@@ -20,6 +20,12 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Saga de commande (séquence)](docs/03-saga-commande.md)
 - [Backlog du POC (US + critères d'acceptation)](docs/backlog.md)
 - [Indicateurs qualité (ISO 25010)](docs/04-indicateurs-qualite.md)
+- [Cycle DevSecOps complet + STRIDE](docs/05-cycle-devsecops.md)
+- [Politique de tests](docs/06-politique-tests.md)
+- [Politique de sécurité](docs/07-politique-securite.md)
+- [Cartographie des compétences](docs/08-competences.md)
+- [Action de formation](docs/09-formation.md)
+- [Suivi d'avancement](docs/suivi-avancement.md)
 - [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md)
 - [Protocoles d'expérimentation](docs/experimentations/)
 
@@ -46,6 +52,7 @@ load-tests/      scénarios JMeter
 - [x] Cadrage technique validé (v1.0)
 - [x] Schémas : architecture, CI/CD, saga
 - [x] Infra locale (docker-compose), squelette CI
+- [x] Phase 1 complète : cycle DevSecOps, politiques de tests et de sécurité, compétences, formation
 - [ ] Expérimentations E1 à E3
 - [ ] Implémentation des 3 services
 - [ ] Scans, test de charge, plan de remédiation
