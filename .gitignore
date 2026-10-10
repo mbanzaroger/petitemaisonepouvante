@@ -1,0 +1,9 @@
+target/
+build/
+node_modules/
+.idea/
+.vscode/
+*.log
+.env
+*.pem
+*.key

@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-test:
+    needs: secrets-scan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [catalog-service, order-service, stock-service]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Service présent ?
+        id: has
+        run: |
+          if [ -f "services/${{ matrix.service }}/pom.xml" ]; then echo "found=true" >> "$GITHUB_OUTPUT"; else echo "found=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-java@v4
+        if: steps.has.outputs.found == 'true'
+        with: { distribution: temurin, java-version: '21', cache: maven }
+      - name: Build + tests unitaires et d'intégration (JaCoCo)
+        if: steps.has.outputs.found == 'true'
+        working-directory: services/${{ matrix.service }}
+        run: mvn -B verify
+      - name: Build de l'image Docker
+        if: steps.has.outputs.found == 'true'
+        run: docker build -t ${{ matrix.service }}:${{ github.sha }} services/${{ matrix.service }}
+      - name: Scan de l'image (Trivy)
+        if: steps.has.outputs.found == 'true'
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: ${{ matrix.service }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
