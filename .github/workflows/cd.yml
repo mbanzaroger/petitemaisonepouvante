@@ -1,0 +1,112 @@
+# Déploiement continu en staging : cluster Kubernetes éphémère (kind) créé dans le runner,
+# à chaque CI verte sur develop ou main. Contrat de fichiers : docs/10-gouvernance-depot.md §4.
+name: CD staging
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-staging
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    name: Déploiement staging (kind) + smoke + DAST
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    permissions:
+      contents: read
+      packages: read
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      OVERLAY: k8s/overlays/staging
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.SHA }}
+
+      - name: Manifestes de staging présents ?
+        id: ready
+        run: |
+          if [ -f "$OVERLAY/kustomization.yaml" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "Aucun manifeste dans \`$OVERLAY\` : déploiement ignoré (prévu au jalon 3)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Créer le cluster kind
+        if: steps.ready.outputs.ok == 'true'
+        uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+        with:
+          cluster_name: pme-staging
+          config: ${{ hashFiles('k8s/kind-config.yaml') != '' && 'k8s/kind-config.yaml' || '' }}
+
+      - name: Connexion à GHCR
+        if: steps.ready.outputs.ok == 'true'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Charger les images du commit dans le cluster
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY,,}"
+          for dir in services/*/; do
+            svc=$(basename "$dir")
+            [ -f "$dir/Dockerfile" ] || continue
+            image="$prefix/$svc:sha-$SHA"
+            docker pull "$image"
+            kind load docker-image "$image" --name pme-staging
+            (cd "$OVERLAY" && kustomize edit set image "$svc=$image")
+          done
+
+      - name: Socle du cluster (ingress, cert-manager, Keycloak, RabbitMQ)
+        if: steps.ready.outputs.ok == 'true' && hashFiles('k8s/staging-bootstrap.sh') != ''
+        run: bash k8s/staging-bootstrap.sh
+
+      - name: Déployer (Kustomize)
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          kubectl apply -k "$OVERLAY"
+          kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=300s
+
+      - name: Smoke tests
+        if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('scripts/smoke-test.sh') != ''
+        run: bash scripts/smoke-test.sh "$BASE_URL"
+
+      - name: DAST — OWASP ZAP baseline
+        if: steps.ready.outputs.ok == 'true' && env.BASE_URL != ''
+        run: |
+          mkdir -p zap && chmod 777 zap
+          rules=()
+          if [ -f .zap/rules.tsv ]; then cp .zap/rules.tsv zap/; rules=(-c rules.tsv); fi
+          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t "$BASE_URL" "${rules[@]}" -r zap-report.html -J zap-report.json -I
+
+      - name: Rapport ZAP
+        if: always() && steps.ready.outputs.ok == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zap-staging-${{ env.SHA }}
+          path: zap/
+          if-no-files-found: ignore
+
+      - name: Diagnostic en cas d'échec
+        if: failure() && steps.ready.outputs.ok == 'true'
+        run: |
+          kubectl get all --all-namespaces
+          kubectl get events --all-namespaces --sort-by=.lastTimestamp | tail -50

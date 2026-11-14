@@ -1,0 +1,52 @@
+# SAST : CodeQL sur le code Java et sur les workflows GitHub Actions eux-mêmes.
+name: CodeQL
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  detect:
+    name: Langages à analyser
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.langs.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Construire la matrice
+        id: langs
+        run: |
+          langs='[{"language":"actions","build-mode":"none"}'
+          if find services -name '*.java' -print -quit 2>/dev/null | grep -q .; then
+            langs+=',{"language":"java-kotlin","build-mode":"none"}'
+          fi
+          langs+=']'
+          echo "matrix={\"include\":$langs}" >> "$GITHUB_OUTPUT"
+
+  analyze:
+    name: Analyse (${{ matrix.language }})
+    needs: detect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.detect.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-extended
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:${{ matrix.language }}"

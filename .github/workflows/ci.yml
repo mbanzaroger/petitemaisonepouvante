@@ -1,51 +1,269 @@
+# Intégration continue DevSecOps — voir docs/02-cicd-pipeline.md
+# Les actions tierces sont épinglées par SHA de commit (incident trivy-action de mars 2026,
+# GHSA-69fq-xp46-6x23). Dependabot propose les mises à jour.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  JAVA_VERSION: "21"
+  COVERAGE_MIN: "80"
+
 jobs:
-  secrets-scan:
+  detect:
+    name: Détection des services
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.list.outputs.services }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Lister les services Maven présents
+        id: list
+        run: |
+          services=$(find services -mindepth 2 -maxdepth 2 -name pom.xml -printf '%h\n' 2>/dev/null \
+            | xargs -r -n1 basename | sort | jq -R . | jq -sc .)
+          echo "services=${services:-[]}" >> "$GITHUB_OUTPUT"
+          echo "Services détectés : ${services:-[]}" >> "$GITHUB_STEP_SUMMARY"
+
+  pr-title:
+    name: Titre de PR (Conventional Commits)
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
-      - uses: gitleaks/gitleaks-action@v2
+      - name: Vérifier le format du titre
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|test|docs|ci|build|refactor|sec|chore|perf|revert)(\([a-z0-9-]+\))?!?: .+'
+          if [[ ! "$TITLE" =~ $pattern ]]; then
+            echo "::error::Titre non conforme : « $TITLE ». Attendu : type(portée): résumé (voir CONTRIBUTING.md)."
+            exit 1
+          fi
+
+  lint:
+    name: Lint des workflows (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: actionlint
+        run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+
+  secrets:
+    name: Secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  sca:
+    name: SCA et IaC (Trivy fs)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dépendances vulnérables (bloquant critique/haute)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Mauvaises configurations IaC (Dockerfile, Kubernetes) — rapport
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: .
+          severity: CRITICAL,HIGH,MEDIUM
+          format: sarif
+          output: trivy-config.sarif
+          exit-code: "0"
+          skip-setup-trivy: true
+      - name: Publier dans l'onglet Security
+        if: always() && hashFiles('trivy-config.sarif') != '' && github.event.pull_request.head.repo.fork != true
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy-config.sarif
+          category: trivy-config
+
+  dependency-review:
+    name: Revue des dépendances (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
 
   build-test:
-    needs: secrets-scan
+    name: Build et tests (${{ matrix.service }})
+    needs: [detect, secrets]
+    if: needs.detect.outputs.services != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        service: [catalog-service, order-service, stock-service]
+        service: ${{ fromJSON(needs.detect.outputs.services) }}
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Service présent ?
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+      - name: Tests unitaires, d'intégration (Testcontainers) et d'acceptation + JaCoCo
+        run: |
+          if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
+          $MVN -B -ntp verify
+      - name: Indicateur 1 — couverture des lignes
+        run: |
+          csv=target/site/jacoco/jacoco.csv
+          if [ ! -f "$csv" ]; then
+            echo "::warning::Rapport JaCoCo absent pour ${{ matrix.service }}"
+            exit 0
+          fi
+          read -r missed covered < <(awk -F, 'NR>1 {m+=$8; c+=$9} END {print m+0, c+0}' "$csv")
+          total=$((missed + covered))
+          pct=$(( total > 0 ? covered * 100 / total : 0 ))
+          echo "| ${{ matrix.service }} | couverture lignes | ${pct} % | seuil ${COVERAGE_MIN} % |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$pct" -lt "$COVERAGE_MIN" ]; then
+            echo "::error::Couverture ${pct} % < ${COVERAGE_MIN} % (indicateur 1)"
+            exit 1
+          fi
+      - name: Indicateur 2 — Quality Gate SonarQube Cloud
+        if: env.SONAR_TOKEN != ''
+        run: |
+          if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
+          $MVN -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization="${{ vars.SONAR_ORGANIZATION || 'mbanzaroger' }}" \
+            -Dsonar.projectKey="mbanzaroger_petitemaisonepouvante_${{ matrix.service }}" \
+            -Dsonar.qualitygate.wait=true
+      - name: Rapports de tests et de couverture
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rapports-${{ matrix.service }}
+          path: |
+            services/${{ matrix.service }}/target/surefire-reports/
+            services/${{ matrix.service }}/target/failsafe-reports/
+            services/${{ matrix.service }}/target/cucumber-reports/
+            services/${{ matrix.service }}/target/site/jacoco/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  image:
+    name: Image, scan et SBOM (${{ matrix.service }})
+    needs: [detect, build-test, sca]
+    if: needs.detect.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJSON(needs.detect.outputs.services) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dockerfile présent ?
         id: has
         run: |
-          if [ -f "services/${{ matrix.service }}/pom.xml" ]; then echo "found=true" >> "$GITHUB_OUTPUT"; else echo "found=false" >> "$GITHUB_OUTPUT"; fi
-      - uses: actions/setup-java@v4
-        if: steps.has.outputs.found == 'true'
-        with: { distribution: temurin, java-version: '21', cache: maven }
-      - name: Build + tests unitaires et d'intégration (JaCoCo)
-        if: steps.has.outputs.found == 'true'
-        working-directory: services/${{ matrix.service }}
-        run: mvn -B verify
-      - name: Build de l'image Docker
-        if: steps.has.outputs.found == 'true'
-        run: docker build -t ${{ matrix.service }}:${{ github.sha }} services/${{ matrix.service }}
-      - name: Scan de l'image (Trivy)
-        if: steps.has.outputs.found == 'true'
-        uses: aquasecurity/trivy-action@0.24.0
+          if [ -f "services/${{ matrix.service }}/Dockerfile" ]; then
+            echo "dockerfile=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dockerfile=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Pas de Dockerfile pour ${{ matrix.service }}"
+          fi
+      - name: Nom de l'image
+        id: img
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.has.outputs.dockerfile == 'true'
+      - name: Build de l'image (tag = SHA du commit)
+        if: steps.has.outputs.dockerfile == 'true'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          image-ref: ${{ matrix.service }}:${{ github.sha }}
+          context: services/${{ matrix.service }}
+          load: true
+          tags: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - name: Indicateur 4 — scan de l'image (bloquant critique/haute)
+        if: steps.has.outputs.dockerfile == 'true'
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
           severity: CRITICAL,HIGH
-          exit-code: '1'
           ignore-unfixed: true
+          exit-code: "1"
+      - name: SBOM (SPDX)
+        if: steps.has.outputs.dockerfile == 'true'
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+          artifact-name: sbom-${{ matrix.service }}.spdx.json
+          upload-release-assets: false
+      - name: Connexion à GHCR
+        if: steps.has.outputs.dockerfile == 'true' && github.event_name == 'push'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publication sur GHCR (main, develop)
+        if: steps.has.outputs.dockerfile == 'true' && github.event_name == 'push'
+        env:
+          IMAGE: ${{ steps.img.outputs.name }}
+        run: |
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          docker tag "$IMAGE:sha-$GITHUB_SHA" "$IMAGE:$GITHUB_REF_NAME"
+          docker push "$IMAGE:$GITHUB_REF_NAME"
+
+  ci-ok:
+    name: Résultat CI
+    if: always()
+    needs: [detect, pr-title, lint, secrets, sca, dependency-review, build-test, image]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Agréger les résultats
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Résultats des jobs : $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::Au moins un job a échoué ($r)"; exit 1 ;;
+            esac
+          done

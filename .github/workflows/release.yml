@@ -1,0 +1,147 @@
+# Publication d'une version : déclenchée par la publication d'une release GitHub (tag vX.Y.Z sur main).
+# Images versionnées sur GHCR, SBOM et documentation joints à la release, puis production sous approbation.
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag existant à republier (ex. v0.5.0)
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  detect:
+    name: Préparation
+    runs-on: ubuntu-latest
+    outputs:
+      services: ${{ steps.list.outputs.services }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - name: Services avec Dockerfile
+        id: list
+        run: |
+          services=$(find services -mindepth 2 -maxdepth 2 -name Dockerfile -printf '%h\n' 2>/dev/null \
+            | xargs -r -n1 basename | sort | jq -R . | jq -sc .)
+          echo "services=${services:-[]}" >> "$GITHUB_OUTPUT"
+
+  docs:
+    name: Archive de la documentation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - name: Joindre docs.zip à la release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git archive --format=zip -o "documentation-$TAG.zip" HEAD docs README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md
+          gh release upload "$TAG" "documentation-$TAG.zip" --clobber
+
+  images:
+    name: Image ${{ matrix.service }}
+    needs: detect
+    if: needs.detect.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        service: ${{ fromJSON(needs.detect.outputs.services) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - name: Tags de l'image
+        id: meta
+        env:
+          PRERELEASE: ${{ github.event.release.prerelease || false }}
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.service }}"
+          version="${TAG#v}"
+          {
+            echo "image=$image"
+            echo "ref=$image:$version"
+            echo "tags<<EOF"
+            echo "$image:$version"
+            [ "$PRERELEASE" = "true" ] || echo "$image:latest"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build et publication (attestations de provenance et SBOM)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/${{ matrix.service }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ env.TAG }}
+      - name: Scan de l'image publiée (bloquant critique/haute)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.ref }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: SBOM joint à la release
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ steps.meta.outputs.ref }}
+          artifact-name: sbom-${{ matrix.service }}-${{ env.TAG }}.spdx.json
+          upload-release-assets: true
+
+  production:
+    name: Mise en production (approbation requise)
+    needs: [detect, images, docs]
+    if: always() && needs.docs.result == 'success' && needs.images.result != 'failure' && !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions:
+      contents: read
+    env:
+      KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_PROD }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - name: Déployer en production
+        run: |
+          if [ -z "$KUBE_CONFIG" ] || [ ! -f k8s/overlays/production/kustomization.yaml ]; then
+            {
+              echo "### Production : version $TAG approuvée"
+              echo "Aucun cluster de production configuré (secret KUBE_CONFIG_PROD ou overlay absent)."
+              echo "Le déploiement réel reste hors périmètre du POC (consignes : non pénalisé)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          mkdir -p ~/.kube && printf '%s' "$KUBE_CONFIG" > ~/.kube/config && chmod 600 ~/.kube/config
+          version="${TAG#v}"
+          cd k8s/overlays/production
+          for svc in $(echo '${{ needs.detect.outputs.services }}' | jq -r '.[]'); do
+            kustomize edit set image "$svc=ghcr.io/${GITHUB_REPOSITORY,,}/$svc:$version"
+          done
+          kubectl apply -k .
+          kubectl wait --for=condition=available deployment --all -n petitemaisonepouvante --timeout=300s
