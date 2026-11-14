@@ -1,0 +1,198 @@
+# Expérimentation E2 (#19) — le pipeline bloque-t-il un livrable non conforme ?
+# Chaque job dégrade volontairement une copie de catalog-service sur le runner (rien n'est commité),
+# lance le contrôle correspondant et vérifie qu'il ÉCHOUE. Protocole : docs/experimentations/E2.md
+name: "Expérimentation E2 — pipeline qualité"
+
+on:
+  push:
+    branches: ["exp/E2-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SVC: services/catalog-service
+
+jobs:
+  couverture:
+    name: "Cas 1 — couverture < 80 % (JaCoCo)"
+    runs-on: ubuntu-latest
+    outputs:
+      bloque: ${{ steps.verdict.outputs.bloque }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: Dégradation — classe métier sans aucun test
+        run: |
+          cat > "$SVC/src/main/java/com/petitemaisonepouvante/catalog/PrixRemise.java" <<'JAVA'
+          package com.petitemaisonepouvante.catalog;
+
+          public final class PrixRemise {
+              private PrixRemise() { }
+
+              public static int appliquer(int prixCentimes, int pourcentage) {
+                  if (prixCentimes < 0) { throw new IllegalArgumentException("prix négatif"); }
+                  if (pourcentage < 0 || pourcentage > 90) { throw new IllegalArgumentException("remise hors bornes"); }
+                  int remise = prixCentimes * pourcentage / 100;
+                  int resultat = prixCentimes - remise;
+                  if (resultat < 100) { return 100; }
+                  return resultat;
+              }
+
+              public static int arrondir(int centimes) {
+                  int reste = centimes % 10;
+                  if (reste == 0) { return centimes; }
+                  if (reste < 5) { return centimes - reste; }
+                  return centimes + (10 - reste);
+              }
+          }
+          JAVA
+      - name: Contrôle — mvn verify (règle JaCoCo)
+        id: controle
+        continue-on-error: true
+        working-directory: ${{ env.SVC }}
+        run: ./mvnw -B -ntp verify 2>&1 | tee ../../couverture.log; exit "${PIPESTATUS[0]}"
+      - name: Verdict
+        id: verdict
+        run: |
+          grep -E "Coverage checks have not been met|lines covered ratio" couverture.log | tee -a "$GITHUB_STEP_SUMMARY" || true
+          if [ "${{ steps.controle.outcome }}" = "failure" ]; then echo "bloque=oui" >> "$GITHUB_OUTPUT"; else echo "bloque=non" >> "$GITHUB_OUTPUT"; exit 1; fi
+
+  dependance:
+    name: "Cas 2 — dépendance vulnérable (Trivy SCA)"
+    runs-on: ubuntu-latest
+    outputs:
+      bloque: ${{ steps.verdict.outputs.bloque }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dégradation — commons-text 1.9 (CVE-2022-42889, « Text4Shell »)
+        run: |
+          python3 - <<'PY'
+          p = "services/catalog-service/pom.xml"
+          s = open(p).read()
+          dep = """        <dependency>
+                      <groupId>org.apache.commons</groupId>
+                      <artifactId>commons-text</artifactId>
+                      <version>1.9</version>
+                  </dependency>
+              </dependencies>"""
+          open(p, "w").write(s.replace("    </dependencies>", dep, 1))
+          PY
+          grep -n -A2 "commons-text" "$SVC/pom.xml"
+      - name: Contrôle — Trivy fs (critique/haute bloquant)
+        id: controle
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: services/catalog-service
+          scanners: vuln
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Verdict
+        id: verdict
+        run: |
+          if [ "${{ steps.controle.outcome }}" = "failure" ]; then echo "bloque=oui" >> "$GITHUB_OUTPUT"; else echo "bloque=non" >> "$GITHUB_OUTPUT"; exit 1; fi
+
+  image:
+    name: "Cas 3 — image de base vulnérable (Trivy image)"
+    runs-on: ubuntu-latest
+    outputs:
+      bloque: ${{ steps.verdict.outputs.bloque }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dégradation — retour à distroless Debian 12 (plus maintenue)
+        run: sed -i 's#java21-debian13#java21-debian12#' "$SVC/Dockerfile" && grep FROM "$SVC/Dockerfile"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ env.SVC }}
+          load: true
+          tags: e2-degradee:latest
+      - name: Contrôle — Trivy image (critique/haute bloquant)
+        id: controle
+        continue-on-error: true
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: e2-degradee:latest
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Verdict
+        id: verdict
+        run: |
+          if [ "${{ steps.controle.outcome }}" = "failure" ]; then echo "bloque=oui" >> "$GITHUB_OUTPUT"; else echo "bloque=non" >> "$GITHUB_OUTPUT"; exit 1; fi
+
+  secret:
+    name: "Cas 4 — secret dans le code (gitleaks)"
+    runs-on: ubuntu-latest
+    outputs:
+      bloque: ${{ steps.verdict.outputs.bloque }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Dégradation — clé d'accès factice générée à l'exécution (jamais commitée)
+        run: |
+          key="AKIA$(tr -dc 'A-Z2-7' < /dev/urandom | head -c 16)"
+          printf 'cloud:\n  access-key-id: %s\n' "$key" >> "$SVC/src/main/resources/application.yml"
+      - name: Contrôle — gitleaks sur l'arborescence
+        id: controle
+        continue-on-error: true
+        run: docker run --rm -v "$PWD/$SVC:/scan" ghcr.io/gitleaks/gitleaks:v8.30.1 dir /scan --redact --no-banner
+      - name: Verdict
+        id: verdict
+        run: |
+          if [ "${{ steps.controle.outcome }}" = "failure" ]; then echo "bloque=oui" >> "$GITHUB_OUTPUT"; else echo "bloque=non" >> "$GITHUB_OUTPUT"; exit 1; fi
+
+  alternative-dependency-check:
+    name: "Alternative — OWASP Dependency-Check (sans clé NVD)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      duree: ${{ steps.mesure.outputs.duree }}
+      resultat: ${{ steps.mesure.outputs.resultat }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with: { distribution: temurin, java-version: "21", cache: maven }
+      - name: Mesure du temps d'analyse (plafond 15 min)
+        id: mesure
+        working-directory: ${{ env.SVC }}
+        run: |
+          start=$(date +%s)
+          if timeout 900 ./mvnw -B -ntp org.owasp:dependency-check-maven:12.2.2:check -DfailBuildOnCVSS=7 > ../../dc.log 2>&1; then
+            resultat="terminé"
+          else
+            resultat="échec ou plafond atteint (code $?)"
+          fi
+          duree=$(( $(date +%s) - start ))
+          echo "duree=${duree}" >> "$GITHUB_OUTPUT"
+          echo "resultat=${resultat}" >> "$GITHUB_OUTPUT"
+          tail -20 ../../dc.log
+
+  synthese:
+    name: Synthèse E2
+    if: always()
+    needs: [couverture, dependance, image, secret, alternative-dependency-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tableau de résultats
+        run: |
+          {
+            echo "### Expérimentation E2 — chaque dégradation doit être bloquée"
+            echo "| Cas | Contrôle | Bloqué |"
+            echo "|---|---|---|"
+            echo "| 1 — couverture < 80 % | JaCoCo (mvn verify) | ${{ needs.couverture.outputs.bloque || 'non' }} |"
+            echo "| 2 — commons-text 1.9 | Trivy fs | ${{ needs.dependance.outputs.bloque || 'non' }} |"
+            echo "| 3 — distroless Debian 12 | Trivy image | ${{ needs.image.outputs.bloque || 'non' }} |"
+            echo "| 4 — clé d'accès en clair | gitleaks | ${{ needs.secret.outputs.bloque || 'non' }} |"
+            echo ""
+            echo "Alternative Dependency-Check : ${{ needs.alternative-dependency-check.outputs.resultat || 'non mesuré' }} en ${{ needs.alternative-dependency-check.outputs.duree || '?' }} s (Trivy fs : environ 30 s)."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: L'expérimentation réussit si les 4 cas sont bloqués
+        run: |
+          for r in "${{ needs.couverture.outputs.bloque }}" "${{ needs.dependance.outputs.bloque }}" "${{ needs.image.outputs.bloque }}" "${{ needs.secret.outputs.bloque }}"; do
+            [ "$r" = "oui" ] || { echo "::error::Une dégradation n'a pas été bloquée"; exit 1; }
+          done
