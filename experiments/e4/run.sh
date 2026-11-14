@@ -79,10 +79,12 @@ done
 delai_resolution=$(( $(date +%s) - t_retour ))
 
 log "9. Tableau de bord Grafana et corrélation des logs"
-dashboard=$(curl -sS -u "admin:$grafana_pw" "http://localhost:3000/api/search?query=RED" | jq -r '.[0].title // "absent"')
-kubectl -n pme logs deploy/catalog-service --tail=2000 > "$OUT/logs-catalog.txt"
-lignes_e4_42=$(grep -c "catalog-service,e4-42\]" "$OUT/logs-catalog.txt" || true)
-grep -m3 "catalog-service,e4-42\]" "$OUT/logs-catalog.txt" > "$OUT/extrait-logs.txt" || true
+dashboard=$(curl -sS -u "admin:$grafana_pw" "http://localhost:3000/api/dashboards/uid/pme-red" | jq -r '.dashboard.title // "absent"')
+curl -s -o /dev/null -H "X-Correlation-Id: e4-verification" http://localhost:8081/actuator/health
+sleep 2
+kubectl -n pme logs deploy/catalog-service > "$OUT/logs-catalog.txt"
+lignes_e4_42=$(grep -c "catalog-service,e4-verification\]" "$OUT/logs-catalog.txt" || true)
+grep -m3 "catalog-service,e4-verification\]" "$OUT/logs-catalog.txt" > "$OUT/extrait-logs.txt" || true
 cat "$OUT/extrait-logs.txt"
 echo "total_s=$(elapsed)" >> "$OUT/durees.txt"
 
@@ -97,7 +99,7 @@ ok=true
   row "alerte reçue par Alertmanager" 1 "$alertmanager"
   row "alerte résolue après le retour de la base" oui "$resolue"
   row "tableau de bord RED provisionné dans Grafana" "PME — RED des microservices" "$dashboard"
-  r="✅"; [ "${lignes_e4_42:-0}" -ge 1 ] || { r="❌"; ok=false; }; echo "| lignes de log portant le correlationId e4-42 | ≥ 1 | ${lignes_e4_42:-0} | $r |"
+  r="✅"; [ "${lignes_e4_42:-0}" -ge 1 ] || { r="❌"; ok=false; }; echo "| lignes de log portant le correlationId e4-verification | ≥ 1 | ${lignes_e4_42:-0} | $r |"
   echo ""
   echo "- Débit nominal : ${debit} req/s ; p95 nominal : ${p95} ms ; erreurs 5xx avant la panne : ${erreurs_avant} req/s"
   echo "- Taux d'erreurs pendant la panne : ${taux_erreur} % ; alerte déclenchée en ${delai_alerte} s (fenêtre 1 min + for 30 s) ; résolue en ${delai_resolution} s"
