@@ -155,7 +155,11 @@ jobs:
           fi
           read -r missed covered < <(awk -F, 'NR>1 {m+=$8; c+=$9} END {print m+0, c+0}' "$csv")
           total=$((missed + covered))
-          pct=$(( total > 0 ? covered * 100 / total : 0 ))
+          if [ "$total" -eq 0 ]; then
+            echo "::notice::Aucune ligne mesurable pour ${{ matrix.service }} (classes exclues uniquement)"
+            exit 0
+          fi
+          pct=$(( covered * 100 / total ))
           echo "| ${{ matrix.service }} | couverture lignes | ${pct} % | seuil ${COVERAGE_MIN} % |" >> "$GITHUB_STEP_SUMMARY"
           if [ "$pct" -lt "$COVERAGE_MIN" ]; then
             echo "::error::Couverture ${pct} % < ${COVERAGE_MIN} % (indicateur 1)"

@@ -1,0 +1,33 @@
+# Configuration de stock-service. Les valeurs par défaut correspondent à infra/docker-compose.yml (développement local) ;
+# en staging et en production, DB_URL, DB_USER et DB_PASSWORD sont injectés par des Secrets Kubernetes.
+server:
+  port: ${SERVER_PORT:8083}
+  shutdown: graceful
+
+spring:
+  application:
+    name: stock-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5435/stock}
+    username: ${DB_USER:stock}
+    password: ${DB_PASSWORD:stock_dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{correlationId:-}]"
