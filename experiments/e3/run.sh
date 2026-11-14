@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 # Expérimentation E3 (#20) : RabbitMQ sur Kubernetes (opérateur officiel, 3 nœuds, files quorum).
-# Prérequis : cluster vide dans le contexte kubectl courant (kind, k3s, Minikube), kubectl et jq.
+# Prérequis : cluster vide dans le contexte kubectl courant (kind, k3s, Minikube), helm, kubectl et jq.
 # Usage : experiments/e3/run.sh   (résultats dans experiments/e3/resultats/)
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 OPERATOR_VERSION="${OPERATOR_VERSION:-v2.23.3}"
+CM_VERSION="${CM_VERSION:-v1.21.3}"
 OUT="${OUT:-$PWD/resultats}"; mkdir -p "$OUT"; : > "$OUT/resultats.jsonl"
 NS=pme-mq
 log() { printf '\n\033[1;34m▸ %s\033[0m\n' "$*"; }
 t0=$(date +%s); elapsed() { echo $(( $(date +%s) - t0 )); }
+
+log "0. cert-manager $CM_VERSION (prérequis des webhooks de l'opérateur depuis la v2.x)"
+helm repo add jetstack https://charts.jetstack.io --force-update >/dev/null
+helm upgrade --install cert-manager jetstack/cert-manager --version "$CM_VERSION" \
+  -n cert-manager --create-namespace --set crds.enabled=true --wait --timeout 5m
 
 log "1. Opérateur RabbitMQ $OPERATOR_VERSION"
 kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/download/$OPERATOR_VERSION/cluster-operator.yml"
