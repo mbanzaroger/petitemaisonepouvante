@@ -8,7 +8,7 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -ntp -q package -DskipTests
 
 # Étape 2 : exécution sur une image distroless (pas de shell ni de gestionnaire de paquets),
 # utilisateur non root (politique de sécurité §4)
-FROM gcr.io/distroless/java21-debian12:nonroot
+FROM gcr.io/distroless/java21-debian13:nonroot
 WORKDIR /app
 COPY --from=build /workspace/target/catalog-service.jar /app/app.jar
 EXPOSE 8081
