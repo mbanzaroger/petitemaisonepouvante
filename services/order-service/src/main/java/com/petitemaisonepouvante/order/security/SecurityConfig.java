@@ -10,7 +10,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * US2 : toute opération sur les commandes exige un jeton Keycloak valide (signature JWKS, émetteur,
  * audience {@code pme-api}) portant le rôle CUSTOMER. Le contrôle est fait par le service lui-même,
- * en plus du Gateway (défense en profondeur). API sans état : pas de session, donc pas de CSRF.
+ * en plus du Gateway (défense en profondeur). API sans état : pas de session ni de cookie.
  */
 @Configuration
 public class SecurityConfig {
@@ -20,7 +20,9 @@ public class SecurityConfig {
         JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
         jwtConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
         return http
-                .csrf(csrf -> csrf.disable())
+                // API REST sans état authentifiée par en-tête Bearer, sans cookie : pas de vecteur CSRF sur /api.
+                // La protection CSRF reste active partout ailleurs.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()

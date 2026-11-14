@@ -26,7 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.AmqpAdmin;
-import org.springframework.amqp.core.AnonymousQueue;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
@@ -76,7 +75,8 @@ class OrderApiIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        published = new AnonymousQueue();
+        // File de test non auto-supprimée : plusieurs lectures successives sont possibles.
+        published = new Queue("test." + UUID.randomUUID(), false, false, false);
         admin.declareQueue(published);
         admin.declareBinding(BindingBuilder.bind(published).to(new TopicExchange(Messaging.EXCHANGE))
                 .with(Messaging.ORDER_PLACED));
@@ -158,10 +158,19 @@ class OrderApiIT extends AbstractIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
         String orderId = json.readTree(response).get("id").asString();
 
-        Message message = rabbit.receive(published.getName(), 15_000);
+        // D'autres commandes des tests précédents peuvent être publiées dans la même fenêtre : on cherche la nôtre.
+        Message message = null;
+        JsonNode event = null;
+        long deadline = System.currentTimeMillis() + 15_000;
+        while (System.currentTimeMillis() < deadline) {
+            Message candidate = rabbit.receive(published.getName(), 1_000);
+            if (candidate != null && orderId.equals(json.readTree(candidate.getBody()).get("orderId").asString())) {
+                message = candidate;
+                event = json.readTree(candidate.getBody());
+                break;
+            }
+        }
         assertThat(message).as("OrderPlaced publié par la boîte d'envoi").isNotNull();
-        JsonNode event = json.readTree(message.getBody());
-        assertThat(event.get("orderId").asString()).isEqualTo(orderId);
         assertThat(event.get("type").asString()).isEqualTo("OrderPlaced");
         assertThat(event.get("lines")).hasSize(2);
         assertThat(message.getMessageProperties().getMessageId()).isEqualTo(event.get("eventId").asString());

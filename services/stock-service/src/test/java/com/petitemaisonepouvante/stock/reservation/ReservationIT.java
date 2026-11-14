@@ -24,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.AmqpAdmin;
-import org.springframework.amqp.core.AnonymousQueue;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
@@ -69,7 +68,8 @@ class ReservationIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        results = new AnonymousQueue();
+        // File de test non auto-supprimée : plusieurs lectures successives sont possibles.
+        results = new Queue("test." + UUID.randomUUID(), false, false, false);
         admin.declareQueue(results);
         admin.declareBinding(BindingBuilder.bind(results).to(new TopicExchange(Messaging.EXCHANGE)).with("stock.*"));
     }
@@ -109,10 +109,19 @@ class ReservationIT extends AbstractIntegrationTest {
     }
 
     private JsonNode awaitResult(UUID orderId) {
-        Message message = rabbit.receive(results.getName(), 15_000);
+        Message message = null;
+        JsonNode result = null;
+        long deadline = System.currentTimeMillis() + 15_000;
+        while (System.currentTimeMillis() < deadline) {
+            Message candidate = rabbit.receive(results.getName(), 1_000);
+            if (candidate != null
+                    && orderId.toString().equals(json.readTree(candidate.getBody()).get("orderId").asString())) {
+                message = candidate;
+                result = json.readTree(candidate.getBody());
+                break;
+            }
+        }
         assertThat(message).as("résultat de réservation publié").isNotNull();
-        JsonNode result = json.readTree(message.getBody());
-        assertThat(result.get("orderId").asString()).isEqualTo(orderId.toString());
         assertThat(message.getMessageProperties().getHeaders()).containsEntry(Messaging.CORRELATION_HEADER, "it-stock");
         return result;
     }
@@ -142,7 +151,9 @@ class ReservationIT extends AbstractIntegrationTest {
         publish(event);
         publish(event);
 
-        assertThat(rabbit.receive(results.getName(), 3_000)).as("aucun second résultat").isNull();
+        Message second = rabbit.receive(results.getName(), 3_000);
+        assertThat(second == null || !order.toString().equals(json.readTree(second.getBody()).get("orderId").asString()))
+                .as("aucun second résultat pour cette commande").isTrue();
         assertThat(available(product)).isEqualTo(6);
     }
 

@@ -10,7 +10,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * La consultation du stock est réservée au rôle ADMIN ; le jeton Keycloak est validé (signature JWKS, émetteur,
  * audience {@code pme-api}). Les réservations ne passent que par la messagerie (saga), jamais par l'API.
- * API sans état : pas de session, donc pas de CSRF.
+ * API sans état : pas de session ni de cookie.
  */
 @Configuration
 public class SecurityConfig {
@@ -20,7 +20,9 @@ public class SecurityConfig {
         JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
         jwtConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
         return http
-                .csrf(csrf -> csrf.disable())
+                // API REST sans état authentifiée par en-tête Bearer, sans cookie : pas de vecteur CSRF sur /api.
+                // La protection CSRF reste active partout ailleurs.
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
