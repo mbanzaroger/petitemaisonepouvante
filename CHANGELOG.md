@@ -3,6 +3,9 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
 ## [Non publié]
+### Ajouté
+- Rétroplanning jusqu'à la soutenance du 26/02/2027 et échéances des jalons J2 à J5 (#23).
+- Détection du jeton limité des Codespaces dans les scripts de configuration.
 
 ## [0.3.0] - 2026-11-14
 ### Ajouté
