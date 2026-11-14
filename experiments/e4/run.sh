@@ -22,9 +22,10 @@ helm upgrade --install kps prometheus-community/kube-prometheus-stack --version 
 echo "supervision_prete_s=$(elapsed)" >> "$OUT/durees.txt"
 
 log "2. catalog-service et PostgreSQL"
-kubectl apply -f 01-catalog.yaml
+kubectl create namespace pme --dry-run=client -o yaml | kubectl apply -f -
 kubectl -n pme create secret generic catalog-db --from-literal=password="$(openssl rand -hex 16)" \
   --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f 01-catalog.yaml
 kubectl -n pme rollout status deploy/catalog-db --timeout=180s
 kubectl -n pme rollout status deploy/catalog-service --timeout=300s
 echo "service_pret_s=$(elapsed)" >> "$OUT/durees.txt"

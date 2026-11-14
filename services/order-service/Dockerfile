@@ -12,5 +12,5 @@ FROM gcr.io/distroless/java21-debian13:nonroot
 WORKDIR /app
 COPY --from=build /workspace/target/order-service.jar /app/app.jar
 EXPOSE 8082
-USER nonroot
+USER 65532:65532
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "/app/app.jar"]
