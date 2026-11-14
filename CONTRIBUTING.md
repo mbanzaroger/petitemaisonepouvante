@@ -48,7 +48,7 @@ Format : `type(portée): résumé à l'impératif`. Exemples : `feat(order): pub
 | `sec` | Correctif ou durcissement de sécurité |
 | `chore` | Maintenance |
 
-Référencer l'issue dans le corps (`Closes #22`) pour que le kanban passe la carte en *Terminé* à la fusion.
+Référencer l'issue dans le corps (`Closes #25`) pour que le kanban passe la carte en *Terminé* à la fusion.
 
 ## 3. Cycle d'une issue sur le kanban
 `Backlog` → `À faire` (prête : critères d'acceptation clairs) → `En cours` (branche créée) → `En revue` (PR ouverte) → `Terminé` (PR fusionnée, issue fermée).

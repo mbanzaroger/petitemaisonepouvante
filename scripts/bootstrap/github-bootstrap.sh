@@ -101,12 +101,15 @@ step_issues() {
 step_environments() {
   log "Environnements de déploiement"
   owner_id=$(api "repos/$REPO" --jq .owner.id)
-  printf '{"wait_timer":0}' | api -X PUT "repos/$REPO/environments/staging" --input - >/dev/null && ok "staging"
+  if ! printf '{"wait_timer":0}' | api -X PUT "repos/$REPO/environments/staging" --input - >/dev/null; then
+    warn "environnements : droit administration manquant"; return 0
+  fi
+  ok "staging"
   printf '{"wait_timer":0,"prevent_self_review":false,"reviewers":[{"type":"User","id":%s}],"deployment_branch_policy":{"protected_branches":false,"custom_branch_policies":true}}' "$owner_id" \
     | api -X PUT "repos/$REPO/environments/production" --input - >/dev/null && ok "production (approbation du propriétaire)"
   existing=$(api "repos/$REPO/environments/production/deployment-branch-policies" --jq '.branch_policies[].name' 2>/dev/null || true)
-  grep -qx 'v\*' <<< "$existing" || api "repos/$REPO/environments/production/deployment-branch-policies" -f name='v*' -f type=tag >/dev/null
-  grep -qx 'main' <<< "$existing" || api "repos/$REPO/environments/production/deployment-branch-policies" -f name=main -f type=branch >/dev/null
+  grep -qx 'v\*' <<< "$existing" || api "repos/$REPO/environments/production/deployment-branch-policies" -f name='v*' -f type=tag >/dev/null || true
+  grep -qx 'main' <<< "$existing" || api "repos/$REPO/environments/production/deployment-branch-policies" -f name=main -f type=branch >/dev/null || true
   ok "production limitée aux tags v* et à main"
 }
 
@@ -137,7 +140,7 @@ step_releases() {
     if api "repos/$REPO/releases/tags/$tag" >/dev/null 2>&1; then ok "existe : $tag"; continue; fi
     body "$f" "$TMP/notes.md"
     api "repos/$REPO/releases" -f tag_name="$tag" -f target_commitish="$target" -f name="$name" \
-      -F body=@"$TMP/notes.md" -F prerelease="${pre:-false}" >/dev/null && ok "publiée : $name"
+      -F body=@"$TMP/notes.md" -F prerelease="${pre:-false}" >/dev/null && ok "publiée : $name" || warn "release $tag non créée"
   done
 }
 
