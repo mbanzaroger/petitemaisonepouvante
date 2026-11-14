@@ -1,0 +1,27 @@
+meta {
+  name: 08 Commande par bob sans rôle (403)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{ordersUrl}}/api/v1/orders
+  body: json
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-08
+}
+
+auth:bearer {
+  token: {{bobToken}}
+}
+
+body:json {
+  {"lines":[{"productId":"{{mug}}","quantity":1}]}
+}
+
+assert {
+  res.status: eq 403
+}

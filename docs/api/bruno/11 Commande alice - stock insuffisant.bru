@@ -1,0 +1,27 @@
+meta {
+  name: 11 Commande alice - stock insuffisant
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{ordersUrl}}/api/v1/orders
+  body: json
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-11
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+body:json {
+  {"lines":[{"productId":"{{buste}}","quantity":3}]}
+}
+
+assert {
+  res.status: eq 202
+}
