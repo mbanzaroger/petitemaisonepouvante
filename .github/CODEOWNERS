@@ -1,0 +1,6 @@
+# Revue requise par le Lead Developer sur les zones sensibles.
+*                     @mbanzaroger
+/.github/             @mbanzaroger
+/k8s/                 @mbanzaroger
+/infra/               @mbanzaroger
+/docs/07-politique-securite.md @mbanzaroger

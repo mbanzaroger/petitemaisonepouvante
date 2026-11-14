@@ -1,0 +1,22 @@
+name: Tâche technique
+description: CI/CD, infrastructure, outillage, documentation.
+labels: ["type:tech"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Objectif
+    validations:
+      required: true
+  - type: textarea
+    id: tasks
+    attributes:
+      label: Tâches
+      value: |
+        - [ ] Première tâche
+  - type: textarea
+    id: done
+    attributes:
+      label: Critère de fin
+    validations:
+      required: true

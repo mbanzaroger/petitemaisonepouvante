@@ -1,0 +1,43 @@
+name: User story
+description: Besoin fonctionnel du backlog, avec critères d'acceptation Gherkin.
+title: "US: "
+labels: ["type:user-story"]
+body:
+  - type: textarea
+    id: story
+    attributes:
+      label: User story
+      description: En tant que <rôle>, je veux <action> afin de <bénéfice>.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critères d'acceptation (Gherkin)
+      value: |
+        Étant donné ...
+        Quand ...
+        Alors ...
+    validations:
+      required: true
+  - type: textarea
+    id: security
+    attributes:
+      label: Exigences de sécurité
+      description: Rôles autorisés, cas 401/403, données sensibles.
+  - type: dropdown
+    id: service
+    attributes:
+      label: Service concerné
+      multiple: true
+      options: [catalog-service, order-service, stock-service, infra, transverse]
+  - type: textarea
+    id: dod
+    attributes:
+      label: Definition of Done
+      value: |
+        - [ ] Critères d'acceptation automatisés (Cucumber ou RestAssured)
+        - [ ] Couverture du code nouveau ≥ 80 %
+        - [ ] Quality Gate passé, 0 vulnérabilité critique/haute
+        - [ ] Tests 401/403 sur les endpoints protégés
+        - [ ] Métriques et logs exposés

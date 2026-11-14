@@ -1,0 +1,31 @@
+name: Vulnérabilité ou faiblesse de sécurité
+description: Constat issu d'un scan ou d'un audit (non exploitable publiquement).
+labels: ["type:security"]
+body:
+  - type: markdown
+    attributes:
+      value: "Une vulnérabilité exploitable se signale via un avis de sécurité privé (onglet Security), pas ici."
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Sévérité
+      options: ["Critique (48 h, bloquant)", "Haute (7 jours, bloquant)", "Moyenne (30 jours)", "Basse (90 jours)"]
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source du constat
+      description: Trivy, CodeQL, SonarCloud, ZAP, JMeter, audit manuel...
+  - type: textarea
+    id: finding
+    attributes:
+      label: Constat et impact
+    validations:
+      required: true
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Remédiation proposée et justification
+    validations:
+      required: true

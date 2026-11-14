@@ -1,0 +1,21 @@
+type:user-story	1d76db	User story du backlog (critères d'acceptation Gherkin)
+type:experimentation	5319e7	Expérimentation en bac à sable (jalon 2)
+type:tech	c5def5	Tâche technique
+type:ci-cd	0e8a16	Pipelines GitHub Actions
+type:infra	006b75	Infrastructure, Kubernetes, docker-compose
+type:doc	0075ca	Documentation
+type:security	b60205	Sécurité (DevSecOps, vulnérabilité, durcissement)
+type:bug	d73a4a	Comportement incorrect
+type:test	fbca04	Tests automatisés, charge
+type:dependencies	0366d6	Mise à jour de dépendances (Dependabot)
+type:soutenance	f9d0c4	Préparation de la soutenance
+svc:catalog	bfd4f2	catalog-service
+svc:order	bfd4f2	order-service
+svc:stock	bfd4f2	stock-service
+prio:P1	b60205	Priorité haute
+prio:P2	fbca04	Priorité moyenne
+prio:P3	c2e0c6	Priorité basse
+phase:1-processus	ededed	Phase 1 — structuration du processus
+phase:2-realisation	ededed	Phase 2 — développement et déploiement
+phase:3-remediation	ededed	Phase 3 — analyse sécurité et remédiation
+audit	e99695	Action issue de l'audit du projet

@@ -1,0 +1,41 @@
+name: Expérimentation (bac à sable)
+description: Tester une technologie phare avant de l'adopter ou de la rejeter.
+title: "E#: "
+labels: ["type:experimentation"]
+body:
+  - type: input
+    id: techno
+    attributes:
+      label: Technologie ou solution testée
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothèse à valider
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: Critère de succès mesurable
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environnement de test
+      description: Machine, OS, versions des outils (Docker, k3s/Minikube, Helm...).
+  - type: textarea
+    id: alternative
+    attributes:
+      label: Alternative comparée ou rejetée
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Livrables attendus
+      value: |
+        - [ ] Protocole reproductible dans docs/experimentations/
+        - [ ] Résultats (captures, logs, métriques)
+        - [ ] Difficultés et limites
+        - [ ] Décision : adoption ou rejet, justifiée

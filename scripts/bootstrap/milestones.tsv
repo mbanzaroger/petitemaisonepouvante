@@ -1,0 +1,7 @@
+J0 — Cadrage (v0.1.0)	closed	Cadrage technique, ADR-001, schémas, infrastructure locale.
+J1 — Processus qualité (v0.2.0)	closed	Phase 1 : indicateurs, DevSecOps, tests, sécurité, compétences, formation.
+Industrialisation CI/CD et audit (v0.3.0)	closed	Gouvernance du dépôt, pipelines GitHub Actions, audit.
+J2 — Expérimentations (v0.4.0)	open	E1 à E4 en bac à sable, synthèse adoption/rejet.
+J3 — POC (v0.5.0)	open	Services, US1 à US5, tests d'acceptation, déploiement Kubernetes.
+J4 — Sécurité, charge, remédiation (v0.6.0)	open	Test de charge, DAST, analyse sécurité, plan de remédiation.
+J5 — Soutenance (v1.0.0)	open	Support, démonstration, répétitions, vidéo de secours.
