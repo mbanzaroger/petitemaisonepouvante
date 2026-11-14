@@ -63,6 +63,6 @@ kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64
   echo "PME_ALICE_PASSWORD=$alice_pw"
   echo "PME_BOB_PASSWORD=$bob_pw"
   echo "PME_CAROL_PASSWORD=$carol_pw"
-  echo "PME_ADMIN_PASSWORD=$adminpme_pw"
+  echo "PME_ADMIN_PME_PASSWORD=$adminpme_pw"
 } >> "$ENV_FILE"
 log "Socle prêt (variables dans $ENV_FILE)"

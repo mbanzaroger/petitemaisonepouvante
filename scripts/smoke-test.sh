@@ -2,7 +2,7 @@
 # Tests de bout en bout sur l'environnement de staging, à travers le Gateway (TLS + JWT) :
 # US1 à US4, saga complète order → stock → order, contrôle d'accès, corrélation, limitation de débit.
 # Usage : scripts/smoke-test.sh https://api.pme.local:8443
-# Variables : PME_CA_CERT, KEYCLOAK_URL, PME_ALICE_PASSWORD, PME_BOB_PASSWORD, PME_CAROL_PASSWORD, PME_ADMIN_PASSWORD
+# Variables : PME_CA_CERT, KEYCLOAK_URL, PME_ALICE_PASSWORD, PME_BOB_PASSWORD, PME_CAROL_PASSWORD, PME_ADMIN_PME_PASSWORD
 set -uo pipefail
 BASE_URL="${1:-${BASE_URL:?BASE_URL requis}}"
 KEYCLOAK_URL="${KEYCLOAK_URL:-https://keycloak.pme.local:8443}"
@@ -31,7 +31,7 @@ await_status() { # await_status <jeton> <id> <statut>
 echo "Attente des routes du Gateway…"
 for _ in $(seq 1 60); do [ "$(code "$BASE_URL/api/v1/categories")" = "200" ] && break; sleep 3; done
 alice=""; for _ in $(seq 1 30); do alice=$(token alice "$PME_ALICE_PASSWORD"); [ -n "$alice" ] && break; sleep 3; done
-bob=$(token bob "$PME_BOB_PASSWORD"); carol=$(token carol "$PME_CAROL_PASSWORD"); admin=$(token admin-pme "$PME_ADMIN_PASSWORD")
+bob=$(token bob "$PME_BOB_PASSWORD"); carol=$(token carol "$PME_CAROL_PASSWORD"); admin=$(token admin-pme "$PME_ADMIN_PME_PASSWORD")
 
 echo "| Contrôle | Attendu | Obtenu | |" > "$RESULTS.md"; echo "|---|---|---|---|" >> "$RESULTS.md"
 check "US1 — catalogue public (produits en vente)" 11 "$(api "$BASE_URL/api/v1/products?size=5" | jq -r .totalElements)"
