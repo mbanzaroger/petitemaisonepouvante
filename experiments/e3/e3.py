@@ -40,7 +40,7 @@ def declare(ch):
     ch.queue_declare(DLQ, durable=True, arguments={"x-queue-type": "quorum"})
     ch.queue_bind(DLQ, DLX)
     ch.queue_declare(QUEUE, durable=True, arguments={
-        "x-queue-type": "quorum", "x-dead-letter-exchange": DLX, "x-delivery-limit": 3})
+        "x-queue-type": "quorum", "x-dead-letter-exchange": DLX, "x-delivery-limit": 5})
     ch.queue_bind(QUEUE, EXCHANGE, routing_key="order.placed")
     ch.queue_declare(DURABILITY_QUEUE, durable=True, arguments={"x-queue-type": "quorum"})
     ch.queue_bind(DURABILITY_QUEUE, EXCHANGE, routing_key="durability")
@@ -87,16 +87,19 @@ def publish_events(ch, events, routing_key="order.placed"):
 def consume(ch, store, stop_after_acks=None, crash=False, idle=3.0):
     """Consomme jusqu'à vider la file. En mode crash : traite un message sans l'acquitter puis coupe la connexion."""
     acks = redelivered = 0
+    deadline = time.time() + 120  # garde-fou : le banc d'essai ne doit jamais boucler sans fin
     ch.basic_qos(prefetch_count=10)
     for method, props, body in ch.consume(QUEUE, inactivity_timeout=idle):
-        if method is None:
+        if method is None or time.time() > deadline:
             break
         if method.redelivered:
             redelivered += 1
         try:
             event = json.loads(body)
         except ValueError:
-            ch.basic_nack(method.delivery_tag, requeue=True)  # message empoisonné : rejeté à chaque livraison
+            # Message illisible : rejeté sans remise en file, RabbitMQ le route vers la DLQ (dead-letter exchange).
+            # Une remise en file (requeue) le ferait boucler indéfiniment devant le consommateur.
+            ch.basic_reject(method.delivery_tag, requeue=False)
             continue
         store.handle(event)
         if crash and stop_after_acks is not None and acks >= stop_after_acks:
