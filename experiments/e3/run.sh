@@ -56,7 +56,7 @@ YAML
 }
 wait_job() {
   local name=$1
-  kubectl -n "$NS" wait "job/$name" --for=jsonpath='{.status.conditions[?(@.status=="True")].type}'=Complete --timeout=300s \
+  kubectl -n "$NS" wait "job/$name" --for=condition=Complete --timeout=300s \
     || { kubectl -n "$NS" logs "job/$name" | tail -40; return 1; }
   kubectl -n "$NS" logs "job/$name" | grep '^RESULT ' | sed 's/^RESULT //' | tee -a "$OUT/resultats.jsonl"
 }
