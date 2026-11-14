@@ -34,7 +34,7 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
 - [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md)
-- [Protocoles d'expérimentation](docs/experimentations/)
+- [Protocoles d'expérimentation](docs/experimentations/) · [Synthèse adoption / rejet](docs/experimentations/synthese.md)
 
 ## Démarrage local (infrastructure)
 ```bash
@@ -70,6 +70,7 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Infra locale (docker-compose), squelette CI
 - [x] Phase 1 complète : cycle DevSecOps, politiques de tests et de sécurité, compétences, formation
 - [x] Industrialisation : pipelines CI/CD, gouvernance GitHub, kanban, audit (v0.3.0)
-- [ ] Expérimentations E1 à E4
-- [ ] Implémentation des 3 services
+- [x] Expérimentations E1 à E4 et synthèse (v0.4.0)
+- [x] Squelettes des 3 services (CI : tests, couverture, scans, images)
+- [ ] User stories US1 à US5
 - [ ] Scans, test de charge, plan de remédiation
