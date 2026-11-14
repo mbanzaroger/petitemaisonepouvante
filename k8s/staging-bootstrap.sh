@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Socle de l'environnement de staging (appelé par .github/workflows/cd.yml, utilisable en local sur kind) :
+# Envoy Gateway + cert-manager (TLS), Keycloak (OIDC), opérateur RabbitMQ, secrets générés à l'exécution.
+# Exporte BASE_URL, KEYCLOAK_URL, PME_CA_CERT et les mots de passe de test (masqués dans les logs GitHub).
+set -euo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")"
+EG_VERSION="${EG_VERSION:-v1.10.0}"
+CM_VERSION="${CM_VERSION:-v1.21.3}"
+RABBIT_OPERATOR_VERSION="${RABBIT_OPERATOR_VERSION:-v2.23.3}"
+WORK="${WORK:-${RUNNER_TEMP:-/tmp}/pme-staging}"; mkdir -p "$WORK"
+ENV_FILE="${GITHUB_ENV:-$WORK/staging.env}"
+log() { printf '\n\033[1;34m▸ %s\033[0m\n' "$*"; }
+secret_value() { local v; v=$(openssl rand -hex 16); [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$v"; echo "$v"; }
+
+log "Envoy Gateway $EG_VERSION puis cert-manager $CM_VERSION (après les CRD Gateway API)"
+helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version "$EG_VERSION" \
+  -n envoy-gateway-system --create-namespace --wait --timeout 5m
+helm repo add jetstack https://charts.jetstack.io --force-update >/dev/null
+helm upgrade --install cert-manager jetstack/cert-manager --version "$CM_VERSION" \
+  -n cert-manager --create-namespace --set crds.enabled=true \
+  --set config.apiVersion=controller.config.cert-manager.io/v1alpha1 \
+  --set config.kind=ControllerConfiguration --set config.enableGatewayAPI=true --wait --timeout 5m
+
+log "Opérateur RabbitMQ $RABBIT_OPERATOR_VERSION"
+kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/download/$RABBIT_OPERATOR_VERSION/cluster-operator.yml"
+kubectl -n rabbitmq-system rollout status deploy/rabbitmq-cluster-operator --timeout=180s
+
+log "PKI, Gateway HTTPS *.pme.local"
+kubectl apply -f platform/pki.yaml
+kubectl -n cert-manager wait certificate/pme-ca --for=condition=Ready --timeout=120s
+kubectl apply -f platform/gateway.yaml
+
+log "Secrets générés à l'exécution (jamais versionnés)"
+for db in catalog orders stock; do
+  kubectl -n pme create secret generic "$db-db" --from-literal=username="$db" \
+    --from-literal=password="$(secret_value)" --dry-run=client -o yaml | kubectl apply -f -
+done
+admin_pw=$(secret_value)
+kubectl -n pme create secret generic keycloak-admin --from-literal=password="$admin_pw" --dry-run=client -o yaml | kubectl apply -f -
+alice_pw=$(secret_value); bob_pw=$(secret_value); carol_pw=$(secret_value); adminpme_pw=$(secret_value)
+sed -e "s/__ALICE_PASSWORD__/$alice_pw/" -e "s/__BOB_PASSWORD__/$bob_pw/" -e "s/__CAROL_PASSWORD__/$carol_pw/" \
+    -e "s/__ADMIN_PME_PASSWORD__/$adminpme_pw/" platform/realm-pme.json > "$WORK/realm-pme.json"
+kubectl -n pme create configmap keycloak-realm --from-file=realm-pme.json="$WORK/realm-pme.json" \
+  --dry-run=client -o yaml | kubectl apply -f -
+rm -f "$WORK/realm-pme.json"
+
+log "Keycloak"
+kubectl apply -f platform/keycloak.yaml
+kubectl -n pme rollout status deploy/keycloak --timeout=420s
+kubectl -n pme wait gateway/pme-gateway --for=condition=Programmed --timeout=180s
+kubectl -n pme wait certificate/pme-wildcard-tls --for=condition=Ready --timeout=180s
+
+log "Accès local au Gateway (port 8443) et paramètres des tests"
+svc=$(kubectl -n envoy-gateway-system get svc \
+  -l gateway.envoyproxy.io/owning-gateway-name=pme-gateway,gateway.envoyproxy.io/owning-gateway-namespace=pme \
+  -o jsonpath='{.items[0].metadata.name}')
+nohup kubectl -n envoy-gateway-system port-forward "svc/$svc" 8443:443 > "$WORK/port-forward.log" 2>&1 &
+kubectl -n cert-manager get secret pme-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > "$WORK/ca.crt"
+{
+  echo "BASE_URL=https://api.pme.local:8443"
+  echo "KEYCLOAK_URL=https://keycloak.pme.local:8443"
+  echo "PME_CA_CERT=$WORK/ca.crt"
+  echo "PME_ALICE_PASSWORD=$alice_pw"
+  echo "PME_BOB_PASSWORD=$bob_pw"
+  echo "PME_CAROL_PASSWORD=$carol_pw"
+  echo "PME_ADMIN_PASSWORD=$adminpme_pw"
+} >> "$ENV_FILE"
+log "Socle prêt (variables dans $ENV_FILE)"

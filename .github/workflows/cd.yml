@@ -69,20 +69,24 @@ jobs:
             svc=$(basename "$dir")
             [ -f "$dir/Dockerfile" ] || continue
             image="$prefix/$svc:sha-$SHA"
-            docker pull "$image"
+            # Image publiée par la CI (push sur develop/main) ; à défaut (lancement manuel sur une branche), construite ici.
+            docker pull "$image" || docker build -t "$image" "$dir"
             kind load docker-image "$image" --name pme-staging
             (cd "$OVERLAY" && kustomize edit set image "$svc=$image")
           done
 
-      - name: Socle du cluster (ingress, cert-manager, Keycloak, RabbitMQ)
+      - name: Socle du cluster (Envoy Gateway, cert-manager, Keycloak, opérateur RabbitMQ)
         if: steps.ready.outputs.ok == 'true' && hashFiles('k8s/staging-bootstrap.sh') != ''
         run: bash k8s/staging-bootstrap.sh
 
       - name: Déployer (Kustomize)
         if: steps.ready.outputs.ok == 'true'
         run: |
-          kubectl apply -k "$OVERLAY"
-          kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=300s
+          # Le webhook de l'opérateur RabbitMQ peut répondre avec quelques secondes de retard.
+          for _ in $(seq 1 12); do kubectl apply -k "$OVERLAY" && break; sleep 5; done
+          kubectl -n pme wait rabbitmqcluster/pme-rabbit --for=condition=AllReplicasReady --timeout=600s
+          kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=600s
+          echo "127.0.0.1 api.pme.local keycloak.pme.local" | sudo tee -a /etc/hosts
 
       - name: Smoke tests
         if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('scripts/smoke-test.sh') != ''
@@ -95,7 +99,7 @@ jobs:
           rules=()
           if [ -f .zap/rules.tsv ]; then cp .zap/rules.tsv zap/; rules=(-c rules.tsv); fi
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t "$BASE_URL" "${rules[@]}" -r zap-report.html -J zap-report.json -I
+            zap-baseline.py -t "$BASE_URL/api/v1/products" "${rules[@]}" -r zap-report.html -J zap-report.json -I
 
       - name: Rapport ZAP
         if: always() && steps.ready.outputs.ok == 'true'
@@ -109,4 +113,6 @@ jobs:
         if: failure() && steps.ready.outputs.ok == 'true'
         run: |
           kubectl get all --all-namespaces
+          kubectl get gateway,httproute,securitypolicy,backendtrafficpolicy,networkpolicy -A
           kubectl get events --all-namespaces --sort-by=.lastTimestamp | tail -50
+          for d in catalog-service order-service stock-service; do kubectl -n pme logs "deploy/$d" --tail=60 || true; done
