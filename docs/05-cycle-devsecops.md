@@ -37,5 +37,5 @@ flowchart LR
 | Modification d'une commande ou du prix en transit | Tampering | TLS, prix relu côté serveur depuis `catalog-service` (jamais accepté du client) |
 | Contestation d'une commande | Repudiation | Journalisation horodatée avec `correlationId` et identifiant utilisateur |
 | Fuite de commandes d'un autre client | Information disclosure | Contrôle d'accès par propriétaire (403/404), tests d'acceptation dédiés |
-| Saturation du service | Denial of service | Rate limiting à l'Ingress, limites de ressources, HPA |
+| Saturation du service | Denial of service | Rate limiting au Gateway (Envoy Gateway), limites de ressources, HPA |
 | Élévation de privilèges | Elevation of privilege | Rôles minimaux, vérification côté service (pas seulement côté interface) |

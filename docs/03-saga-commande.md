@@ -4,7 +4,7 @@
 sequenceDiagram
     autonumber
     actor C as Client
-    participant ING as Ingress
+    participant ING as Gateway (Envoy)
     participant O as order-service
     participant CAT as catalog-service
     participant MQ as RabbitMQ
@@ -36,4 +36,4 @@ sequenceDiagram
 ## Garanties visées
 - **Idempotence** : un même `eventId` rejoué ne décrémente le stock qu'une seule fois.
 - **Fiabilité** : files durables, accusés de réception manuels, temporisation des nouvelles tentatives, dead-letter queue.
-- **Traçabilité** : `correlationId` propagé de l'Ingress aux événements et aux logs.
+- **Traçabilité** : `correlationId` propagé du Gateway aux événements et aux logs.

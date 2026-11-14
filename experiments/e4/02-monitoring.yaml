@@ -1,0 +1,38 @@
+# Collecte des métriques Actuator et règles d'alerte RED (taux d'erreurs, latence p95).
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: catalog-service
+  namespace: pme
+spec:
+  selector:
+    matchLabels: { app: catalog-service }
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 10s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: pme-red
+  namespace: pme
+spec:
+  groups:
+    - name: pme-red
+      rules:
+        - alert: TauxErreurEleve
+          expr: |
+            sum by (service) (rate(http_server_requests_seconds_count{status=~"5.."}[1m]))
+              / sum by (service) (rate(http_server_requests_seconds_count[1m])) > 0.05
+          for: 30s
+          labels: { severity: critical }
+          annotations:
+            summary: "Plus de 5 % de réponses 5xx sur {{ $labels.service }}"
+        - alert: LatenceP95Elevee
+          expr: |
+            histogram_quantile(0.95, sum by (le, service) (rate(http_server_requests_seconds_bucket[1m]))) > 0.3
+          for: 1m
+          labels: { severity: warning }
+          annotations:
+            summary: "Latence p95 > 300 ms sur {{ $labels.service }} (indicateur 3)"
