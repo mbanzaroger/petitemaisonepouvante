@@ -21,7 +21,8 @@ kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/download
 kubectl -n rabbitmq-system rollout status deploy/rabbitmq-cluster-operator --timeout=180s
 
 log "2. Cluster RabbitMQ à 3 nœuds"
-kubectl apply -f 01-rabbitmq.yaml
+# Le webhook de l'opérateur répond quelques secondes après son déploiement (certificat injecté par cert-manager).
+for _ in $(seq 1 24); do kubectl apply -f 01-rabbitmq.yaml && break; sleep 5; done
 kubectl -n "$NS" wait rabbitmqcluster/pme-rabbit --for=condition=AllReplicasReady --timeout=600s
 echo "cluster_pret_s=$(elapsed)" >> "$OUT/durees.txt"
 kubectl -n "$NS" exec pme-rabbit-server-0 -c rabbitmq -- rabbitmq-diagnostics -q server_version | tee "$OUT/version.txt"
