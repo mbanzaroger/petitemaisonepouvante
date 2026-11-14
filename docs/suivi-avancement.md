@@ -23,7 +23,7 @@ gantt
     axisFormat %d/%m
     section J2 Expérimentations
     Squelettes des services et E2 qualité      :a1, 2026-11-16, 7d
-    E1 Keycloak, Ingress, cert-manager         :a2, after a1, 7d
+    E1 Gateway, cert-manager, Keycloak        :a2, after a1, 7d
     E3 RabbitMQ sur Kubernetes                 :a3, after a2, 7d
     E4 Observabilité et synthèse               :a4, after a3, 7d
     v0.4.0                                     :milestone, m1, 2026-12-13, 0d
@@ -48,7 +48,7 @@ gantt
 | Semaine | Dates | Objectif | Issues |
 |---|---|---|---|
 | S1 | 16/11 → 22/11 | Squelettes des 3 services, pipeline qualité mesuré (E2) | #24, #19 |
-| S2 | 23/11 → 29/11 | E1 : Keycloak, Ingress NGINX, cert-manager sur kind | #18 |
+| S2 | 23/11 → 29/11 | E1 : Gateway API (Envoy Gateway), cert-manager, Keycloak sur kind | #18 |
 | S3 | 30/11 → 06/12 | E3 : RabbitMQ, saga, DLQ, idempotence | #20 |
 | S4 | 07/12 → 13/12 | E4 : observabilité ; synthèse adoption/rejet ; **v0.4.0** | #21, #22 |
 | S5 | 14/12 → 20/12 | US1 catalogue, US2 authentification, SonarQube Cloud | #25, #26, #32 |

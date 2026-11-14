@@ -47,7 +47,7 @@ Le workflow `cd.yml` s'active automatiquement dès que ces fichiers existent ; t
 |---|---|---|
 | `k8s/overlays/staging/kustomization.yaml` | Oui | Déploiement staging ; images nommées `catalog-service`, `order-service`, `stock-service` |
 | `k8s/kind-config.yaml` | Non | Configuration du cluster kind (ports, nœuds) |
-| `k8s/staging-bootstrap.sh` | Non | Installe le socle (ingress-nginx, cert-manager, Keycloak, RabbitMQ, PostgreSQL) et écrit `BASE_URL=…` dans `$GITHUB_ENV` |
+| `k8s/staging-bootstrap.sh` | Non | Installe le socle (Envoy Gateway, cert-manager, Keycloak, RabbitMQ, PostgreSQL) et écrit `BASE_URL=…` dans `$GITHUB_ENV` |
 | `scripts/smoke-test.sh` | Non | Reçoit `BASE_URL`, échoue si un appel clé échoue |
 | `.zap/rules.tsv` | Non | Qualification des alertes ZAP (IGNORE / WARN / FAIL) |
 | `k8s/overlays/production/kustomization.yaml` + secret `KUBE_CONFIG_PROD` | Non | Déploiement réel en production depuis `release.yml` |
