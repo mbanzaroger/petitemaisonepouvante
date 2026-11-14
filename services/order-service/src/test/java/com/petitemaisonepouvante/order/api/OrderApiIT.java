@@ -75,8 +75,9 @@ class OrderApiIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // File de test non auto-supprimée : plusieurs lectures successives sont possibles.
-        published = new Queue("test." + UUID.randomUUID(), false, false, false);
+        // File de test durable, non exclusive et non auto-supprimée (RabbitMQ 4 refuse les files transitoires
+        // non exclusives) : plusieurs lectures successives sont possibles ; supprimée après le test.
+        published = new Queue("test." + UUID.randomUUID(), true, false, false);
         admin.declareQueue(published);
         admin.declareBinding(BindingBuilder.bind(published).to(new TopicExchange(Messaging.EXCHANGE))
                 .with(Messaging.ORDER_PLACED));

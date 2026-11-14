@@ -68,8 +68,9 @@ class ReservationIT extends AbstractIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        // File de test non auto-supprimée : plusieurs lectures successives sont possibles.
-        results = new Queue("test." + UUID.randomUUID(), false, false, false);
+        // File de test durable, non exclusive et non auto-supprimée (RabbitMQ 4 refuse les files transitoires
+        // non exclusives) : plusieurs lectures successives sont possibles ; supprimée après le test.
+        results = new Queue("test." + UUID.randomUUID(), true, false, false);
         admin.declareQueue(results);
         admin.declareBinding(BindingBuilder.bind(results).to(new TopicExchange(Messaging.EXCHANGE)).with("stock.*"));
     }
