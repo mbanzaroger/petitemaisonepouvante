@@ -1,0 +1,47 @@
+# Expérimentation E4 (#21) — observabilité : Prometheus, Alertmanager, Grafana, logs corrélés.
+# Protocole : docs/experimentations/E4.md ; script reproductible en local : experiments/e4/run.sh
+name: "Expérimentation E4 — observabilité"
+
+on:
+  push:
+    branches: ["exp/E4-*"]
+    paths: ["experiments/e4/**", "services/catalog-service/**", ".github/workflows/exp-e4-observabilite.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e4:
+    name: E4 sur kind
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cluster kind
+        uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+        with:
+          cluster_name: e4
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Image catalog-service
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: services/catalog-service
+          load: true
+          tags: catalog-service:e4
+      - name: Charger l'image dans kind
+        run: kind load docker-image catalog-service:e4 --name e4
+      - name: Exécuter l'expérimentation
+        run: experiments/e4/run.sh
+      - name: Diagnostic
+        if: failure()
+        run: |
+          kubectl get pods -A
+          kubectl -n pme logs deploy/catalog-service --tail=80 || true
+      - name: Preuves
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e4-resultats
+          path: experiments/e4/resultats/
+          if-no-files-found: ignore
