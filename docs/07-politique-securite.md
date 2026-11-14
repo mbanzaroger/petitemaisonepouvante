@@ -34,6 +34,7 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 ## 5. Chaîne d'approvisionnement logicielle
 - Dépendances figées ; mises à jour automatisées (Dependabot ou Renovate) ; SCA et scan d'image à chaque build ; SBOM généré à chaque release.
 - Images issues de sources officielles ; tag immuable par SHA de commit.
+- Image de base issue d'une **branche maintenue** (ex. distroless Debian 13 et non Debian 12, plus reconstruite) ; le scan Trivy de l'image est bloquant (constat de l'expérimentation E2).
 - Actions GitHub tierces épinglées par SHA de commit, jamais par tag de version (leçon de la compromission de `trivy-action`, mars 2026).
 
 ## 6. Gestion des vulnérabilités
