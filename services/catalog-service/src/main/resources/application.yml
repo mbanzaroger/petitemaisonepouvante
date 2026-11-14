@@ -1,5 +1,5 @@
 # Configuration de catalog-service. Les valeurs par défaut correspondent à infra/docker-compose.yml (développement local) ;
-# en staging et en production, DB_URL, DB_USER et DB_PASSWORD sont injectés par des Secrets Kubernetes.
+# en staging et en production, les secrets (base, broker) sont injectés par des Secrets Kubernetes.
 server:
   port: ${SERVER_PORT:8081}
   shutdown: graceful
@@ -11,12 +11,19 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5433/catalog}
     username: ${DB_USER:catalog}
     password: ${DB_PASSWORD:catalog_dev}
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
   flyway:
     enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Clés lues sur l'adresse interne de Keycloak ; émetteur et audience vérifiés dans chaque jeton (US2).
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/pme/protocol/openid-connect/certs}
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/pme}
+          audiences: pme-api
 
 management:
   endpoints:
