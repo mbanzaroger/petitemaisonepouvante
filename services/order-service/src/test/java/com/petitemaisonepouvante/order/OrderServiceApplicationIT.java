@@ -1,78 +1,56 @@
 package com.petitemaisonepouvante.order;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.test.web.servlet.MockMvc;
 
 import com.petitemaisonepouvante.order.web.CorrelationIdFilter;
 
-/**
- * Test d'intégration : le service démarre sur un PostgreSQL réel (Testcontainers),
- * applique ses migrations Flyway et expose santé, métriques et corrélation.
- */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class OrderServiceApplicationIT {
+/** Le service démarre sur PostgreSQL et RabbitMQ réels, applique ses migrations et expose santé, métriques et corrélation. */
+class OrderServiceApplicationIT extends AbstractIntegrationTest {
 
-    @Container
-    @ServiceConnection
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
-
-    private final HttpClient http = HttpClient.newHttpClient();
-
-    @LocalServerPort
-    private int port;
+    @Autowired
+    private MockMvc mvc;
 
     @Autowired
     private JdbcTemplate jdbc;
 
     @Test
     void lesMigrationsFlywayCreentLeSchema() {
-        Integer tables = jdbc.queryForObject(
-                "select count(*) from information_schema.tables where table_schema = 'public' and table_name in ('customer_order', 'order_line')",
-                Integer.class);
-        assertThat(tables).isEqualTo(2);
+        Integer tables = jdbc.queryForObject("""
+                select count(*) from information_schema.tables
+                where table_schema = 'public' and table_name in ('customer_order', 'order_line', 'outbox_event')
+                """, Integer.class);
+        assertThat(tables).isEqualTo(3);
     }
 
     @Test
-    void laSanteEstUp() throws Exception {
-        HttpResponse<String> response = get("/actuator/health", null);
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("\"status\":\"UP\"");
+    void laSanteEstUpAvecBaseEtBroker() throws Exception {
+        mvc.perform(get("/actuator/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", Matchers.is("UP")));
     }
 
     @Test
     void lesMetriquesPrometheusSontExposees() throws Exception {
-        HttpResponse<String> response = get("/actuator/prometheus", null);
-        assertThat(response.statusCode()).isEqualTo(200);
-        assertThat(response.body()).contains("jvm_memory_used_bytes");
+        mvc.perform(get("/actuator/prometheus"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("jvm_memory_used_bytes")));
     }
 
     @Test
     void lIdentifiantDeCorrelationEstRenvoye() throws Exception {
-        HttpResponse<String> response = get("/actuator/health", "it-order-1");
-        assertThat(response.headers().firstValue(CorrelationIdFilter.HEADER)).hasValue("it-order-1");
-    }
-
-    private HttpResponse<String> get(String path, String correlationId) throws IOException, InterruptedException {
-        HttpRequest.Builder request = HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET();
-        if (correlationId != null) {
-            request.header(CorrelationIdFilter.HEADER, correlationId);
-        }
-        return http.send(request.build(), HttpResponse.BodyHandlers.ofString());
+        mvc.perform(get("/actuator/health").header(CorrelationIdFilter.HEADER, "it-order-1"))
+                .andExpect(header().string(CorrelationIdFilter.HEADER, "it-order-1"));
     }
 }

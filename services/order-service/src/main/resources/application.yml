@@ -1,5 +1,5 @@
 # Configuration de order-service. Les valeurs par défaut correspondent à infra/docker-compose.yml (développement local) ;
-# en staging et en production, DB_URL, DB_USER et DB_PASSWORD sont injectés par des Secrets Kubernetes.
+# en staging et en production, les secrets (base, broker) sont injectés par des Secrets Kubernetes.
 server:
   port: ${SERVER_PORT:8082}
   shutdown: graceful
@@ -11,12 +11,35 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5434/orders}
     username: ${DB_USER:orders}
     password: ${DB_PASSWORD:orders_dev}
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: validate
   flyway:
     enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Clés lues sur l'adresse interne de Keycloak ; émetteur et audience vérifiés dans chaque jeton (US2).
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/pme/protocol/openid-connect/certs}
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/pme}
+          audiences: pme-api
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER:guest}
+    password: ${RABBIT_PASSWORD:guest}
+    # Accusé du broker attendu avant de marquer un événement publié (boîte d'envoi transactionnelle)
+    publisher-confirm-type: simple
+    listener:
+      simple:
+        prefetch: 10
+        # Après 3 tentatives, le message part en file de rebut au lieu de boucler
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 500ms
 
 management:
   endpoints:
@@ -32,6 +55,12 @@ management:
       # Histogrammes de latence : nécessaires au calcul du p95 (indicateur 3) dans Prometheus
       percentiles-histogram:
         http.server.requests: true
+pme:
+  catalog:
+    url: ${CATALOG_URL:http://localhost:8081}
+    timeout: 3s
+  outbox:
+    delay-ms: 500
 
 logging:
   pattern:
