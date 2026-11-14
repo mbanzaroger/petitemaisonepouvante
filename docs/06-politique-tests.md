@@ -10,7 +10,7 @@ Garantir l'adéquation fonctionnelle, la fiabilité et la non-régression, et re
 | Intégration | Service + PostgreSQL + RabbitMQ réels, migrations Flyway, sécurité JWT | Testcontainers, Spring Boot Test | À chaque PR | ~20 % | 100 % verts |
 | Contrat / API | Conformité des endpoints au contrat OpenAPI, codes d'erreur | RestAssured | À chaque PR | inclus | 100 % verts |
 | Acceptation | Scénarios Gherkin du backlog (US1 à US4) | Cucumber | À chaque PR | ~10 % | 100 % verts |
-| Sécurité | Tests négatifs 401/403, SAST, SCA, scan d'image, DAST | Sonar, Dependency-Check, Trivy, ZAP | Pipeline | – | 0 vulnérabilité critique/haute |
+| Sécurité | Tests négatifs 401/403, SAST, SCA, scan d'image, DAST | CodeQL, SonarQube Cloud, Trivy, ZAP | Pipeline | – | 0 vulnérabilité critique/haute |
 | Charge | Tenue en charge du catalogue et de la commande | JMeter (ou Siege) | Avant release, démonstration en soutenance | – | p95 < 300 ms, erreurs < 1 % |
 | Accessibilité | Contrôles automatisés RGAA sur les pages clés | axe | À chaque PR front | – | 0 erreur bloquante |
 
@@ -40,4 +40,4 @@ Garantir l'adéquation fonctionnelle, la fiabilité et la non-régression, et re
 | Couverture ≥ 80 % | Rapport JaCoCo importé dans SonarQube |
 | Dette ≤ 5 %, duplication ≤ 3 % | SonarQube |
 | p95 < 300 ms, erreurs < 1 % | Rapport JMeter + métriques Prometheus |
-| Vulnérabilités critiques/hautes = 0 | Rapports Trivy, Dependency-Check, ZAP |
+| Vulnérabilités critiques/hautes = 0 | Rapports Trivy, CodeQL, ZAP |

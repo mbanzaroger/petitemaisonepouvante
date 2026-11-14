@@ -1,5 +1,9 @@
 # petitemaisonepouvante.com — Plateforme e-commerce (architecture microservices)
 
+[![CI](https://github.com/mbanzaroger/petitemaisonepouvante/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mbanzaroger/petitemaisonepouvante/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/mbanzaroger/petitemaisonepouvante/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/mbanzaroger/petitemaisonepouvante/actions/workflows/codeql.yml)
+[![Release](https://img.shields.io/github/v/release/mbanzaroger/petitemaisonepouvante?include_prereleases)](https://github.com/mbanzaroger/petitemaisonepouvante/releases)
+
 > Projet individuel — Bloc CESI « Superviser et assurer le développement des applications logicielles ».
 > Cas fictif : *La Petite Maison de l'Épouvante*. Rôle : Lead Developer.
 
@@ -25,7 +29,10 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Politique de sécurité](docs/07-politique-securite.md)
 - [Cartographie des compétences](docs/08-competences.md)
 - [Action de formation](docs/09-formation.md)
+- [Gouvernance du dépôt et de la livraison](docs/10-gouvernance-depot.md)
+- [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
+- [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
 - [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md)
 - [Protocoles d'expérimentation](docs/experimentations/)
 
@@ -45,14 +52,24 @@ services/        microservices (catalog, order, stock)
 infra/           docker-compose + monitoring (dev local)
 k8s/             manifestes Kubernetes (Kustomize)
 load-tests/      scénarios JMeter
-.github/         pipeline CI/CD (GitHub Actions)
+scripts/         configuration GitHub reproductible (issues, jalons, kanban, releases)
+.github/         workflows CI/CD, modèles d'issues et de PR, Dependabot
 ```
+
+## Pipeline CI/CD
+| Workflow | Déclencheur | Rôle |
+|---|---|---|
+| `ci.yml` | PR, push sur `develop` / `main` | Secrets, SCA, IaC, build et tests, couverture, Quality Gate, image, scan, SBOM, GHCR |
+| `codeql.yml` | PR, push, hebdomadaire | SAST Java et analyse des workflows |
+| `cd.yml` | CI verte sur `develop` / `main` | Déploiement sur cluster kind éphémère, smoke tests, DAST ZAP |
+| `release.yml` | Release publiée | Images versionnées, SBOM, production sous approbation |
 
 ## Avancement
 - [x] Cadrage technique validé (v1.0)
 - [x] Schémas : architecture, CI/CD, saga
 - [x] Infra locale (docker-compose), squelette CI
 - [x] Phase 1 complète : cycle DevSecOps, politiques de tests et de sécurité, compétences, formation
-- [ ] Expérimentations E1 à E3
+- [x] Industrialisation : pipelines CI/CD, gouvernance GitHub, kanban, audit (v0.3.0)
+- [ ] Expérimentations E1 à E4
 - [ ] Implémentation des 3 services
 - [ ] Scans, test de charge, plan de remédiation

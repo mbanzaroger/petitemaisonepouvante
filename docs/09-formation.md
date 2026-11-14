@@ -11,7 +11,7 @@ La cartographie (`08-competences.md`) montre que les développeurs juniors n'ont
 À l'issue de la formation, chaque participant sait :
 1. écrire un test d'intégration avec Testcontainers pour un service Spring Boot et PostgreSQL ;
 2. protéger un endpoint par JWT/rôles et écrire les tests négatifs 401/403 ;
-3. lire un rapport Trivy ou Dependency-Check, qualifier une vulnérabilité et la corriger ;
+3. lire un rapport Trivy ou CodeQL, qualifier une vulnérabilité et la corriger ;
 4. expliquer et faire passer/échouer un Quality Gate SonarQube ;
 5. relire une pull request avec une grille de revue sécurité.
 
@@ -21,7 +21,7 @@ La cartographie (`08-competences.md`) montre que les développeurs juniors n'ont
 | **J1 matin** | Modèle DevSecOps, STRIDE sur le flux de commande, OWASP Top 10 appliqué au projet | Exposé court + atelier de modélisation |
 | **J1 après-midi** | Tests : pyramide, Testcontainers, idempotence de la saga, cas limites | Atelier pratique sur `stock-service` |
 | **J2 matin** | Sécurité applicative : OIDC/Keycloak, validation du JWT, rôles, tests 401/403 | Atelier pratique sur `order-service` |
-| **J2 après-midi** | Pipeline : Sonar (Quality Gate), Dependency-Check, Trivy, gitleaks ; lecture et traitement d'un rapport | Atelier + mise en situation |
+| **J2 après-midi** | Pipeline : SonarQube Cloud (Quality Gate), CodeQL, Trivy, gitleaks ; lecture et traitement d'un rapport | Atelier + mise en situation |
 
 Durée : **2 jours**, puis **4 semaines de pair programming** (2 h par semaine avec le Lead) sur des tâches réelles du backlog, pour ancrer les acquis.
 
