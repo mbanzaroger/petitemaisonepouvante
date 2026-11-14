@@ -7,7 +7,7 @@ Le suivi détaillé est tenu dans GitHub : [jalons](https://github.com/mbanzarog
 | J0 — Cadrage | v0.1.0 | 10/10/2026 | ✅ Terminé | #1 à #3 |
 | J1 — Processus qualité (phase 1) | v0.2.0 | 10/10/2026 | ✅ Terminé | #4 à #8, #10, #12 |
 | Industrialisation CI/CD et audit | v0.3.0 | 14/11/2026 | ✅ Terminé | #13, #15, #16, #17 |
-| J2 — Expérimentations (E1 à E4) + squelettes | v0.4.0 | 13/12/2026 | 🔲 À faire | #18 à #24 |
+| J2 — Expérimentations (E1 à E4) + squelettes | v0.4.0 | 13/12/2026 | ✅ Terminé le 14/11/2026 | #18 à #24 |
 | J3 — Développement du POC | v0.5.0 | 24/01/2027 | 🔲 À faire | #25 à #35 |
 | J4 — Sécurité, charge, remédiation | v0.6.0 | 07/02/2027 | 🔲 À faire | #36 à #39 |
 | J5 — Soutenance | v1.0.0 | 25/02/2027 | 🔲 À faire | #40, #41 |

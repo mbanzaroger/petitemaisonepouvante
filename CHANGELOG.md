@@ -3,7 +3,12 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
 ## [Non publié]
+
+## [0.4.0] - 2026-11-14
 ### Ajouté
+- Squelettes Spring Boot 4.1 / Java 21 des 3 services : Actuator, Flyway, tests unitaires et Testcontainers, JaCoCo ≥ 80 %, images distroless non root (#24).
+- Expérimentations reproductibles sur kind, avec workflow et protocole : E1 Gateway API + cert-manager + Keycloak (#18), E2 pipeline qualité (#19), E3 RabbitMQ (#20), E4 observabilité (#21) ; synthèse adoption/rejet (#22).
+- ADR-003 : Gateway API (Envoy Gateway) à la place d'Ingress NGINX, retiré en mars 2026.
 - Rétroplanning jusqu'à la soutenance du 26/02/2027 et échéances des jalons J2 à J5 (#23).
 - Détection du jeton limité des Codespaces dans les scripts de configuration.
 
