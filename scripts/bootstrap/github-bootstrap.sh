@@ -7,6 +7,13 @@
 #   REPO=propriétaire/dépôt pour cibler un autre dépôt (défaut : remote origin).
 set -euo pipefail
 
+# Dans un Codespace, GITHUB_TOKEN est un jeton limité au dépôt (ni administration, ni projets).
+if [ "${CODESPACES:-}" = "true" ] && [ -n "${GITHUB_TOKEN:-}${GH_TOKEN:-}" ]; then
+  echo "Codespace détecté : le jeton GITHUB_TOKEN n'a pas les droits nécessaires. Lance d'abord :" >&2
+  echo "  unset GITHUB_TOKEN GH_TOKEN && gh auth login -h github.com -p https -w -s repo,workflow,project" >&2
+  exit 1
+fi
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="${REPO:-$(git -C "$HERE" remote get-url origin | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')}"
 TMP="$(mktemp -d)"
