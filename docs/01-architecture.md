@@ -7,7 +7,7 @@ flowchart TB
     subgraph K8S["Cluster Kubernetes (hébergement UE)"]
         direction TB
         subgraph EDGE["Zone exposée"]
-            ING["Ingress NGINX<br/>cert-manager + rate limiting"]
+            ING["Gateway API — Envoy Gateway<br/>TLS cert-manager, JWT + rôles, rate limiting"]
             FE["web-frontend (SPA)"]
         end
         subgraph APP["Zone applicative (NetworkPolicies deny-all par défaut)"]
@@ -30,7 +30,7 @@ flowchart TB
 
     ING --> FE
     ING -->|"REST /api/v1/products"| CAT
-    ING -->|"REST /api/v1/orders + JWT"| ORD
+    ING -->|"REST /api/v1/orders + JWT vérifié"| ORD
     ORD -->|"REST : prix et disponibilité"| CAT
     ORD -->|"événement OrderPlaced"| MQ
     MQ -->|"OrderPlaced"| STK
@@ -57,7 +57,7 @@ flowchart TB
 ## Mesures de sécurité par zone
 | Zone | Mesures |
 |---|---|
-| Edge | TLS (cert-manager), rate limiting, en-têtes de sécurité (HSTS, CSP) |
+| Edge | Gateway API (Envoy Gateway, ADR-003) : TLS 1.2+ (cert-manager), validation du JWT et du rôle dès l'entrée (`SecurityPolicy`), rate limiting (`BackendTrafficPolicy`), en-têtes de sécurité (HSTS, CSP) |
 | Applicative | JWT validé par service, rôles `CUSTOMER` / `MODERATOR` / `ADMIN`, images non root, limites CPU/mémoire |
 | Données | Non exposée hors cluster, NetworkPolicies, secrets Kubernetes, migrations Flyway |
 | Chaîne de livraison | gitleaks, SAST, SCA, scan d'images, DAST (voir `02-cicd-pipeline.md`) |

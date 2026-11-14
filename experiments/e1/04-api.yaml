@@ -1,0 +1,93 @@
+# API de démonstration protégée au niveau du Gateway : JWT Keycloak obligatoire et rôle CUSTOMER exigé.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: pme
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:1.0.0
+          args: ["-text=pong", "-listen=:5678"]
+          ports:
+            - containerPort: 5678
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: pme
+spec:
+  selector:
+    app: echo
+  ports:
+    - port: 5678
+      targetPort: 5678
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api
+  namespace: pme
+spec:
+  parentRefs:
+    - name: pme-gateway
+  hostnames: ["api.pme.local"]
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: echo
+          port: 5678
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: api-jwt
+  namespace: pme
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: api
+  jwt:
+    providers:
+      - name: keycloak
+        issuer: https://keycloak.pme.local:8443/realms/pme
+        audiences: ["pme-api"]
+        remoteJWKS:
+          uri: http://keycloak.pme.svc.cluster.local:8080/realms/pme/protocol/openid-connect/certs
+          backendRefs:
+            - group: ""
+              kind: Service
+              name: keycloak
+              port: 8080
+          cacheDuration: 60s
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: role-customer
+        action: Allow
+        principal:
+          jwt:
+            provider: keycloak
+            claims:
+              - name: realm_access.roles
+                valueType: StringArray
+                values: ["CUSTOMER"]

@@ -1,0 +1,21 @@
+# Cluster RabbitMQ de 3 nœuds géré par l'opérateur officiel (files quorum répliquées sur la majorité des nœuds).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pme-mq
+---
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: pme-rabbit
+  namespace: pme-mq
+spec:
+  replicas: 3
+  persistence:
+    storage: 1Gi
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

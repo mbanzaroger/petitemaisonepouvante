@@ -11,25 +11,23 @@ updates:
       actions:
         patterns: ["*"]
 
-  # Maven et Docker : à réactiver avec les squelettes des services (#24), quand services/*/pom.xml
-  # et services/*/Dockerfile existent (sinon Dependabot échoue faute de manifeste).
-  # - package-ecosystem: maven
-  #   directories: ["/services/*"]
-  #   target-branch: develop
-  #   schedule: { interval: weekly, day: monday }
-  #   labels: ["type:dependencies"]
-  #   commit-message: { prefix: build }
-  #   open-pull-requests-limit: 5
-  #   groups:
-  #     spring:
-  #       patterns: ["org.springframework*"]
+  - package-ecosystem: maven
+    directories: ["/services/*"]
+    target-branch: develop
+    schedule: { interval: weekly, day: monday }
+    labels: ["type:dependencies"]
+    commit-message: { prefix: build }
+    open-pull-requests-limit: 5
+    groups:
+      spring:
+        patterns: ["org.springframework*"]
 
-  # - package-ecosystem: docker
-  #   directories: ["/services/*"]
-  #   target-branch: develop
-  #   schedule: { interval: weekly, day: monday }
-  #   labels: ["type:dependencies"]
-  #   commit-message: { prefix: build }
+  - package-ecosystem: docker
+    directories: ["/services/*"]
+    target-branch: develop
+    schedule: { interval: weekly, day: monday }
+    labels: ["type:dependencies"]
+    commit-message: { prefix: build }
 
   - package-ecosystem: docker-compose
     directory: /infra
