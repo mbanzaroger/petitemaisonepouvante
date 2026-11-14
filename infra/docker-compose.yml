@@ -31,7 +31,7 @@ services:
     ports: ["8080:8080"]
     depends_on: [postgres-keycloak]
   prometheus:
-    image: prom/prometheus:v2.53.0
+    image: prom/prometheus:v3.16.0
     volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
     ports: ["9090:9090"]
   grafana:
