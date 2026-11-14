@@ -29,7 +29,7 @@ flowchart LR
     CI -->|"vert sur develop / main"| CD
     subgraph CD["cd.yml — staging éphémère"]
         direction TB
-        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : ingress, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D6["DAST<br/>OWASP ZAP"]
+        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D6["DAST<br/>OWASP ZAP"]
     end
     REL["Release publiée<br/>tag vX.Y.Z sur main"] --> R
     subgraph R["release.yml"]

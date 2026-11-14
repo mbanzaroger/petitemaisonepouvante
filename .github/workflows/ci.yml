@@ -93,6 +93,8 @@ jobs:
         with:
           scan-type: config
           scan-ref: .
+          # Les manifestes des bacs à sable (experiments/) ne sont pas livrés ; seuls k8s/ et les Dockerfile le sont.
+          skip-dirs: experiments
           severity: CRITICAL,HIGH,MEDIUM
           format: sarif
           output: trivy-config.sarif
