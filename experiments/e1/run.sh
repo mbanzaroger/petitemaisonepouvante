@@ -48,7 +48,7 @@ kubectl apply -f 04-api.yaml
 
 log "7. Attente des composants"
 kubectl -n pme wait deploy/echo --for=condition=Available --timeout=180s
-kubectl -n pme wait deploy/keycloak --for=condition=Available --timeout=420s
+kubectl -n pme rollout status deploy/keycloak --timeout=420s
 echo "keycloak_pret_s=$(elapsed)" >> "$OUT/durees.txt"
 kubectl -n pme wait gateway/pme-gateway --for=condition=Programmed --timeout=180s
 kubectl -n pme wait certificate/pme-wildcard-tls --for=condition=Ready --timeout=180s

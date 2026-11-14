@@ -1,0 +1,4 @@
+# Faux positifs gitleaks qualifiés (politique de sécurité §6 : exception justifiée et datée).
+# 14/11/2026 — règle generic-api-key déclenchée par « keycloak » + « --for=condition=Available » dans une
+# commande kubectl (aucun secret). Ligne réécrite depuis ; l'empreinte reste dans l'historique de la PR #45.
+9d5694dbe4c891945f556066c78e11aab35460b6:experiments/e1/run.sh:generic-api-key:51
