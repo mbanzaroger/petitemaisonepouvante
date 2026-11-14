@@ -19,7 +19,7 @@ services:
     image: rabbitmq:3.13-management
     ports: ["5672:5672", "15672:15672"]
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0
+    image: quay.io/keycloak/keycloak:26.8
     command: start-dev
     environment:
       KC_DB: postgres
