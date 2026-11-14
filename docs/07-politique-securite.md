@@ -28,7 +28,8 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 ## 4. Réseau et conteneurs
 - NetworkPolicies en **deny-all** par défaut, flux explicitement autorisés ; bases de données non exposées hors cluster.
 - Images minimales, utilisateur non root, système de fichiers en lecture seule quand possible, limites CPU/mémoire, pas de conteneur privilégié.
-- Rate limiting à l'Ingress contre le brute force et le déni de service.
+- Point d'entrée unique par Gateway API (Envoy Gateway, ADR-003) : TLS, contrôle du JWT et du rôle avant les services, rate limiting contre le brute force et le déni de service.
+- Aucun composant en fin de vie : un composant retiré par son projet (ex. Ingress NGINX, mars 2026) est remplacé, même sans vulnérabilité connue.
 
 ## 5. Chaîne d'approvisionnement logicielle
 - Dépendances figées ; mises à jour automatisées (Dependabot ou Renovate) ; SCA et scan d'image à chaque build ; SBOM généré à chaque release.
