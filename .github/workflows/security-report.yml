@@ -1,0 +1,98 @@
+# Rapport de sécurité consolidé (analyse de la V1, issue #38, puis veille hebdomadaire) :
+# vulnérabilités de toutes sévérités des images publiées, y compris sans correctif (que la CI, réglée sur
+# « critique/haute corrigeables », ne bloque pas), et configuration Kubernetes réellement déployée (rendu Kustomize).
+# Non bloquant : il alimente le registre des vulnérabilités (docs/13-analyse-securite.md).
+name: Rapport de sécurité
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+  pull_request:
+    paths: [.github/workflows/security-report.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    name: Images (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [catalog-service, order-service, stock-service]
+    steps:
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trivy image (toutes sévérités, avec et sans correctif)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.service }}:develop
+          format: json
+          output: trivy-${{ matrix.service }}.json
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+      - name: Synthèse
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          {
+            echo "### $SERVICE"
+            echo
+            echo "| Sévérité | Total | Avec correctif | Sans correctif |"
+            echo "|---|---|---|---|"
+            jq -r '[.Results[]?.Vulnerabilities[]?] | group_by(.Severity)[]
+              | "| \(.[0].Severity) | \(length) | \([.[] | select(.FixedVersion != null and .FixedVersion != "")] | length) | \([.[] | select(.FixedVersion == null or .FixedVersion == "")] | length) |"' \
+              "trivy-$SERVICE.json"
+            echo
+            echo "| CVE | Sévérité | Paquet | Version | Corrigée en | Titre |"
+            echo "|---|---|---|---|---|---|"
+            jq -r '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL" or .Severity == "HIGH" or .Severity == "MEDIUM")]
+              | unique_by(.VulnerabilityID + .PkgName)[]
+              | "| \(.VulnerabilityID) | \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion // "—") | \((.Title // "") | gsub("\\|"; "/") | .[0:90]) |"' \
+              "trivy-$SERVICE.json"
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-${{ matrix.service }}
+          path: trivy-${{ matrix.service }}.json
+          retention-days: 90
+
+  iac:
+    name: Configuration Kubernetes déployée (Trivy config)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rendu Kustomize du staging
+        run: mkdir -p rendu && kustomize build k8s/overlays/staging > rendu/staging.yaml
+      - name: Trivy config
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: rendu
+          format: json
+          output: trivy-iac.json
+          exit-code: "0"
+      - name: Synthèse
+        run: |
+          {
+            echo "### Configuration Kubernetes (rendu du staging)"
+            echo
+            echo "| Règle | Sévérité | Objet | Titre |"
+            echo "|---|---|---|---|"
+            jq -r '.Results[]? | .Misconfigurations[]? | select(.Status == "FAIL")
+              | "| \(.ID) | \(.Severity) | \(.CauseMetadata.Resource // "-") | \(.Title) |"' trivy-iac.json | sort -u
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: trivy-iac
+          path: trivy-iac.json
+          retention-days: 90
