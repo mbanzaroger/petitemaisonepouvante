@@ -25,6 +25,7 @@ flowchart TB
         subgraph OBS["Observabilité"]
             PROM["Prometheus"]
             GRAF["Grafana"]
+            ALERT["Alertmanager"]
         end
     end
 
@@ -46,7 +47,9 @@ flowchart TB
     CAT -.->|"/actuator/prometheus"| PROM
     ORD -.-> PROM
     STK -.-> PROM
+    MQ -.->|"profondeur des files, DLQ"| PROM
     PROM --> GRAF
+    PROM -->|"6 règles d'alerte"| ALERT
 ```
 
 ## Principes
