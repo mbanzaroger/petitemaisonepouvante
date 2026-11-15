@@ -1,0 +1,23 @@
+meta {
+  name: 07 Commande sans jeton (401)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{ordersUrl}}/api/v1/orders
+  body: json
+  auth: none
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-07
+}
+
+body:json {
+  {"lines":[{"productId":"{{mug}}","quantity":1}]}
+}
+
+assert {
+  res.status: eq 401
+}

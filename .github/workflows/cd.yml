@@ -1,27 +1,23 @@
-# Déploiement continu en staging : cluster Kubernetes éphémère (kind) créé dans le runner,
-# à chaque CI verte sur develop ou main. Contrat de fichiers : docs/10-gouvernance-depot.md §4.
+# Déploiement continu en staging : cluster Kubernetes éphémère (kind) créé dans le runner.
+# Workflow réutilisable appelé par ci.yml (job « CD staging ») après une CI verte sur un push vers develop
+# ou main ; lançable aussi à la main sur une branche. Contrat de fichiers : docs/10-gouvernance-depot.md §4.
+# Pas de déclencheur workflow_run : le code déployé est toujours celui du commit de l'événement (github.sha),
+# jamais un SHA fourni par un autre workflow (CodeQL : empoisonnement de cache, code non fiable).
 name: CD staging
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [develop, main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: cd-staging
-  cancel-in-progress: false
-
 jobs:
   staging:
     name: Déploiement staging (kind) + smoke + DAST
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    concurrency:
+      group: cd-staging
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -29,12 +25,10 @@ jobs:
       contents: read
       packages: read
     env:
-      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      SHA: ${{ github.sha }}
       OVERLAY: k8s/overlays/staging
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.SHA }}
 
       - name: Manifestes de staging présents ?
         id: ready
@@ -69,24 +63,48 @@ jobs:
             svc=$(basename "$dir")
             [ -f "$dir/Dockerfile" ] || continue
             image="$prefix/$svc:sha-$SHA"
-            docker pull "$image"
+            # Image publiée par la CI (push sur develop/main) ; à défaut (lancement manuel sur une branche), construite ici.
+            docker pull "$image" || docker build -t "$image" "$dir"
             kind load docker-image "$image" --name pme-staging
             (cd "$OVERLAY" && kustomize edit set image "$svc=$image")
           done
 
-      - name: Socle du cluster (ingress, cert-manager, Keycloak, RabbitMQ)
+      - name: Socle du cluster (Envoy Gateway, cert-manager, Keycloak, opérateur RabbitMQ)
         if: steps.ready.outputs.ok == 'true' && hashFiles('k8s/staging-bootstrap.sh') != ''
         run: bash k8s/staging-bootstrap.sh
 
       - name: Déployer (Kustomize)
         if: steps.ready.outputs.ok == 'true'
         run: |
-          kubectl apply -k "$OVERLAY"
-          kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=300s
+          # Le webhook de l'opérateur RabbitMQ peut répondre avec quelques secondes de retard.
+          for _ in $(seq 1 12); do kubectl apply -k "$OVERLAY" && break; sleep 5; done
+          kubectl -n pme wait rabbitmqcluster/pme-rabbit --for=condition=AllReplicasReady --timeout=600s
+          kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=600s
+          echo "127.0.0.1 api.pme.local keycloak.pme.local" | sudo tee -a /etc/hosts
 
       - name: Smoke tests
         if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('scripts/smoke-test.sh') != ''
         run: bash scripts/smoke-test.sh "$BASE_URL"
+
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('acceptance-tests/pom.xml') != ''
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Tests d'acceptation Cucumber (US1 à US4)
+        if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('acceptance-tests/pom.xml') != ''
+        working-directory: acceptance-tests
+        run: ./mvnw -B -ntp test
+
+      - name: Rapport Cucumber
+        if: always() && steps.ready.outputs.ok == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cucumber-staging-${{ env.SHA }}
+          path: acceptance-tests/target/cucumber-reports/
+          if-no-files-found: ignore
 
       - name: DAST — OWASP ZAP baseline
         if: steps.ready.outputs.ok == 'true' && env.BASE_URL != ''
@@ -95,7 +113,7 @@ jobs:
           rules=()
           if [ -f .zap/rules.tsv ]; then cp .zap/rules.tsv zap/; rules=(-c rules.tsv); fi
           docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t "$BASE_URL" "${rules[@]}" -r zap-report.html -J zap-report.json -I
+            zap-baseline.py -t "$BASE_URL/api/v1/products" "${rules[@]}" -r zap-report.html -J zap-report.json -I
 
       - name: Rapport ZAP
         if: always() && steps.ready.outputs.ok == 'true'
@@ -109,4 +127,6 @@ jobs:
         if: failure() && steps.ready.outputs.ok == 'true'
         run: |
           kubectl get all --all-namespaces
+          kubectl get gateway,httproute,securitypolicy,backendtrafficpolicy,networkpolicy -A
           kubectl get events --all-namespaces --sort-by=.lastTimestamp | tail -50
+          for d in catalog-service order-service stock-service; do kubectl -n pme logs "deploy/$d" --tail=60 || true; done

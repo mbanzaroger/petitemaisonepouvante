@@ -1,0 +1,74 @@
+# stock-service : utilisateur non root, système de fichiers en lecture seule, capacités retirées, ressources bornées.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stock-service
+  labels: { app: stock-service, app.kubernetes.io/part-of: petitemaisonepouvante }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app: stock-service }
+  template:
+    metadata:
+      labels: { app: stock-service, app.kubernetes.io/part-of: petitemaisonepouvante }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: stock-service
+          image: stock-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8083 }
+          env:
+            - { name: DB_URL, value: "jdbc:postgresql://stock-db:5432/stock" }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: stock-db, key: username } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: stock-db, key: password } }
+            - name: JWT_JWK_SET_URI
+              valueFrom: { configMapKeyRef: { name: pme-config, key: jwt-jwk-set-uri } }
+            - name: JWT_ISSUER_URI
+              valueFrom: { configMapKeyRef: { name: pme-config, key: jwt-issuer-uri } }
+            - { name: RABBIT_HOST, value: pme-rabbit }
+            - name: RABBIT_USER
+              valueFrom: { secretKeyRef: { name: pme-rabbit-default-user, key: username } }
+            - name: RABBIT_PASSWORD
+              valueFrom: { secretKeyRef: { name: pme-rabbit-default-user, key: password } }
+            - { name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError" }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stock-service
+  labels: { app: stock-service }
+spec:
+  selector: { app: stock-service }
+  ports:
+    - { name: http, port: 8083, targetPort: http }

@@ -1,0 +1,155 @@
+# Zonage réseau (docs/01-architecture.md) : tout est interdit par défaut, chaque flux est autorisé explicitement.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+      ports: [{ protocol: UDP, port: 53 }, { protocol: TCP, port: 53 }]
+---
+# Zone exposée → zone applicative : seul le proxy Envoy du Gateway atteint les services et Keycloak.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-apps
+spec:
+  podSelector:
+    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, keycloak] }]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: envoy-gateway-system } }
+---
+# Collecte des métriques par Prometheus (namespace monitoring), si la supervision est installée.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+spec:
+  podSelector:
+    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service] }]
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: monitoring } }
+---
+# order-service → catalog-service (relecture des prix).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-to-catalog
+spec:
+  podSelector: { matchLabels: { app: catalog-service } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: order-service } } }]
+      ports: [{ port: 8081 }]
+---
+# Sorties autorisées des services : leur base, le broker, Keycloak (clés JWKS), le catalogue pour order-service.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: catalog-egress
+spec:
+  podSelector: { matchLabels: { app: catalog-service } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: catalog-db } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
+      ports: [{ port: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: order-egress
+spec:
+  podSelector: { matchLabels: { app: order-service } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: orders-db } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app.kubernetes.io/name: pme-rabbit } } }]
+      ports: [{ port: 5672 }]
+    - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
+      ports: [{ port: 8080 }]
+    - to: [{ podSelector: { matchLabels: { app: catalog-service } } }]
+      ports: [{ port: 8081 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: stock-egress
+spec:
+  podSelector: { matchLabels: { app: stock-service } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: stock-db } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app.kubernetes.io/name: pme-rabbit } } }]
+      ports: [{ port: 5672 }]
+    - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
+      ports: [{ port: 8080 }]
+---
+# Zone données : chaque base n'accepte que son service ; le broker n'accepte que order et stock (et son opérateur).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: databases-ingress
+spec:
+  podSelector:
+    matchExpressions: [{ key: app, operator: In, values: [catalog-db, orders-db, stock-db] }]
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: catalog-service } } }]
+      ports: [{ port: 5432 }]
+    - from: [{ podSelector: { matchLabels: { app: order-service } } }]
+      ports: [{ port: 5432 }]
+    - from: [{ podSelector: { matchLabels: { app: stock-service } } }]
+      ports: [{ port: 5432 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rabbitmq-ingress
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: pme-rabbit } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions: [{ key: app, operator: In, values: [order-service, stock-service] }]
+      ports: [{ port: 5672 }]
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: rabbitmq-system } }
+    - from:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: pme-rabbit } }
+  egress:
+    - to:
+        - podSelector: { matchLabels: { app.kubernetes.io/name: pme-rabbit } }
+---
+# Le proxy Envoy lit les clés JWKS de Keycloak ; Keycloak n'a besoin que du DNS en sortie.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: keycloak-ingress-internal
+spec:
+  podSelector: { matchLabels: { app: keycloak } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service] }]
+      ports: [{ port: 8080 }]
