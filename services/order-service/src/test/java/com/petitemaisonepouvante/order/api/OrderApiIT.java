@@ -46,6 +46,7 @@ import com.petitemaisonepouvante.order.catalog.CatalogProduct;
 import com.petitemaisonepouvante.order.catalog.CatalogUnavailableException;
 import com.petitemaisonepouvante.order.messaging.Messaging;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -67,6 +68,9 @@ class OrderApiIT extends AbstractIntegrationTest {
 
     @Autowired
     private JsonMapper json;
+
+    @Autowired
+    private MeterRegistry meters;
 
     @MockitoBean
     private CatalogClient catalog;
@@ -196,6 +200,29 @@ class OrderApiIT extends AbstractIntegrationTest {
         String orderId = placeOrder(subject, body(MUG, 3));
         publishStockResult("StockReserved", orderId, Messaging.STOCK_RESERVED);
         awaitStatus(subject, orderId, "CONFIRMED");
+    }
+
+    @Test
+    @DisplayName("US5 — Les métriques métier suivent la saga : commande créée, confirmée et durée mesurée")
+    void metriquesDeSaga() throws Exception {
+        double placedBefore = orderCount("placed");
+        double confirmedBefore = orderCount("confirmed");
+        long durationsBefore = meters.get("pme.saga.duration").timer().count();
+
+        String subject = UUID.randomUUID().toString();
+        String orderId = placeOrder(subject, body(MUG, 1));
+        assertThat(orderCount("placed")).as("comptée après validation de la transaction").isEqualTo(placedBefore + 1);
+
+        publishStockResult("StockReserved", orderId, Messaging.STOCK_RESERVED);
+        awaitStatus(subject, orderId, "CONFIRMED");
+        await().atMost(Duration.ofSeconds(5)).untilAsserted(() -> {
+            assertThat(orderCount("confirmed")).isGreaterThanOrEqualTo(confirmedBefore + 1);
+            assertThat(meters.get("pme.saga.duration").timer().count()).isGreaterThan(durationsBefore);
+        });
+    }
+
+    private double orderCount(String event) {
+        return meters.get("pme.orders").tag("event", event).counter().count();
     }
 
     @Test

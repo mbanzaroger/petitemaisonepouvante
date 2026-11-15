@@ -1,5 +1,7 @@
 package com.petitemaisonepouvante.order.domain;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +25,7 @@ import com.petitemaisonepouvante.order.messaging.Events;
 import com.petitemaisonepouvante.order.messaging.Messaging;
 import com.petitemaisonepouvante.order.messaging.OutboxEvent;
 import com.petitemaisonepouvante.order.messaging.OutboxRepository;
+import com.petitemaisonepouvante.order.observability.SagaMetrics;
 import com.petitemaisonepouvante.order.web.CorrelationIdFilter;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -37,12 +40,15 @@ public class OrderService {
     private final OutboxRepository outbox;
     private final CatalogClient catalog;
     private final JsonMapper json;
+    private final SagaMetrics metrics;
 
-    public OrderService(OrderRepository orders, OutboxRepository outbox, CatalogClient catalog, JsonMapper json) {
+    public OrderService(OrderRepository orders, OutboxRepository outbox, CatalogClient catalog, JsonMapper json,
+            SagaMetrics metrics) {
         this.orders = orders;
         this.outbox = outbox;
         this.catalog = catalog;
         this.json = json;
+        this.metrics = metrics;
     }
 
     /**
@@ -86,6 +92,7 @@ public class OrderService {
                 lines.stream().map(l -> new Events.OrderPlaced.Line(l.productId(), l.quantity())).toList());
         outbox.add(new OutboxEvent(eventId, Messaging.ORDER_PLACED, json.writeValueAsString(event), correlationId));
         LOG.info("Commande {} créée ({} ligne(s), total {} centimes)", order.id(), lines.size(), order.totalCents());
+        metrics.orderPlaced();
         return orders.findById(order.id()).orElseThrow();
     }
 
@@ -108,10 +115,13 @@ public class OrderService {
     @Transactional
     public boolean applyStockResult(Events.StockResult result) {
         OrderStatus target = result.reserved() ? OrderStatus.CONFIRMED : OrderStatus.CANCELLED;
-        boolean changed = orders.completeIfPending(result.orderId(), target);
-        if (changed && !result.reserved()) {
-            LOG.info("Commande {} annulée : {}", result.orderId(), result.reason());
-        }
-        return changed;
+        Optional<Instant> createdAt = orders.completeIfPending(result.orderId(), target);
+        createdAt.ifPresent(created -> {
+            metrics.orderCompleted(target, Duration.between(created, Instant.now()));
+            if (!result.reserved()) {
+                LOG.info("Commande {} annulée : {}", result.orderId(), result.reason());
+            }
+        });
+        return createdAt.isPresent();
     }
 }

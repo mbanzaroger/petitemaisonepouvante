@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.AmqpRejectAndDontRequeueException;
 
+import com.petitemaisonepouvante.stock.observability.ReservationMetrics;
 import com.petitemaisonepouvante.stock.reservation.ReservationService;
 
 import tools.jackson.databind.json.JsonMapper;
@@ -18,7 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 class EventsTest {
 
     private final OrderPlacedListener listener =
-            new OrderPlacedListener(mock(ReservationService.class), JsonMapper.builder().build());
+            new OrderPlacedListener(mock(ReservationService.class), mock(ReservationMetrics.class),
+                    JsonMapper.builder().build());
 
     private static Events.OrderPlaced event(List<Events.OrderPlaced.Line> lines) {
         return new Events.OrderPlaced(UUID.randomUUID(), "OrderPlaced", UUID.randomUUID(), "c-1", lines);
