@@ -2,7 +2,8 @@
 # chaque route porte sa politique : catalogue public, commandes réservées à CUSTOMER, stock réservé à ADMIN.
 # Les services valident aussi le jeton eux-mêmes (défense en profondeur).
 # En-têtes de réponse ajoutés au Gateway (DAST ZAP, J4) : HSTS, puisque le TLS se termine ici et que les services
-# ne voient que du HTTP, et Cross-Origin-Resource-Policy limité au site.
+# ne voient que du HTTP, et Cross-Origin-Resource-Policy « same-origin » (une API n'a pas à être chargée par une
+# autre origine sans CORS). La route « api-introuvable » applique les mêmes en-têtes aux chemins inconnus.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -19,7 +20,7 @@ spec:
           responseHeaderModifier:
             set:
               - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
-              - { name: Cross-Origin-Resource-Policy, value: same-site }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: catalog-service, port: 8081 }]
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -36,7 +37,7 @@ spec:
           responseHeaderModifier:
             set:
               - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
-              - { name: Cross-Origin-Resource-Policy, value: same-site }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: order-service, port: 8082 }]
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -53,8 +54,41 @@ spec:
           responseHeaderModifier:
             set:
               - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
-              - { name: Cross-Origin-Resource-Policy, value: same-site }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: stock-service, port: 8083 }]
+---
+# Chemins inconnus : réponse 404 problem+json produite par le Gateway, avec les en-têtes de sécurité
+# (sans cette route, Envoy répond lui-même sans HSTS). Les routes plus précises restent prioritaires.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: api-introuvable
+spec:
+  directResponse:
+    contentType: application/problem+json
+    statusCode: 404
+    body:
+      type: Inline
+      inline: '{"type":"about:blank","title":"Not Found","status":404}'
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: api-introuvable
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: / } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+              - { name: X-Content-Type-Options, value: nosniff }
+        - type: ExtensionRef
+          extensionRef: { group: gateway.envoyproxy.io, kind: HTTPRouteFilter, name: api-introuvable }
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
