@@ -34,6 +34,7 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Observabilité et supervision (US5)](docs/12-observabilite.md)
 - [Analyse de sécurité de la V1 et registre des vulnérabilités](docs/13-analyse-securite.md)
 - [Test de charge (indicateur 3)](docs/14-test-de-charge.md)
+- [Soutenance : trame, notes et questions](docs/soutenance/support.md)
 - [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
