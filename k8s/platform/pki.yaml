@@ -1,0 +1,33 @@
+# PKI du bac à sable : autorité racine auto-signée, puis émetteur « pme-ca » qui signe les certificats du Gateway.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pme-ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  commonName: PME Root CA (bac a sable)
+  secretName: pme-ca
+  duration: 87600h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: pme-ca
+spec:
+  ca:
+    secretName: pme-ca

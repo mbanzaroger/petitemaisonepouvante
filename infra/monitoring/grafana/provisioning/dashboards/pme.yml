@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: pme
+    folder: PME
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

@@ -52,12 +52,25 @@ jobs:
           fi
 
   lint:
-    name: Lint des workflows (actionlint)
+    name: Lint (workflows, supervision)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: actionlint
         run: docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.12 -color
+      - name: Prometheus — configuration, règles d'alerte et tests unitaires des alertes (promtool)
+        run: |
+          promtool() {
+            docker run --rm -v "$PWD/infra/monitoring:/etc/prometheus:ro" -w /etc/prometheus \
+              --entrypoint promtool prom/prometheus:v3.16.0 "$@"
+          }
+          promtool check config prometheus.yml
+          promtool test rules alerts.test.yml
+      - name: Tableaux de bord Grafana (JSON valide, uid unique)
+        run: |
+          for f in infra/monitoring/grafana/dashboards/*.json; do jq -e '.uid and .title' "$f" > /dev/null; done
+          dup=$(jq -r .uid infra/monitoring/grafana/dashboards/*.json | sort | uniq -d)
+          if [ -n "$dup" ]; then echo "::error::uid de tableau de bord en double : $dup"; exit 1; fi
 
   secrets:
     name: Secrets (gitleaks)
@@ -95,6 +108,7 @@ jobs:
           scan-ref: .
           # Les manifestes des bacs à sable (experiments/) ne sont pas livrés ; seuls k8s/ et les Dockerfile le sont.
           skip-dirs: experiments
+          trivyignores: .trivyignore.yaml
           severity: CRITICAL,HIGH,MEDIUM
           format: sarif
           output: trivy-config.sarif
@@ -273,3 +287,16 @@ jobs:
               *) echo "::error::Au moins un job a échoué ($r)"; exit 1 ;;
             esac
           done
+
+  cd-staging:
+    name: CD staging
+    needs: ci-ok
+    # !cancelled() : sans fonction de statut, GitHub saute ce job dès qu'un ancêtre est « skipped »
+    # (titre de PR, revue des dépendances : jobs propres aux PR), même si « Résultat CI » est vert.
+    if: >-
+      !cancelled() && needs.ci-ok.result == 'success' && github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/cd.yml

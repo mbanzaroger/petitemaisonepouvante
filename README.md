@@ -33,17 +33,20 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
-- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md)
+- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-002 : front-end hors POC](docs/adr/ADR-002-front-end.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md)
+- [Contrat OpenAPI](docs/api/openapi.yaml) · [Collection Bruno](docs/api/bruno/) · [Script de démonstration](docs/demo/script-demo.md)
 - [Protocoles d'expérimentation](docs/experimentations/) · [Synthèse adoption / rejet](docs/experimentations/synthese.md)
 
-## Démarrage local (infrastructure)
+## Démarrage local
 ```bash
-cd infra
-docker compose up -d
-# Keycloak : http://localhost:8080  (admin / admin — dev uniquement)
-# RabbitMQ : http://localhost:15672 (guest / guest — dev uniquement)
-# Prometheus : http://localhost:9090 | Grafana : http://localhost:3000
+infra/init-env.sh                              # génère infra/.env (mots de passe aléatoires, jamais versionné)
+cd infra && docker compose --profile app up -d --build
+# API : catalogue http://localhost:8081, commandes :8082, stock :8083 (ports liés à 127.0.0.1)
+# Keycloak http://localhost:8080 (admin / KEYCLOAK_ADMIN_PASSWORD) · RabbitMQ http://localhost:15672
+# Prometheus http://localhost:9090 · Grafana http://localhost:3000 (tableau de bord « PME — RED des microservices »)
 ```
+Comptes de test du royaume `pme` (mots de passe dans `infra/.env`) : `alice` et `carol` (CUSTOMER), `bob` (sans rôle), `admin-pme` (ADMIN).
+Sans `--profile app`, seules les dépendances démarrent (pour lancer les services depuis l'IDE).
 
 ## Organisation du dépôt
 ```
@@ -61,7 +64,7 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 |---|---|---|
 | `ci.yml` | PR, push sur `develop` / `main` | Secrets, SCA, IaC, build et tests, couverture, Quality Gate, image, scan, SBOM, GHCR |
 | `codeql.yml` | PR, push, hebdomadaire | SAST Java et analyse des workflows |
-| `cd.yml` | CI verte sur `develop` / `main` | Déploiement sur cluster kind éphémère, smoke tests, DAST ZAP |
+| `cd.yml` | Appelé par `ci.yml` après une CI verte sur un push vers `develop` / `main` (ou lancement manuel) | Déploiement sur cluster kind éphémère, smoke tests, acceptation Cucumber, vérification de la supervision, DAST ZAP |
 | `release.yml` | Release publiée | Images versionnées, SBOM, production sous approbation |
 
 ## Avancement
@@ -72,5 +75,5 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Industrialisation : pipelines CI/CD, gouvernance GitHub, kanban, audit (v0.3.0)
 - [x] Expérimentations E1 à E4 et synthèse (v0.4.0)
 - [x] Squelettes des 3 services (CI : tests, couverture, scans, images)
-- [ ] User stories US1 à US5
+- [x] User stories US1 à US5 : staging Kubernetes, tests d'acceptation, supervision (v0.5.0)
 - [ ] Scans, test de charge, plan de remédiation

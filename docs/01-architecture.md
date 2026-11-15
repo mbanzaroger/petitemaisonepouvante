@@ -8,7 +8,7 @@ flowchart TB
         direction TB
         subgraph EDGE["Zone exposée"]
             ING["Gateway API — Envoy Gateway<br/>TLS cert-manager, JWT + rôles, rate limiting"]
-            FE["web-frontend (SPA)"]
+            FE["web-frontend (SPA)<br/>hors POC — ADR-002"]
         end
         subgraph APP["Zone applicative (NetworkPolicies deny-all par défaut)"]
             CAT["catalog-service<br/>Spring Boot"]
@@ -25,6 +25,7 @@ flowchart TB
         subgraph OBS["Observabilité"]
             PROM["Prometheus"]
             GRAF["Grafana"]
+            ALERT["Alertmanager"]
         end
     end
 
@@ -46,7 +47,9 @@ flowchart TB
     CAT -.->|"/actuator/prometheus"| PROM
     ORD -.-> PROM
     STK -.-> PROM
+    MQ -.->|"profondeur des files, DLQ"| PROM
     PROM --> GRAF
+    PROM -->|"6 règles d'alerte"| ALERT
 ```
 
 ## Principes

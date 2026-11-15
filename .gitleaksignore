@@ -2,3 +2,8 @@
 # 14/11/2026 — règle generic-api-key déclenchée par « keycloak » + « --for=condition=Available » dans une
 # commande kubectl (aucun secret). Ligne réécrite depuis ; l'empreinte reste dans l'historique de la PR #45.
 9d5694dbe4c891945f556066c78e11aab35460b6:experiments/e1/run.sh:generic-api-key:51
+# 15/11/2026 — règle generic-api-key déclenchée par l'URL JDBC de la base Keycloak (variable KC_DB_URL)
+# du premier docker-compose : l'URL ne contient aucun secret. Révélé par un scan complet de l'historique (lancement manuel
+# de la CI). Les identifiants de développement par défaut de ce fichier ont été remplacés par des secrets générés
+# (infra/init-env.sh, PR #61) ; le constat est suivi au registre des vulnérabilités (docs/07, jalon 4).
+6346d1276d4d173f2ebcdd36a8af5bf9740f9e16:infra/docker-compose.yml:generic-api-key:26

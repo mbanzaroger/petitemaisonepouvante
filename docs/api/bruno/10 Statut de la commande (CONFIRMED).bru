@@ -1,0 +1,23 @@
+meta {
+  name: 10 Statut de la commande (CONFIRMED)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{ordersUrl}}/api/v1/orders/{{orderId}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-10
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+assert {
+  res.body.status: eq CONFIRMED
+}

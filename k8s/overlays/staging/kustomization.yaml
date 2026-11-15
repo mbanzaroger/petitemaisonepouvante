@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: pme
+resources:
+  - ../../base
+  - databases.yaml
+  - rabbitmq.yaml
+configMapGenerator:
+  - name: pme-config
+    literals:
+      - jwt-jwk-set-uri=http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+      - jwt-issuer-uri=https://keycloak.pme.local:8443/realms/pme
+patches:
+  - target: { kind: SecurityPolicy }
+    patch: |-
+      - op: replace
+        path: /spec/jwt/providers/0/issuer
+        value: https://keycloak.pme.local:8443/realms/pme

@@ -1,0 +1,220 @@
+openapi: 3.1.0
+info:
+  title: petitemaisonepouvante.com — API du POC
+  version: 0.5.0
+  description: |
+    API exposée par le Gateway (Envoy Gateway, Gateway API) devant les microservices catalog-service,
+    order-service et stock-service. Le TLS est terminé au Gateway ; les jetons Keycloak (OIDC) sont vérifiés
+    au Gateway **et** par chaque service (signature JWKS, émetteur, audience `pme-api`, rôles du royaume).
+    Les erreurs suivent le format `application/problem+json` (RFC 9457).
+servers:
+  - url: https://api.pme.local:8443
+    description: Staging (cluster kind éphémère du CD)
+  - url: http://localhost:8081
+    description: catalog-service en local (docker compose)
+tags:
+  - name: Catalogue
+    description: US1 — lecture publique
+  - name: Commandes
+    description: US2 à US4 — rôle CUSTOMER
+  - name: Stock
+    description: Supervision — rôle ADMIN
+security: []
+paths:
+  /api/v1/products:
+    get:
+      tags: [Catalogue]
+      summary: Lister les produits en vente (paginé) ou lire un lot par identifiants
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: category, in: query, schema: { type: string, maxLength: 100 } }
+        - name: ids
+          in: query
+          description: Lecture groupée (1 à 50 identifiants séparés par des virgules), utilisée par order-service.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Page de produits, ou tableau de produits si `ids` est fourni
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/ProductPage"
+                  - { type: array, items: { $ref: "#/components/schemas/Product" } }
+        "400": { $ref: "#/components/responses/Problem" }
+  /api/v1/products/{id}:
+    get:
+      tags: [Catalogue]
+      summary: Consulter la fiche d'un produit
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Produit, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/categories:
+    get:
+      tags: [Catalogue]
+      summary: Lister les catégories
+      responses:
+        "200": { description: Noms de catégories, content: { application/json: { schema: { type: array, items: { type: string } } } } }
+  /api/v1/orders:
+    post:
+      tags: [Commandes]
+      summary: Passer une commande (début de la saga)
+      description: |
+        Le prix est relu dans le catalogue côté serveur ; tout prix envoyé par le client est ignoré.
+        La commande est créée en `PENDING` puis confirmée (`CONFIRMED`) ou annulée (`CANCELLED`) de façon asynchrone.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/CorrelationId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PlaceOrderRequest" }
+      responses:
+        "202":
+          description: Commande acceptée
+          headers:
+            Location: { schema: { type: string }, description: URL de la commande }
+          content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { description: Jeton absent ou invalide }
+        "403": { description: Rôle CUSTOMER manquant }
+        "422": { $ref: "#/components/responses/Problem" }
+        "429": { description: Limitation de débit du Gateway }
+        "503": { $ref: "#/components/responses/Problem" }
+    get:
+      tags: [Commandes]
+      summary: Historique des commandes du client authentifié (US4)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        "200": { description: Page de commandes, content: { application/json: { schema: { $ref: "#/components/schemas/OrderPage" } } } }
+        "401": { description: Jeton absent ou invalide }
+        "403": { description: Rôle CUSTOMER manquant }
+  /api/v1/orders/{id}:
+    get:
+      tags: [Commandes]
+      summary: Consulter une de ses commandes
+      description: La commande d'un autre client répond 404, comme une commande inexistante.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Commande, content: { application/json: { schema: { $ref: "#/components/schemas/Order" } } } }
+        "401": { description: Jeton absent ou invalide }
+        "403": { description: Rôle CUSTOMER manquant }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/stock/{productId}:
+    get:
+      tags: [Stock]
+      summary: Niveau de stock d'un produit
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: productId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Stock, content: { application/json: { schema: { $ref: "#/components/schemas/StockLevel" } } } }
+        "401": { description: Jeton absent ou invalide }
+        "403": { description: Rôle ADMIN manquant }
+        "404": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    keycloak:
+      type: openIdConnect
+      openIdConnectUrl: https://keycloak.pme.local:8443/realms/pme/.well-known/openid-configuration
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      description: Identifiant de corrélation (1 à 64 caractères alphanumériques ou tirets), renvoyé et propagé.
+      schema: { type: string, pattern: "^[A-Za-z0-9-]{1,64}$" }
+  responses:
+    Problem:
+      description: Erreur au format RFC 9457
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Price:
+      type: object
+      properties:
+        amountCents: { type: integer, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    Product:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sku: { type: string }
+        name: { type: string }
+        description: { type: string }
+        price: { $ref: "#/components/schemas/Price" }
+        category: { type: string }
+        available: { type: boolean }
+    ProductPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/Product" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+    PlaceOrderRequest:
+      type: object
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string, format: uuid }
+              quantity: { type: integer, minimum: 1, maximum: 10 }
+    Order:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, CONFIRMED, CANCELLED] }
+        totalCents: { type: integer }
+        currency: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        lines:
+          type: array
+          items:
+            type: object
+            properties:
+              productId: { type: string, format: uuid }
+              productName: { type: string }
+              quantity: { type: integer }
+              unitPriceCents: { type: integer }
+              subtotalCents: { type: integer }
+    OrderPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/Order" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+    StockLevel:
+      type: object
+      properties:
+        productId: { type: string, format: uuid }
+        available: { type: integer }
+        reserved: { type: integer }
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }

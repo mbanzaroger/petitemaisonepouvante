@@ -1,40 +1,155 @@
-# Infrastructure locale de DÉVELOPPEMENT uniquement (identifiants par défaut non utilisables en production).
+# Environnement local de développement et de démonstration de secours (sans Kubernetes).
+# Prérequis : infra/.env (généré par infra/init-env.sh, jamais versionné). Tous les ports sont liés à 127.0.0.1.
+#   docker compose up -d                  → bases, broker, Keycloak, Prometheus, Grafana
+#   docker compose --profile app up -d    → idem + les 3 microservices construits depuis services/
+name: pme
+
+x-postgres: &postgres
+  image: postgres:16-alpine
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+
+x-service: &service
+  restart: unless-stopped
+  profiles: ["app"]
+  security_opt: ["no-new-privileges:true"]
+  read_only: true
+  tmpfs: ["/tmp"]
+  cap_drop: ["ALL"]
+
 services:
-  postgres-catalog:
-    image: postgres:16
-    environment: { POSTGRES_DB: catalog, POSTGRES_USER: catalog, POSTGRES_PASSWORD: catalog_dev }
-    ports: ["5433:5432"]
-  postgres-orders:
-    image: postgres:16
-    environment: { POSTGRES_DB: orders, POSTGRES_USER: orders, POSTGRES_PASSWORD: orders_dev }
-    ports: ["5434:5432"]
-  postgres-stock:
-    image: postgres:16
-    environment: { POSTGRES_DB: stock, POSTGRES_USER: stock, POSTGRES_PASSWORD: stock_dev }
-    ports: ["5435:5432"]
-  postgres-keycloak:
-    image: postgres:16
-    environment: { POSTGRES_DB: keycloak, POSTGRES_USER: keycloak, POSTGRES_PASSWORD: keycloak_dev }
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    ports: ["5672:5672", "15672:15672"]
-  keycloak:
-    image: quay.io/keycloak/keycloak:25.0
-    command: start-dev
+  catalog-db:
+    <<: *postgres
     environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres-keycloak:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: keycloak_dev
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-    ports: ["8080:8080"]
-    depends_on: [postgres-keycloak]
+      POSTGRES_DB: catalog
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:?Lancez infra/init-env.sh}
+    ports: ["127.0.0.1:5433:5432"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U catalog -d catalog"], interval: 5s, retries: 20 }
+
+  orders-db:
+    <<: *postgres
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:?Lancez infra/init-env.sh}
+    ports: ["127.0.0.1:5434:5432"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U orders -d orders"], interval: 5s, retries: 20 }
+
+  stock-db:
+    <<: *postgres
+    environment:
+      POSTGRES_DB: stock
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: ${STOCK_DB_PASSWORD:?Lancez infra/init-env.sh}
+    ports: ["127.0.0.1:5435:5432"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U stock -d stock"], interval: 5s, retries: 20 }
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      RABBITMQ_DEFAULT_USER: pme
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD:?Lancez infra/init-env.sh}
+    ports: ["127.0.0.1:5672:5672", "127.0.0.1:15672:15672"]
+    healthcheck: { test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"], interval: 10s, retries: 12 }
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ["start-dev", "--import-realm"]
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Lancez infra/init-env.sh}
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      # Mots de passe des comptes de test, injectés dans le royaume importé (placeholders ${...})
+      PME_ALICE_PASSWORD: ${PME_ALICE_PASSWORD:?Lancez infra/init-env.sh}
+      PME_BOB_PASSWORD: ${PME_BOB_PASSWORD:?Lancez infra/init-env.sh}
+      PME_CAROL_PASSWORD: ${PME_CAROL_PASSWORD:?Lancez infra/init-env.sh}
+      PME_ADMIN_PME_PASSWORD: ${PME_ADMIN_PME_PASSWORD:?Lancez infra/init-env.sh}
+    volumes: ["./keycloak/realm-pme.json:/opt/keycloak/data/import/realm-pme.json:ro"]
+    ports: ["127.0.0.1:8080:8080"]
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      retries: 30
+
   prometheus:
-    image: prom/prometheus:v2.53.0
-    volumes: ["./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
-    ports: ["9090:9090"]
+    image: prom/prometheus:v3.16.0
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports: ["127.0.0.1:9090:9090"]
+
   grafana:
-    image: grafana/grafana:11.1.0
-    ports: ["3000:3000"]
+    image: grafana/grafana:13.3.1
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Lancez infra/init-env.sh}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3000:3000"]
     depends_on: [prometheus]
+
+  catalog-service:
+    <<: *service
+    build: ../services/catalog-service
+    environment:
+      DB_URL: jdbc:postgresql://catalog-db:5432/catalog
+      DB_USER: catalog
+      DB_PASSWORD: ${CATALOG_DB_PASSWORD}
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+      JWT_ISSUER_URI: http://localhost:8080/realms/pme
+    ports: ["127.0.0.1:8081:8081"]
+    depends_on:
+      catalog-db: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  order-service:
+    <<: *service
+    build: ../services/order-service
+    environment:
+      DB_URL: jdbc:postgresql://orders-db:5432/orders
+      DB_USER: orders
+      DB_PASSWORD: ${ORDERS_DB_PASSWORD}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: pme
+      RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+      CATALOG_URL: http://catalog-service:8081
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+      JWT_ISSUER_URI: http://localhost:8080/realms/pme
+    ports: ["127.0.0.1:8082:8082"]
+    depends_on:
+      orders-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+      catalog-service: { condition: service_started }
+
+  stock-service:
+    <<: *service
+    build: ../services/stock-service
+    environment:
+      DB_URL: jdbc:postgresql://stock-db:5432/stock
+      DB_USER: stock
+      DB_PASSWORD: ${STOCK_DB_PASSWORD}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: pme
+      RABBIT_PASSWORD: ${RABBIT_PASSWORD}
+      JWT_JWK_SET_URI: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+      JWT_ISSUER_URI: http://localhost:8080/realms/pme
+    ports: ["127.0.0.1:8083:8083"]
+    depends_on:
+      stock-db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
