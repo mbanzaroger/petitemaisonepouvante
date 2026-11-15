@@ -29,7 +29,7 @@ flowchart LR
     CI -->|"push vert sur develop / main<br/>(workflow réutilisable)"| CD
     subgraph CD["cd.yml — staging éphémère"]
         direction TB
-        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D7["Acceptation<br/>Cucumber"] --> D6["DAST<br/>OWASP ZAP"]
+        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D7["Acceptation<br/>Cucumber"] --> D8["Supervision US5<br/>métriques, alertes, logs"] --> D6["DAST<br/>OWASP ZAP"]
     end
     REL["Release publiée<br/>tag vX.Y.Z sur main"] --> R
     subgraph R["release.yml"]
@@ -53,13 +53,15 @@ Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call
 | Revue des dépendances | Dependency Review | `ci.yml` / `dependency-review` | Oui (haute) | 4 |
 | Tests unitaires | JUnit 5, Mockito | `ci.yml` / `build-test` | Oui | 1 — couverture ≥ 80 % (JaCoCo, contrôlée dans le job) |
 | Tests d'intégration | Testcontainers (PostgreSQL, RabbitMQ réels) | `ci.yml` / `build-test` | Oui | 1 et fiabilité |
-| Tests d'acceptation | Cucumber, RestAssured (scénarios du backlog, 401/403) | `ci.yml` / `build-test` | Oui | Adéquation fonctionnelle |
+| Tests d'acceptation | Cucumber, Gherkin en français (US1 à US4, 401/403/404), contre le staging déployé | `cd.yml` | Oui | Adéquation fonctionnelle |
+| Règles d'alerte | `promtool check config` et `test rules` (`infra/monitoring/alerts.test.yml`) | `ci.yml` / `lint` | Oui | Fiabilité de la supervision |
 | Analyse statique | SonarQube Cloud (Quality Gate attendu) | `ci.yml` / `build-test` | Oui | 2 — dette ≤ 5 %, duplication ≤ 3 % |
 | SAST | CodeQL `java-kotlin` (security-extended) | `codeql.yml` | Alertes dans Security | 4 |
 | Scan d'image | Trivy image | `ci.yml` / `image`, `release.yml` | Oui (critique, haute) | 4 |
 | SBOM et provenance | Syft (SPDX), attestations BuildKit | `ci.yml` / `image`, `release.yml` | – | Intégrité logicielle (OWASP A08) |
 | Déploiement | kind + Kustomize | `cd.yml` | Oui | Disponibilité (rollout réussi) |
 | Smoke tests | `scripts/smoke-test.sh` | `cd.yml` | Oui | Disponibilité |
+| Supervision | kube-prometheus-stack, `k8s/monitoring/verify.sh` (cibles, métriques, 6 alertes chargées, Grafana, logs corrélés) | `cd.yml` | Oui | US5 ; mesure du p95 (indicateur 3) |
 | DAST | OWASP ZAP baseline | `cd.yml` | Rapport (seuil à fixer au jalon 4) | 4 |
 | Charge | JMeter (hors pipeline, démonstration en soutenance) | `load-tests/` | – | 3 — p95 < 300 ms, erreurs < 1 % |
 | Production | Environnement `production` avec approbation | `release.yml` / `production` | Validation manuelle | – |

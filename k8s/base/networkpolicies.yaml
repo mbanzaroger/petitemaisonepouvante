@@ -134,6 +134,10 @@ spec:
       ports: [{ port: 5672 }]
     - from:
         - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: rabbitmq-system } }
+    # Collecte des métriques par file (plugin rabbitmq_prometheus) par Prometheus (US5)
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: monitoring } }
+      ports: [{ port: 15692 }]
     - from:
         - podSelector: { matchLabels: { app.kubernetes.io/name: pme-rabbit } }
   egress:
