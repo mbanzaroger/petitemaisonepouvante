@@ -63,7 +63,7 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 |---|---|---|
 | `ci.yml` | PR, push sur `develop` / `main` | Secrets, SCA, IaC, build et tests, couverture, Quality Gate, image, scan, SBOM, GHCR |
 | `codeql.yml` | PR, push, hebdomadaire | SAST Java et analyse des workflows |
-| `cd.yml` | CI verte sur `develop` / `main` | Déploiement sur cluster kind éphémère, smoke tests, DAST ZAP |
+| `cd.yml` | Appelé par `ci.yml` après une CI verte sur un push vers `develop` / `main` (ou lancement manuel) | Déploiement sur cluster kind éphémère, smoke tests, acceptation Cucumber, DAST ZAP |
 | `release.yml` | Release publiée | Images versionnées, SBOM, production sous approbation |
 
 ## Avancement

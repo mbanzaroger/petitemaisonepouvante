@@ -1,27 +1,23 @@
-# Déploiement continu en staging : cluster Kubernetes éphémère (kind) créé dans le runner,
-# à chaque CI verte sur develop ou main. Contrat de fichiers : docs/10-gouvernance-depot.md §4.
+# Déploiement continu en staging : cluster Kubernetes éphémère (kind) créé dans le runner.
+# Workflow réutilisable appelé par ci.yml (job « CD staging ») après une CI verte sur un push vers develop
+# ou main ; lançable aussi à la main sur une branche. Contrat de fichiers : docs/10-gouvernance-depot.md §4.
+# Pas de déclencheur workflow_run : le code déployé est toujours celui du commit de l'événement (github.sha),
+# jamais un SHA fourni par un autre workflow (CodeQL : empoisonnement de cache, code non fiable).
 name: CD staging
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [develop, main]
+  workflow_call:
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: cd-staging
-  cancel-in-progress: false
-
 jobs:
   staging:
     name: Déploiement staging (kind) + smoke + DAST
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    concurrency:
+      group: cd-staging
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
       name: staging
@@ -29,12 +25,10 @@ jobs:
       contents: read
       packages: read
     env:
-      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      SHA: ${{ github.sha }}
       OVERLAY: k8s/overlays/staging
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.SHA }}
 
       - name: Manifestes de staging présents ?
         id: ready
