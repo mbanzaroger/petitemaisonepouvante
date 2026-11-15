@@ -4,6 +4,22 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [0.6.0] - 2026-11-15
+### Ajouté
+- Test de charge JMeter du catalogue et de la commande, paliers nominal et de stress, HPA et metrics-server en staging, panneau Grafana des instances (#36, `docs/14-test-de-charge.md`).
+- DAST : scan actif de l'API à partir du contrat OpenAPI, authentifié ; qualification des alertes ZAP dans `.zap/rules.tsv` (#37).
+- Rapport de sécurité hebdomadaire (Trivy images toutes sévérités, configuration Kubernetes rendue) ; analyse de sécurité de la V1 et registre de 24 constats (#38, `docs/13-analyse-securite.md`).
+- Plan de remédiation priorisé et justifié, issues #73 à #83 (#39, `docs/11-plan-remediation.md`).
+
+### Modifié
+- CD staging : entrée « charge », file d'attente par branche, DAST par `scripts/dast.sh`.
+- Royaume de staging : jetons de 15 minutes pour le client de test.
+
+### Sécurité
+- En-têtes HSTS et Cross-Origin-Resource-Policy ajoutés au Gateway ; réponse 404 de repli avec en-têtes de sécurité.
+- Console d'administration Keycloak et royaume `master` retirés de la route publique.
+- Identifiant client (pseudonyme) dans le journal de création de commande (non-répudiation).
+
 ## [0.5.0] - 2026-11-15
 ### Ajouté
 - US1 à US4 : catalogue public, authentification Keycloak (JWT vérifié au Gateway et dans les services), commande par saga chorégraphiée order ↔ stock (outbox, idempotence, DLQ), historique par propriétaire (#25 à #28).
@@ -45,7 +61,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Cadrage technique v1.0, ADR-001 (microservices), schémas d'architecture, de CI/CD et de saga, backlog US1 à US5.
 - Infrastructure locale de développement (docker-compose) et squelette de CI.
 
-[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.5.0...develop
+[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.6.0...develop
+[0.6.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.2.0...v0.3.0
