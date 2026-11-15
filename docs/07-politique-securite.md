@@ -47,6 +47,8 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 
 Une **exception** (faux positif ou absence de correctif) exige : justification écrite, mesure compensatoire, date de réexamen, validation du Lead Developer.
 
+Le **registre des vulnérabilités** est tenu dans `docs/13-analyse-securite.md` (sévérité de l'outil, sévérité retenue dans le contexte, statut) et les actions dans `docs/11-plan-remediation.md`. Le workflow « Rapport de sécurité » relance chaque semaine l'analyse des images (toutes sévérités) et de la configuration Kubernetes.
+
 ## 7. Journalisation et détection
 - Journaux structurés JSON avec `correlationId` et identifiant utilisateur (pseudonymisé).
 - Événements de sécurité tracés : échecs d'authentification, 401/403, changements de rôle.

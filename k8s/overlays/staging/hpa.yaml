@@ -1,0 +1,45 @@
+# Mise à l'échelle horizontale (test de charge, indicateur 3) : 1 à 3 instances par service selon le CPU.
+# Les 3 services le supportent : catalog-service est sans état ; order-service publie sa boîte d'envoi avec
+# « FOR UPDATE SKIP LOCKED » ; stock-service consomme en concurrence avec des verrous ordonnés (expérimentation E3).
+# Le démarrage d'une JVM consomme du CPU : la fenêtre de stabilisation évite les oscillations.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: catalog-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: catalog-service }
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+  behavior:
+    scaleDown: { stabilizationWindowSeconds: 180 }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: order-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: order-service }
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+  behavior:
+    scaleDown: { stabilizationWindowSeconds: 180 }
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: stock-service
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: stock-service }
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+  behavior:
+    scaleDown: { stabilizationWindowSeconds: 180 }

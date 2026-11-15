@@ -46,10 +46,10 @@ sequenceDiagram
 
 Le correlationId est accepté seulement s'il respecte `[A-Za-z0-9-]{1,64}` : un client ne peut pas injecter de contenu arbitraire dans les journaux (OWASP A09). Il traverse aussi l'asynchrone : il est stocké avec l'événement dans la boîte d'envoi, donc même un événement publié plusieurs minutes plus tard (broker indisponible) reste rattaché à la requête d'origine.
 
-Lignes relevées sur le staging pour la commande des smoke tests (`smoke-saga-1`, run CD du 15/11/2026, identifiants abrégés) :
+Lignes produites sur le staging pour la commande des smoke tests (`smoke-saga-1`, run CD du 15/11/2026, identifiants abrégés ; l'identifiant client figure dans le log de création depuis l'analyse de sécurité du J4) :
 
 ```text
-INFO [order-service,smoke-saga-1] … [nio-8082-exec-1] c.p.order.domain.OrderService           : Commande 61ccd396-… créée (1 ligne(s), total 5990 centimes)
+INFO [order-service,smoke-saga-1] … [nio-8082-exec-1] c.p.order.domain.OrderService           : Commande 61ccd396-… créée pour le client 3f9c…-… (1 ligne(s), total 5990 centimes)
 INFO [order-service,smoke-saga-1] … [   scheduling-1] c.p.order.messaging.OutboxPublisher     : Événement … publié (order.placed)
 INFO [stock-service,smoke-saga-1] … [ntContainer#0-1] c.p.s.reservation.ReservationService    : Stock réservé pour la commande 61ccd396-… (1 produit(s))
 INFO [stock-service,smoke-saga-1] … [   scheduling-1] c.p.stock.messaging.OutboxPublisher     : Événement … publié (stock.reserved)
@@ -78,6 +78,7 @@ Les compteurs métier ne bougent **qu'après validation de la transaction** (`Tr
 |---|---|
 | RED | Débit (req/s), erreurs 5xx (%), latence p95 avec seuil 300 ms (indicateur 3), mémoire JVM |
 | Saga de commande | Commandes par étape, durée de saga p95, réservations par issue, boîte d'envoi en attente, messages en file de rebut |
+| Capacité | Instances actives par service (mise à l'échelle horizontale, test de charge) |
 
 ## 5. Alertes
 
@@ -103,7 +104,7 @@ Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas n
 | Boîte d'envoi | vide |
 | Files de rebut supervisées | 2 |
 | Règles d'alerte chargées dans Prometheus | 6 |
-| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | 10 panneaux, valeur non nulle |
+| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | 11 panneaux, valeur non nulle |
 | Logs reliés par `smoke-saga-1` | ≥ 3 lignes dans order-service, ≥ 2 dans stock-service |
 
 Le résultat (tableau et lignes de logs corrélées) est publié dans le résumé du run GitHub Actions.

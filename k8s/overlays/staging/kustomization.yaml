@@ -5,6 +5,7 @@ resources:
   - ../../base
   - databases.yaml
   - rabbitmq.yaml
+  - hpa.yaml
 configMapGenerator:
   - name: pme-config
     literals:
@@ -16,3 +17,8 @@ patches:
       - op: replace
         path: /spec/jwt/providers/0/issuer
         value: https://keycloak.pme.local:8443/realms/pme
+  # Le nombre d'instances est piloté par les HPA (hpa.yaml) : un « kubectl apply » ne doit pas le réinitialiser.
+  - target: { kind: Deployment, labelSelector: "app in (catalog-service,order-service,stock-service)" }
+    patch: |-
+      - op: remove
+        path: /spec/replicas
