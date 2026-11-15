@@ -10,7 +10,10 @@ RABBIT_OPERATOR_VERSION="${RABBIT_OPERATOR_VERSION:-v2.23.3}"
 WORK="${WORK:-${RUNNER_TEMP:-/tmp}/pme-staging}"; mkdir -p "$WORK"
 ENV_FILE="${GITHUB_ENV:-$WORK/staging.env}"
 log() { printf '\n\033[1;34m▸ %s\033[0m\n' "$*"; }
-secret_value() { local v; v=$(openssl rand -hex 16); [ -n "${GITHUB_ACTIONS:-}" ] && echo "::add-mask::$v"; echo "$v"; }
+# Secret aléatoire, puis masquage dans les logs GitHub : la commande ::add-mask:: doit sortir sur stdout,
+# donc jamais à l'intérieur d'une substitution $(...) dont on capture la sortie.
+gen_secret() { openssl rand -hex 16; }
+mask() { if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::add-mask::$1"; fi; }
 
 log "Envoy Gateway $EG_VERSION puis cert-manager $CM_VERSION (après les CRD Gateway API)"
 helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm --version "$EG_VERSION" \
@@ -32,12 +35,14 @@ kubectl apply -f platform/gateway.yaml
 
 log "Secrets générés à l'exécution (jamais versionnés)"
 for db in catalog orders stock; do
+  db_pw=$(gen_secret); mask "$db_pw"
   kubectl -n pme create secret generic "$db-db" --from-literal=username="$db" \
-    --from-literal=password="$(secret_value)" --dry-run=client -o yaml | kubectl apply -f -
+    --from-literal=password="$db_pw" --dry-run=client -o yaml | kubectl apply -f -
 done
-admin_pw=$(secret_value)
+admin_pw=$(gen_secret); mask "$admin_pw"
 kubectl -n pme create secret generic keycloak-admin --from-literal=password="$admin_pw" --dry-run=client -o yaml | kubectl apply -f -
-alice_pw=$(secret_value); bob_pw=$(secret_value); carol_pw=$(secret_value); adminpme_pw=$(secret_value)
+alice_pw=$(gen_secret); bob_pw=$(gen_secret); carol_pw=$(gen_secret); adminpme_pw=$(gen_secret)
+for v in "$alice_pw" "$bob_pw" "$carol_pw" "$adminpme_pw"; do mask "$v"; done
 sed -e "s/__ALICE_PASSWORD__/$alice_pw/" -e "s/__BOB_PASSWORD__/$bob_pw/" -e "s/__CAROL_PASSWORD__/$carol_pw/" \
     -e "s/__ADMIN_PME_PASSWORD__/$adminpme_pw/" platform/realm-pme.json > "$WORK/realm-pme.json"
 kubectl -n pme create configmap keycloak-realm --from-file=realm-pme.json="$WORK/realm-pme.json" \
