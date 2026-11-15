@@ -66,6 +66,6 @@ cat "$RESULTS" >> "$RESULTS.md"
   echo "Échecs : $failures"; echo
   echo "### Logs reliés par le correlationId \`$CORRELATION_ID\`"; echo
   echo '```text'; cut -c1-220 "$RESULTS.order" "$RESULTS.stock"; echo '```'
-} >> "${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+} | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 echo "Échecs : $failures"
 [ "$failures" -eq 0 ]

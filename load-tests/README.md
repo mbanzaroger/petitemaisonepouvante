@@ -9,7 +9,8 @@ Objectif : vérifier que la boutique tient une charge réaliste avec **une laten
 | Visiteurs — catalogue public | 40 (`catalog_threads`) | liste paginée, fiche d'un produit au hasard, catégories | 0,3 à 1 s |
 | Clients — commande authentifiée | 10 (`order_threads`) | connexion Keycloak une fois (alice / carol), création de commande (202), suivi, historique | 0,8 à 2 s |
 
-- Montée en charge sur 30 s (`rampup`), puis palier de 180 s (`duration`).
+- **Palier nominal** (bloquant) : montée en charge sur 30 s, puis 180 s ; seuils de l'indicateur 3.
+- **Palier de stress** (observé, non bloquant) : 150 visiteurs sans temps de réflexion (0 à 50 ms) pendant 240 s après 60 s de montée, pour déclencher la mise à l'échelle horizontale (HPA) et mesurer le comportement en saturation.
 - Chaque requête porte un `X-Correlation-Id` `charge-<utilisateur>-<itération>` : une requête lente se retrouve dans les logs.
 - Les commandes visent les produits les mieux approvisionnés ; quand le stock s'épuise, la saga annule la commande (comportement normal, la requête reste un succès 202).
 - Le débit des clients reste sous la limitation de débit du Gateway (50 requêtes/s par adresse IP sur `/api/v1/orders`) : le test mesure la performance, pas la protection, démontrée par les smoke tests.
@@ -22,10 +23,11 @@ Objectif : vérifier que la boutique tient une charge réaliste avec **une laten
 1. télécharge JMeter 5.6.3 depuis l'archive Apache et vérifie son empreinte SHA-512 ;
 2. vise directement le NodePort du Gateway (un `kubectl port-forward` ajouterait sa propre latence) ;
 3. passe les mots de passe de test par un fichier de propriétés temporaire (jamais sur la ligne de commande) ;
-4. publie le tableau des indicateurs dans le résumé du run et le rapport HTML JMeter en artefact `charge-<commit>` ;
-5. échoue si un seuil n'est pas tenu (indicateur bloquant quand le test est lancé).
+4. enchaîne le palier nominal et le palier de stress ;
+5. publie le tableau des indicateurs dans le résumé du run et les rapports HTML JMeter en artefact `charge-<commit>` ;
+6. échoue si un seuil n'est pas tenu au palier nominal (indicateur bloquant quand le test est lancé).
 
-Mesures croisées côté serveur dans le même résumé (Prometheus) : p95 des services, durée de saga p95, nombre maximal d'instances par service pendant le test.
+Mesures croisées côté serveur dans le même résumé, pour chaque palier (Prometheus) : p95 des services, durée de saga p95, nombre maximal d'instances par service, CPU maximal par instance.
 
 **Sur le poste (démonstration)**, contre l'environnement docker compose (sans Gateway) :
 
@@ -49,5 +51,6 @@ Pendant le test, le tableau de bord Grafana « PME — RED et saga des microserv
 | `catalog_port`, `order_port` | `api_port` | Ports distincts quand il n'y a pas de Gateway (local) |
 | `kc_protocol`, `kc_host`, `kc_port` | `https`, `keycloak.pme.local`, `api_port` | Keycloak |
 | `catalog_threads`, `order_threads` | `40`, `10` | Utilisateurs virtuels |
+| `think_min`, `think_range` | `300`, `700` | Temps de réflexion des visiteurs du catalogue (ms) |
 | `rampup`, `duration` | `30`, `180` | Montée en charge et palier (s) |
 | `alice_password`, `carol_password` | — | Mots de passe des comptes de test (fichier `-q`) |

@@ -155,8 +155,8 @@
         </HeaderManager>
         <hashTree/>
         <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Temps de réflexion">
-          <stringProp name="ConstantTimer.delay">300</stringProp>
-          <stringProp name="RandomTimer.range">700</stringProp>
+          <stringProp name="ConstantTimer.delay">${__P(think_min,300)}</stringProp>
+          <stringProp name="RandomTimer.range">${__P(think_range,700)}</stringProp>
         </UniformRandomTimer>
         <hashTree/>
         <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="API catalogue — liste paginée">
