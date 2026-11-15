@@ -1,6 +1,8 @@
 # Exposition par Gateway API (ADR-003). Le Gateway « pme-gateway » (plateforme) termine le TLS ;
 # chaque route porte sa politique : catalogue public, commandes réservées à CUSTOMER, stock réservé à ADMIN.
 # Les services valident aussi le jeton eux-mêmes (défense en profondeur).
+# En-têtes de réponse ajoutés au Gateway (DAST ZAP, J4) : HSTS, puisque le TLS se termine ici et que les services
+# ne voient que du HTTP, et Cross-Origin-Resource-Policy limité au site.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -12,6 +14,12 @@ spec:
     - matches:
         - { path: { type: PathPrefix, value: /api/v1/products }, method: GET }
         - { path: { type: PathPrefix, value: /api/v1/categories }, method: GET }
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-site }
       backendRefs: [{ name: catalog-service, port: 8081 }]
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -23,6 +31,12 @@ spec:
   hostnames: ["api.pme.local"]
   rules:
     - matches: [{ path: { type: PathPrefix, value: /api/v1/orders } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-site }
       backendRefs: [{ name: order-service, port: 8082 }]
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -34,6 +48,12 @@ spec:
   hostnames: ["api.pme.local"]
   rules:
     - matches: [{ path: { type: PathPrefix, value: /api/v1/stock } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-site }
       backendRefs: [{ name: stock-service, port: 8083 }]
 ---
 apiVersion: gateway.envoyproxy.io/v1alpha1
