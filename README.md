@@ -82,3 +82,6 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Squelettes des 3 services (CI : tests, couverture, scans, images)
 - [x] User stories US1 à US5 : staging Kubernetes, tests d'acceptation, supervision (v0.5.0)
 - [x] DAST de l'API, test de charge (indicateur 3), analyse de sécurité et plan de remédiation (v0.6.0)
+- [x] Support de soutenance, trame et script de démonstration (v1.0.0)
+- [ ] Répétitions chronométrées et vidéo de secours (#41)
+- [ ] SonarQube Cloud, indicateur 2 (#32)

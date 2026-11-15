@@ -4,6 +4,15 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [1.0.0] - 2026-11-15
+### Ajouté
+- Trame de soutenance minutée, notes et questions probables (`docs/soutenance/support.md`) ; support de présentation (#40).
+
+### Modifié
+- Script de démonstration : test de charge sous Grafana, correlationId, HPA, vérification de la supervision.
+- Suivi d'avancement : J3 et J4 terminés le 15/11/2026, point d'avancement et écarts.
+- CD staging : attente du Gateway portée à 6 minutes, état du Gateway affiché en cas d'échec.
+
 ## [0.6.0] - 2026-11-15
 ### Ajouté
 - Test de charge JMeter du catalogue et de la commande, paliers nominal et de stress, HPA et metrics-server en staging, panneau Grafana des instances (#36, `docs/14-test-de-charge.md`).
@@ -61,7 +70,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Cadrage technique v1.0, ADR-001 (microservices), schémas d'architecture, de CI/CD et de saga, backlog US1 à US5.
 - Infrastructure locale de développement (docker-compose) et squelette de CI.
 
-[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.6.0...develop
+[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.0.0...develop
+[1.0.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.3.0...v0.4.0
