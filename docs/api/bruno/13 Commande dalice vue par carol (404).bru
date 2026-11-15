@@ -1,0 +1,23 @@
+meta {
+  name: 13 Commande d'alice vue par carol (404)
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{ordersUrl}}/api/v1/orders/{{orderId}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-13
+}
+
+auth:bearer {
+  token: {{carolToken}}
+}
+
+assert {
+  res.status: eq 404
+}

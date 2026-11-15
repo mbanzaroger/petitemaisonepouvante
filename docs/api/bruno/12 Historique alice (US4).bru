@@ -1,0 +1,23 @@
+meta {
+  name: 12 Historique alice (US4)
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{ordersUrl}}/api/v1/orders
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-12
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+assert {
+  res.status: eq 200
+}

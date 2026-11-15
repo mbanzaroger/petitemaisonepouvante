@@ -1,0 +1,26 @@
+meta {
+  name: 03 Jeton alice (CUSTOMER)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{keycloakUrl}}/realms/pme/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: pme-tests
+  username: alice
+  password: {{alicePassword}}
+}
+
+script:post-response {
+  bru.setVar("aliceToken", res.body.access_token);
+}
+
+assert {
+  res.status: eq 200
+}

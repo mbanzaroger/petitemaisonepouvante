@@ -1,0 +1,23 @@
+meta {
+  name: 14 Stock de la figurine (ADMIN)
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{stockUrl}}/api/v1/stock/{{figurine}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-14
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+assert {
+  res.status: eq 200
+}

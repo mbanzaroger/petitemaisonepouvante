@@ -1,0 +1,26 @@
+meta {
+  name: 06 Jeton admin-pme (ADMIN)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{keycloakUrl}}/realms/pme/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: pme-tests
+  username: admin-pme
+  password: {{adminPassword}}
+}
+
+script:post-response {
+  bru.setVar("adminToken", res.body.access_token);
+}
+
+assert {
+  res.status: eq 200
+}
