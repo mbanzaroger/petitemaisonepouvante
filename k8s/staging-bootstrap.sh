@@ -60,7 +60,11 @@ rm -f "$WORK/realm-pme.json"
 log "Keycloak"
 kubectl apply -f platform/keycloak.yaml
 kubectl -n pme rollout status deploy/keycloak --timeout=420s
-kubectl -n pme wait gateway/pme-gateway --for=condition=Programmed --timeout=180s
+# Gateway « Programmed » : l'adresse du service NodePort peut tarder à être publiée (run du 15/11/2026).
+if ! kubectl -n pme wait gateway/pme-gateway --for=condition=Programmed --timeout=360s; then
+  kubectl -n pme get gateway pme-gateway -o jsonpath='{.status}' && echo
+  exit 1
+fi
 kubectl -n pme wait certificate/pme-wildcard-tls --for=condition=Ready --timeout=180s
 
 log "Accès local au Gateway (port 8443) et paramètres des tests"
