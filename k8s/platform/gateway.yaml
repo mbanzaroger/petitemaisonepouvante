@@ -1,0 +1,55 @@
+# Gateway API (successeur de l'API Ingress) implémentée par Envoy Gateway.
+# cert-manager lit les annotations et crée le certificat *.pme.local (90 jours, renouvelé 15 jours avant).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pme
+---
+# Service Envoy en NodePort : un cluster local (kind, k3s) n'a pas de répartiteur de charge.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: proxy-local
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        type: NodePort
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: proxy-local
+    namespace: envoy-gateway-system
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: pme-gateway
+  namespace: pme
+  annotations:
+    cert-manager.io/cluster-issuer: pme-ca
+    cert-manager.io/duration: 2160h
+    cert-manager.io/renew-before: 360h
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.pme.local"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: pme-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: Same

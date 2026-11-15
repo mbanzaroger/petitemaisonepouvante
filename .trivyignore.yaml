@@ -1,0 +1,10 @@
+# Exceptions d'analyse IaC (Trivy) : chacune est justifiée, datée et assortie d'une remédiation
+# (politique de sécurité §6). Revue à chaque jalon.
+misconfigurations:
+  - id: KSV-0014
+    paths:
+      - "k8s/platform/keycloak.yaml"
+    statement: >-
+      14/11/2026 — Keycloak de staging en mode développement (start-dev) écrit dans son répertoire
+      d'installation au démarrage : système de fichiers en lecture seule impossible. Remédiation (plan J4) :
+      image Keycloak optimisée (kc.sh build) en mode « start », avec /tmp et /opt/keycloak/data en volumes.

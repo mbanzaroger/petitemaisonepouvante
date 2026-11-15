@@ -95,6 +95,7 @@ jobs:
           scan-ref: .
           # Les manifestes des bacs à sable (experiments/) ne sont pas livrés ; seuls k8s/ et les Dockerfile le sont.
           skip-dirs: experiments
+          trivyignores: .trivyignore.yaml
           severity: CRITICAL,HIGH,MEDIUM
           format: sarif
           output: trivy-config.sarif
@@ -273,3 +274,12 @@ jobs:
               *) echo "::error::Au moins un job a échoué ($r)"; exit 1 ;;
             esac
           done
+
+  cd-staging:
+    name: CD staging
+    needs: ci-ok
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/cd.yml

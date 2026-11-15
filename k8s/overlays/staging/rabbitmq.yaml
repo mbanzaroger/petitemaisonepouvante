@@ -1,0 +1,12 @@
+# Broker de staging : 1 nœud (le comportement à 3 nœuds est validé par l'expérimentation E3).
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: pme-rabbit
+spec:
+  replicas: 1
+  persistence:
+    storage: 1Gi
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+    limits: { memory: 1Gi }

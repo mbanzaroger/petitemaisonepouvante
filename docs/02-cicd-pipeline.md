@@ -26,10 +26,10 @@ flowchart LR
         OK{{"Résultat CI<br/>check exigé"}}
     end
     DEV --> Q["codeql.yml<br/>SAST Java + workflows"]
-    CI -->|"vert sur develop / main"| CD
+    CI -->|"push vert sur develop / main<br/>(workflow réutilisable)"| CD
     subgraph CD["cd.yml — staging éphémère"]
         direction TB
-        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D6["DAST<br/>OWASP ZAP"]
+        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D7["Acceptation<br/>Cucumber"] --> D6["DAST<br/>OWASP ZAP"]
     end
     REL["Release publiée<br/>tag vX.Y.Z sur main"] --> R
     subgraph R["release.yml"]
@@ -38,6 +38,8 @@ flowchart LR
         R3 --> R4{"Approbation<br/>environnement production"} --> R5["Déploiement production"]
     end
 ```
+
+Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call`) appelé par le job `CD staging` de `ci.yml` une fois le check « Résultat CI » vert, uniquement sur un push vers `develop` ou `main`. Il déploie donc toujours le commit qui vient d'être validé (`github.sha`). Un déclencheur `workflow_run` avait été utilisé au départ : CodeQL l'a signalé (2 alertes élevées « Cache Poisoning via execution of untrusted code »), car le SHA déployé provenait d'un autre workflow et le code s'exécutait dans le contexte privilégié de la branche par défaut. Le lancement manuel (`workflow_dispatch`) reste possible sur une branche pour valider un changement d'infrastructure avant fusion.
 
 ## Étape → outil → indicateur alimenté
 
