@@ -4,6 +4,22 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [0.5.0] - 2026-11-15
+### Ajouté
+- US1 à US4 : catalogue public, authentification Keycloak (JWT vérifié au Gateway et dans les services), commande par saga chorégraphiée order ↔ stock (outbox, idempotence, DLQ), historique par propriétaire (#25 à #28).
+- US5 : métriques métier de la saga, tableau de bord Grafana RED + saga, 6 règles d'alerte avec tests `promtool`, correlationId de bout en bout (#29, `docs/12-observabilite.md`).
+- Staging Kubernetes : Kustomize, Gateway API (Envoy Gateway, TLS cert-manager, JWT, limitation de débit), NetworkPolicies, supervision kube-prometheus-stack (#31).
+- Tests d'acceptation Cucumber en français exécutés contre le staging (#30).
+- Infrastructure locale durcie et complète (docker compose, secrets générés) (#33).
+- ADR-002 (front-end hors POC), contrat OpenAPI, collection Bruno, script de démonstration (#34, #35).
+
+### Modifié
+- `cd.yml` devient un workflow réutilisable appelé par `ci.yml` (suppression de `workflow_run`, alertes CodeQL « cache poisoning »).
+
+### Corrigé
+- Le staging déployait l'image `:develop` au lieu de celle du commit (surcharge Kustomize mal ciblée) ; garde-fou ajouté dans le CD.
+- Mots de passe générés du staging corrompus par la commande de masquage GitHub.
+
 ## [0.4.0] - 2026-11-14
 ### Ajouté
 - Squelettes Spring Boot 4.1 / Java 21 des 3 services : Actuator, Flyway, tests unitaires et Testcontainers, JaCoCo ≥ 80 %, images distroless non root (#24).
@@ -29,7 +45,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Cadrage technique v1.0, ADR-001 (microservices), schémas d'architecture, de CI/CD et de saga, backlog US1 à US5.
 - Infrastructure locale de développement (docker-compose) et squelette de CI.
 
-[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.3.0...develop
+[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.5.0...develop
+[0.5.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mbanzaroger/petitemaisonepouvante/releases/tag/v0.1.0
