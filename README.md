@@ -37,14 +37,16 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Contrat OpenAPI](docs/api/openapi.yaml) · [Collection Bruno](docs/api/bruno/) · [Script de démonstration](docs/demo/script-demo.md)
 - [Protocoles d'expérimentation](docs/experimentations/) · [Synthèse adoption / rejet](docs/experimentations/synthese.md)
 
-## Démarrage local (infrastructure)
+## Démarrage local
 ```bash
-cd infra
-docker compose up -d
-# Keycloak : http://localhost:8080  (admin / admin — dev uniquement)
-# RabbitMQ : http://localhost:15672 (guest / guest — dev uniquement)
-# Prometheus : http://localhost:9090 | Grafana : http://localhost:3000
+infra/init-env.sh                              # génère infra/.env (mots de passe aléatoires, jamais versionné)
+cd infra && docker compose --profile app up -d --build
+# API : catalogue http://localhost:8081, commandes :8082, stock :8083 (ports liés à 127.0.0.1)
+# Keycloak http://localhost:8080 (admin / KEYCLOAK_ADMIN_PASSWORD) · RabbitMQ http://localhost:15672
+# Prometheus http://localhost:9090 · Grafana http://localhost:3000 (tableau de bord « PME — RED des microservices »)
 ```
+Comptes de test du royaume `pme` (mots de passe dans `infra/.env`) : `alice` et `carol` (CUSTOMER), `bob` (sans rôle), `admin-pme` (ADMIN).
+Sans `--profile app`, seules les dépendances démarrent (pour lancer les services depuis l'IDE).
 
 ## Organisation du dépôt
 ```

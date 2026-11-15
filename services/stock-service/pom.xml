@@ -13,15 +13,18 @@
 
     <groupId>com.petitemaisonepouvante</groupId>
     <artifactId>stock-service</artifactId>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
     <name>stock-service</name>
     <description>Stock et réservations ; consomme OrderPlaced et publie StockReserved ou StockRejected (saga).</description>
 
     <properties>
         <java.version>21</java.version>
-        <jacoco.version>0.8.14</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- Indicateur 1 : couverture minimale des lignes (politique de tests) -->
         <coverage.minimum>0.80</coverage.minimum>
+        <!-- Remédiation : Spring Boot 4.1.2 gère amqp-client 5.30.0, vulnérable (CVE-2026-63337, -69219, -69220,
+             -75516, sévérité haute), détecté par le scan Trivy de l'image ; corrigé à partir de 5.34.0. -->
+        <rabbit-amqp-client.version>5.37.1</rabbit-amqp-client.version>
     </properties>
 
     <dependencies>
@@ -39,7 +42,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -48,6 +51,14 @@
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -68,6 +79,21 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-rabbitmq</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
