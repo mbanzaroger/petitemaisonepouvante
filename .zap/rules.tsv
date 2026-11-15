@@ -1,0 +1,18 @@
+10035	FAIL	HSTS : corrigé au Gateway (en-tête ajouté par les HTTPRoute) ; échec si l'en-tête disparaît
+90004	FAIL	Cross-Origin-Resource-Policy : corrigé au Gateway (same-site)
+10021	FAIL	X-Content-Type-Options : envoyé par Spring Security (nosniff), contrôlé aussi par les smoke tests
+10037	FAIL	X-Powered-By : aucune technologie ne doit être annoncée
+10098	FAIL	CORS trop permissif : aucune origine n'est autorisée sur l'API du POC (pas de front-end, ADR-002)
+10049	IGNORE	Faux positif qualifié : Cache-Control no-store voulu (Spring Security), réponses potentiellement personnelles ; mise en cache du catalogue au plan de remédiation
+6	FAIL	Traversée de répertoire
+7	FAIL	Inclusion de fichier distant
+40003	FAIL	Injection CRLF
+40012	FAIL	XSS réfléchi
+40014	FAIL	XSS persistant
+40018	FAIL	Injection SQL
+40022	FAIL	Injection SQL PostgreSQL (temporisation)
+40046	FAIL	SSRF
+90019	FAIL	Injection de code côté serveur
+90020	FAIL	Injection de commande système
+90023	FAIL	XXE
+90035	FAIL	Injection de gabarit côté serveur (SSTI)

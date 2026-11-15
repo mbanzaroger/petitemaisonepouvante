@@ -66,7 +66,11 @@
             "id.token.claim": "false"
           }
         }
-      ]
+      ],
+      "attributes": {
+        "access.token.lifespan": "900"
+      },
+      "description": "Staging uniquement : jetons de 15 min pour couvrir un scan DAST ou un test de charge complet"
     }
   ],
   "users": [
