@@ -91,7 +91,9 @@ public class OrderService {
         Events.OrderPlaced event = Events.OrderPlaced.of(eventId, correlationId, order.id(), customerId,
                 lines.stream().map(l -> new Events.OrderPlaced.Line(l.productId(), l.quantity())).toList());
         outbox.add(new OutboxEvent(eventId, Messaging.ORDER_PLACED, json.writeValueAsString(event), correlationId));
-        LOG.info("Commande {} créée ({} ligne(s), total {} centimes)", order.id(), lines.size(), order.totalCents());
+        // Traçabilité (STRIDE, répudiation) : l'identifiant client est le « subject » Keycloak, pseudonyme.
+        LOG.info("Commande {} créée pour le client {} ({} ligne(s), total {} centimes)", order.id(), customerId,
+                lines.size(), order.totalCents());
         metrics.orderPlaced();
         return orders.findById(order.id()).orElseThrow();
     }

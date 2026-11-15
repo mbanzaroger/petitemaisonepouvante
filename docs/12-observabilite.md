@@ -46,10 +46,10 @@ sequenceDiagram
 
 Le correlationId est accepté seulement s'il respecte `[A-Za-z0-9-]{1,64}` : un client ne peut pas injecter de contenu arbitraire dans les journaux (OWASP A09). Il traverse aussi l'asynchrone : il est stocké avec l'événement dans la boîte d'envoi, donc même un événement publié plusieurs minutes plus tard (broker indisponible) reste rattaché à la requête d'origine.
 
-Lignes relevées sur le staging pour la commande des smoke tests (`smoke-saga-1`, run CD du 15/11/2026, identifiants abrégés) :
+Lignes produites sur le staging pour la commande des smoke tests (`smoke-saga-1`, run CD du 15/11/2026, identifiants abrégés ; l'identifiant client figure dans le log de création depuis l'analyse de sécurité du J4) :
 
 ```text
-INFO [order-service,smoke-saga-1] … [nio-8082-exec-1] c.p.order.domain.OrderService           : Commande 61ccd396-… créée (1 ligne(s), total 5990 centimes)
+INFO [order-service,smoke-saga-1] … [nio-8082-exec-1] c.p.order.domain.OrderService           : Commande 61ccd396-… créée pour le client 3f9c…-… (1 ligne(s), total 5990 centimes)
 INFO [order-service,smoke-saga-1] … [   scheduling-1] c.p.order.messaging.OutboxPublisher     : Événement … publié (order.placed)
 INFO [stock-service,smoke-saga-1] … [ntContainer#0-1] c.p.s.reservation.ReservationService    : Stock réservé pour la commande 61ccd396-… (1 produit(s))
 INFO [stock-service,smoke-saga-1] … [   scheduling-1] c.p.stock.messaging.OutboxPublisher     : Événement … publié (stock.reserved)

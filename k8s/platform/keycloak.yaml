@@ -90,7 +90,13 @@ spec:
   parentRefs:
     - name: pme-gateway
   hostnames: ["keycloak.pme.local"]
+  # Seuls les points d'accès OIDC du royaume « pme » et les ressources des pages de connexion sont exposés :
+  # la console d'administration (/admin) et le royaume « master » ne sont joignables que par « kubectl port-forward »
+  # (analyse de sécurité, J4).
   rules:
-    - backendRefs:
+    - matches:
+        - { path: { type: PathPrefix, value: /realms/pme/ } }
+        - { path: { type: PathPrefix, value: /resources/ } }
+      backendRefs:
         - name: keycloak
           port: 8080
