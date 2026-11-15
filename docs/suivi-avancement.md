@@ -8,9 +8,19 @@ Le suivi détaillé est tenu dans GitHub : [jalons](https://github.com/mbanzarog
 | J1 — Processus qualité (phase 1) | v0.2.0 | 10/10/2026 | ✅ Terminé | #4 à #8, #10, #12 |
 | Industrialisation CI/CD et audit | v0.3.0 | 14/11/2026 | ✅ Terminé | #13, #15, #16, #17 |
 | J2 — Expérimentations (E1 à E4) + squelettes | v0.4.0 | 13/12/2026 | ✅ Terminé le 14/11/2026 | #18 à #24 |
-| J3 — Développement du POC | v0.5.0 | 24/01/2027 | 🔲 À faire | #25 à #35 |
-| J4 — Sécurité, charge, remédiation | v0.6.0 | 07/02/2027 | 🔲 À faire | #36 à #39 |
-| J5 — Soutenance | v1.0.0 | 25/02/2027 | 🔲 À faire | #40, #41 |
+| J3 — Développement du POC | v0.5.0 | 24/01/2027 | ✅ Terminé le 15/11/2026 | #25 à #31, #33 à #35 |
+| J4 — Sécurité, charge, remédiation | v0.6.0 | 07/02/2027 | ✅ Terminé le 15/11/2026 | #36 à #39 |
+| J5 — Soutenance | v1.0.0 | 25/02/2027 | 🟡 En cours : support livré (#40), répétitions et vidéo à faire (#41) | #40, #41 |
+| Remédiation (après le POC) | — | 13/02/2027 | 🔲 Planifié (`docs/11-plan-remediation.md`) | #32, #73 à #83 |
+
+## Point d'avancement du 15/11/2026
+
+Les jalons J3 et J4 sont livrés avec plus de dix semaines d'avance sur le rétroplanning ci-dessous, qui reste la référence initiale. Le temps gagné sert, par ordre de priorité :
+1. aux répétitions chronométrées et à la vidéo de secours (#41), qui ne peuvent être faites que par le Lead Dev ;
+2. à l'activation de SonarQube Cloud (#32), pour présenter l'indicateur 2 mesuré ;
+3. aux actions P2 du plan de remédiation les moins coûteuses (R-07 routage des alertes, R-01 limitation de débit du catalogue), si elles n'exposent pas la démonstration à un risque : gel des changements maintenu à partir du 22/02/2027.
+
+Écart à signaler : SonarQube Cloud, prévu en S5 avec US1 et US2, attend l'action du Lead Dev ; l'indicateur 2 n'est donc pas encore mesuré.
 
 ## Rétroplanning — soutenance le vendredi 26/02/2027
 

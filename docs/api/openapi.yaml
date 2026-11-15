@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: petitemaisonepouvante.com — API du POC
-  version: 0.6.0
+  version: 1.0.0
   description: |
     API exposée par le Gateway (Envoy Gateway, Gateway API) devant les microservices catalog-service,
     order-service et stock-service. Le TLS est terminé au Gateway ; les jetons Keycloak (OIDC) sont vérifiés

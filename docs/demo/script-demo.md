@@ -22,8 +22,8 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 | 1 min | Sécurité (US2) | Bruno 03 à 08 | Jetons Keycloak ; 401 sans jeton ; 403 sans rôle |
 | 2 min | Saga (US3) | Bruno 09 à 11, puis 14 | PENDING → CONFIRMED, stock décrémenté ; stock insuffisant → CANCELLED |
 | 1 min | Historique (US4) | Bruno 12 et 13 | Seules ses commandes ; 404 sur celle d'autrui |
-| 1 min | Observabilité | Grafana « PME — RED des microservices » pendant le test de charge | Débit, p95 < 300 ms, 0 % d'erreurs |
-| (option) | Kubernetes | `kubectl get pods,networkpolicy,gateway,httproute -n pme` | Déploiements durcis, flux réseau explicites |
+| 2 min | Charge et observabilité | Test de charge JMeter (`load-tests/README.md`, commande « sur le poste ») avec Grafana « PME — RED et saga des microservices » à l'écran ; puis `grep` d'un correlationId dans les logs des 2 services | Débit, p95 < 300 ms, 0 % d'erreurs, commandes par étape ; mêmes identifiants dans order-service et stock-service |
+| (option) | Kubernetes | `kubectl get pods,hpa,networkpolicy,gateway,httproute -n pme` ; dernier run CD lancé avec la case « charge » | Déploiements durcis, flux réseau explicites, montée du catalogue à 3 instances |
 
 ## Environnement B : staging sur le poste
 ```bash
@@ -38,10 +38,12 @@ kubectl wait --for=condition=available deployment --all -n pme --timeout=600s
 echo "127.0.0.1 api.pme.local keycloak.pme.local" | sudo tee -a /etc/hosts
 set -a; source /tmp/pme-staging/staging.env; set +a
 scripts/smoke-test.sh "$BASE_URL"              # 13 contrôles de bout en bout
+bash k8s/monitoring/install.sh && set -a && source /tmp/pme-monitoring.env && set +a
+bash k8s/monitoring/verify.sh                  # 14 contrôles de supervision (US5)
 ```
 Ne pas valider les modifications d'images faites par `kustomize edit` (`git checkout k8s/overlays/staging`).
 
 ## Plan B si une démonstration échoue
-1. Montrer le dernier run **CD staging** (résumé : tableau des tests de bout en bout et rapport Cucumber en artefact).
+1. Montrer le dernier run **CD staging** (résumé : smoke tests, supervision US5, test de charge, DAST ; rapports Cucumber, JMeter et ZAP en artefacts).
 2. Lancer la vidéo de secours.
 3. Expliquer la cause probable (dépendance externe, réseau) : c'est aussi un argument d'observabilité.
