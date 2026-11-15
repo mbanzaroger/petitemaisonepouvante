@@ -15,8 +15,9 @@ permissions:
 jobs:
   staging:
     name: Déploiement staging (kind) + smoke + supervision + DAST
+    # Un cluster kind par runner : rien n'est partagé entre branches, seuls les runs d'une même branche se suivent.
     concurrency:
-      group: cd-staging
+      group: cd-staging-${{ github.ref }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
