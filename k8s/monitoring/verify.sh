@@ -45,7 +45,7 @@ check "Saga : durées mesurées (histogramme)" oui "$(positive "$(promq 'sum(pme
 check "Boîte d'envoi vide (aucun événement bloqué)" 0 "$(promq 'sum(pme_outbox_pending)')"
 check "Files de rebut supervisées" 2 "$(promq 'count(rabbitmq_detailed_queue_messages_ready{queue=~".+[.]dlq"})')"
 check "Règles d'alerte de la boutique chargées" 6 "$rules"
-check "Tableau de bord Grafana pme-red (panneaux)" 10 "$panels"
+check "Tableau de bord Grafana pme-red (panneaux)" 11 "$panels"
 grafana -H 'Content-Type: application/json' http://localhost:3000/api/ds/query -d \
   '{"from":"now-15m","to":"now","queries":[{"refId":"A","datasource":{"uid":"prometheus"},"expr":"sum(pme_orders_total)","instant":true}]}' \
   > "$RESULTS.grafana"

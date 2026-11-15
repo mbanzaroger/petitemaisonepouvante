@@ -468,6 +468,51 @@
         },
         "textMode": "value_and_name"
       }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Instances actives par service (HPA)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "description": "Nombre d'instances collectées et actives : montre la mise à l'échelle horizontale pendant le test de charge (docs/14-test-de-charge.md).",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count by (service) (up{service=~\".+-service\"} == 1)",
+          "legendFormat": "{{service}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
     }
   ],
   "description": "US5 : indicateurs RED (débit, erreurs, latence) hors appels de supervision, puis suivi métier de la saga de commande.",
