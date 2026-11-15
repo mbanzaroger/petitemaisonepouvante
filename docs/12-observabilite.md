@@ -78,6 +78,7 @@ Les compteurs métier ne bougent **qu'après validation de la transaction** (`Tr
 |---|---|
 | RED | Débit (req/s), erreurs 5xx (%), latence p95 avec seuil 300 ms (indicateur 3), mémoire JVM |
 | Saga de commande | Commandes par étape, durée de saga p95, réservations par issue, boîte d'envoi en attente, messages en file de rebut |
+| Capacité | Instances actives par service (mise à l'échelle horizontale, test de charge) |
 
 ## 5. Alertes
 
@@ -103,7 +104,7 @@ Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas n
 | Boîte d'envoi | vide |
 | Files de rebut supervisées | 2 |
 | Règles d'alerte chargées dans Prometheus | 6 |
-| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | 10 panneaux, valeur non nulle |
+| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | 11 panneaux, valeur non nulle |
 | Logs reliés par `smoke-saga-1` | ≥ 3 lignes dans order-service, ≥ 2 dans stock-service |
 
 Le résultat (tableau et lignes de logs corrélées) est publié dans le résumé du run GitHub Actions.

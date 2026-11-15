@@ -8,5 +8,6 @@ node_modules/
 *.pem
 *.key
 acceptance-tests/target/
+load-tests/target/
 __pycache__/
 *.pyc
