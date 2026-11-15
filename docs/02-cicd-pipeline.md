@@ -64,7 +64,7 @@ Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call
 | Déploiement | kind + Kustomize | `cd.yml` | Oui | Disponibilité (rollout réussi) |
 | Smoke tests | `scripts/smoke-test.sh` | `cd.yml` | Oui | Disponibilité |
 | Supervision | kube-prometheus-stack, `k8s/monitoring/verify.sh` (cibles, métriques, 6 alertes chargées, Grafana, logs corrélés) | `cd.yml` | Oui | US5 ; mesure du p95 (indicateur 3) |
-| DAST | OWASP ZAP baseline | `cd.yml` | Rapport (seuil à fixer au jalon 4) | 4 |
+| DAST | OWASP ZAP : baseline passif puis scan actif de l'API à partir du contrat OpenAPI, authentifié (`scripts/dast.sh`) | `cd.yml` | Oui pour les règles qualifiées FAIL dans `.zap/rules.tsv` (injections, en-têtes de sécurité corrigés) | 4 |
 | Charge | JMeter (hors pipeline, démonstration en soutenance) | `load-tests/` | – | 3 — p95 < 300 ms, erreurs < 1 % |
 | Production | Environnement `production` avec approbation | `release.yml` / `production` | Validation manuelle | – |
 

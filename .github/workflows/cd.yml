@@ -25,8 +25,9 @@ permissions:
 jobs:
   staging:
     name: Déploiement staging (kind) + smoke + supervision + DAST
+    # Un cluster kind par runner : rien n'est partagé entre branches, seuls les runs d'une même branche se suivent.
     concurrency:
-      group: cd-staging
+      group: cd-staging-${{ github.ref }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment:
@@ -144,14 +145,9 @@ jobs:
           path: acceptance-tests/target/cucumber-reports/
           if-no-files-found: ignore
 
-      - name: DAST — OWASP ZAP baseline
+      - name: DAST — OWASP ZAP (baseline + scan actif de l'API OpenAPI)
         if: steps.ready.outputs.ok == 'true' && env.BASE_URL != ''
-        run: |
-          mkdir -p zap && chmod 777 zap
-          rules=()
-          if [ -f .zap/rules.tsv ]; then cp .zap/rules.tsv zap/; rules=(-c rules.tsv); fi
-          docker run --rm --network host -v "$PWD/zap:/zap/wrk:rw" ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t "$BASE_URL/api/v1/products" "${rules[@]}" -r zap-report.html -J zap-report.json -I
+        run: bash scripts/dast.sh
 
       - name: Rapport ZAP
         if: always() && steps.ready.outputs.ok == 'true'
