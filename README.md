@@ -30,6 +30,10 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Cartographie des compétences](docs/08-competences.md)
 - [Action de formation](docs/09-formation.md)
 - [Gouvernance du dépôt et de la livraison](docs/10-gouvernance-depot.md)
+- [Plan de remédiation](docs/11-plan-remediation.md)
+- [Observabilité et supervision (US5)](docs/12-observabilite.md)
+- [Analyse de sécurité de la V1 et registre des vulnérabilités](docs/13-analyse-securite.md)
+- [Test de charge (indicateur 3)](docs/14-test-de-charge.md)
 - [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
@@ -76,4 +80,4 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Expérimentations E1 à E4 et synthèse (v0.4.0)
 - [x] Squelettes des 3 services (CI : tests, couverture, scans, images)
 - [x] User stories US1 à US5 : staging Kubernetes, tests d'acceptation, supervision (v0.5.0)
-- [ ] Scans, test de charge, plan de remédiation
+- [x] DAST de l'API, test de charge (indicateur 3), analyse de sécurité et plan de remédiation (v0.6.0)
