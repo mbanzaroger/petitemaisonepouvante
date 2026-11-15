@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>21</java.version>
-        <jacoco.version>0.8.14</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- Indicateur 1 : couverture minimale des lignes (politique de tests) -->
         <coverage.minimum>0.80</coverage.minimum>
         <!-- Remédiation : Spring Boot 4.1.2 gère amqp-client 5.30.0, vulnérable (CVE-2026-63337, -69219, -69220,
