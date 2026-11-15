@@ -1,0 +1,26 @@
+meta {
+  name: 05 Jeton carol (CUSTOMER)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{keycloakUrl}}/realms/pme/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: pme-tests
+  username: carol
+  password: {{carolPassword}}
+}
+
+script:post-response {
+  bru.setVar("carolToken", res.body.access_token);
+}
+
+assert {
+  res.status: eq 200
+}

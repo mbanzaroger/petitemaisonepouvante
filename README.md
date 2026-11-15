@@ -33,7 +33,8 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
-- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md)
+- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-002 : front-end hors POC](docs/adr/ADR-002-front-end.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md)
+- [Contrat OpenAPI](docs/api/openapi.yaml) · [Collection Bruno](docs/api/bruno/) · [Script de démonstration](docs/demo/script-demo.md)
 - [Protocoles d'expérimentation](docs/experimentations/) · [Synthèse adoption / rejet](docs/experimentations/synthese.md)
 
 ## Démarrage local

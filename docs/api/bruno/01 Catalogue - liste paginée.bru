@@ -1,0 +1,19 @@
+meta {
+  name: 01 Catalogue - liste paginée
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/products?page=0&size=5
+  body: none
+  auth: none
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-01
+}
+
+assert {
+  res.status: eq 200
+}

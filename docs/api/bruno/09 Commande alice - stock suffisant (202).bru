@@ -1,0 +1,31 @@
+meta {
+  name: 09 Commande alice - stock suffisant (202)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{ordersUrl}}/api/v1/orders
+  body: json
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-09
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+body:json {
+  {"lines":[{"productId":"{{figurine}}","quantity":1}]}
+}
+
+script:post-response {
+  bru.setVar("orderId", res.body.id);
+}
+
+assert {
+  res.status: eq 202
+}

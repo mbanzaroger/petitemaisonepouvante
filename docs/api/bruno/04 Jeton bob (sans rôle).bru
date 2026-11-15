@@ -1,0 +1,26 @@
+meta {
+  name: 04 Jeton bob (sans rôle)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{keycloakUrl}}/realms/pme/protocol/openid-connect/token
+  body: formUrlEncoded
+  auth: none
+}
+
+body:form-urlencoded {
+  grant_type: password
+  client_id: pme-tests
+  username: bob
+  password: {{bobPassword}}
+}
+
+script:post-response {
+  bru.setVar("bobToken", res.body.access_token);
+}
+
+assert {
+  res.status: eq 200
+}

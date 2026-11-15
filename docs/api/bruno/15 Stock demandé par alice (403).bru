@@ -1,0 +1,23 @@
+meta {
+  name: 15 Stock demandé par alice (403)
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{stockUrl}}/api/v1/stock/{{figurine}}
+  body: none
+  auth: bearer
+}
+
+headers {
+  X-Correlation-Id: bruno-demo-15
+}
+
+auth:bearer {
+  token: {{aliceToken}}
+}
+
+assert {
+  res.status: eq 403
+}
