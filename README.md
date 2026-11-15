@@ -64,7 +64,7 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 |---|---|---|
 | `ci.yml` | PR, push sur `develop` / `main` | Secrets, SCA, IaC, build et tests, couverture, Quality Gate, image, scan, SBOM, GHCR |
 | `codeql.yml` | PR, push, hebdomadaire | SAST Java et analyse des workflows |
-| `cd.yml` | Appelé par `ci.yml` après une CI verte sur un push vers `develop` / `main` (ou lancement manuel) | Déploiement sur cluster kind éphémère, smoke tests, acceptation Cucumber, DAST ZAP |
+| `cd.yml` | Appelé par `ci.yml` après une CI verte sur un push vers `develop` / `main` (ou lancement manuel) | Déploiement sur cluster kind éphémère, smoke tests, acceptation Cucumber, vérification de la supervision, DAST ZAP |
 | `release.yml` | Release publiée | Images versionnées, SBOM, production sous approbation |
 
 ## Avancement
@@ -75,5 +75,5 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Industrialisation : pipelines CI/CD, gouvernance GitHub, kanban, audit (v0.3.0)
 - [x] Expérimentations E1 à E4 et synthèse (v0.4.0)
 - [x] Squelettes des 3 services (CI : tests, couverture, scans, images)
-- [ ] User stories US1 à US5
+- [x] User stories US1 à US5 : staging Kubernetes, tests d'acceptation, supervision (v0.5.0)
 - [ ] Scans, test de charge, plan de remédiation

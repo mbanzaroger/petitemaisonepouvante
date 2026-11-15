@@ -1,0 +1,94 @@
+# Tests unitaires des règles d'alerte (promtool test rules), exécutés par la CI (job « Lint »).
+rule_files: [alerts.yml]
+evaluation_interval: 30s
+tests:
+  - name: Fonctionnement nominal, aucune alerte
+    interval: 30s
+    input_series:
+      - series: 'up{service="order-service"}'
+        values: '1x20'
+      - series: 'pme_outbox_pending{service="order-service"}'
+        values: '0x20'
+      - series: 'http_server_requests_seconds_count{service="order-service",status="200",uri="/api/v1/orders"}'
+        values: '0+60x20'
+      - series: 'rabbitmq_detailed_queue_messages_ready{queue="stock.order-placed.dlq"}'
+        values: '0x20'
+    alert_rule_test:
+      - { eval_time: 10m, alertname: ServiceIndisponible, exp_alerts: [] }
+      - { eval_time: 10m, alertname: BoiteEnvoiBloquee, exp_alerts: [] }
+      - { eval_time: 10m, alertname: TauxErreurEleve, exp_alerts: [] }
+      - { eval_time: 10m, alertname: MessagesEnRebut, exp_alerts: [] }
+
+  - name: Service arrêté
+    interval: 30s
+    input_series:
+      - series: 'up{service="stock-service"}'
+        values: '1 1 0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ServiceIndisponible
+        exp_alerts:
+          - exp_labels: { severity: critical, service: stock-service }
+            exp_annotations:
+              summary: "stock-service ne répond plus à la collecte depuis 1 minute"
+
+  - name: Broker injoignable, la boîte d'envoi grossit
+    interval: 30s
+    input_series:
+      - series: 'pme_outbox_pending{service="order-service"}'
+        values: '0 1 2 3 4 5 6 7 8 9'
+    alert_rule_test:
+      - { eval_time: 1m, alertname: BoiteEnvoiBloquee, exp_alerts: [] }
+      - eval_time: 3m
+        alertname: BoiteEnvoiBloquee
+        exp_alerts:
+          - exp_labels: { severity: critical, service: order-service }
+            exp_annotations:
+              summary: "6 événement(s) non publié(s) depuis 2 minutes sur order-service : RabbitMQ injoignable ?"
+
+  - name: 5 % de réponses 5xx (les appels /actuator sont ignorés)
+    interval: 30s
+    input_series:
+      - series: 'http_server_requests_seconds_count{service="catalog-service",status="200",uri="/api/v1/products"}'
+        values: '0+57x20'
+      - series: 'http_server_requests_seconds_count{service="catalog-service",status="500",uri="/api/v1/products"}'
+        values: '0+3x20'
+      - series: 'http_server_requests_seconds_count{service="catalog-service",status="200",uri="/actuator/prometheus"}'
+        values: '0+1000x20'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: TauxErreurEleve
+        exp_alerts:
+          - exp_labels: { severity: critical, service: catalog-service }
+            exp_annotations:
+              summary: "Plus de 1 % de réponses 5xx sur catalog-service (objectif : < 1 %)"
+
+  - name: Message empoisonné en file de rebut
+    interval: 30s
+    input_series:
+      - series: 'rabbitmq_detailed_queue_messages_ready{queue="stock.order-placed.dlq",vhost="/"}'
+        values: '0 1 1 1 1 1'
+      - series: 'rabbitmq_detailed_queue_messages_ready{queue="stock.order-placed",vhost="/"}'
+        values: '5 5 5 5 5 5'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: MessagesEnRebut
+        exp_alerts:
+          - exp_labels: { severity: warning, queue: stock.order-placed.dlq }
+            exp_annotations:
+              summary: "1 message(s) dans la file de rebut stock.order-placed.dlq : analyser puis rejouer ou purger"
+
+  - name: Ruptures de stock, plus de 20 % d'annulations
+    interval: 1m
+    input_series:
+      - series: 'pme_orders_total{event="confirmed",service="order-service"}'
+        values: '0+6x30'
+      - series: 'pme_orders_total{event="cancelled",service="order-service"}'
+        values: '0+4x30'
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: TauxAnnulationEleve
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "Plus de 20 % des commandes annulées sur 15 minutes : ruptures de stock à traiter"

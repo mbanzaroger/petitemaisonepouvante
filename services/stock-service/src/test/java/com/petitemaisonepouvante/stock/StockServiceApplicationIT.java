@@ -45,7 +45,9 @@ class StockServiceApplicationIT extends AbstractIntegrationTest {
     void lesMetriquesPrometheusSontExposees() throws Exception {
         mvc.perform(get("/actuator/prometheus"))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("jvm_memory_used_bytes")));
+                .andExpect(content().string(containsString("jvm_memory_used_bytes")))
+                .andExpect(content().string(containsString("pme_stock_reservations_total")))
+                .andExpect(content().string(containsString("pme_outbox_pending")));
     }
 
     @Test

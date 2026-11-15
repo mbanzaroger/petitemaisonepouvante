@@ -6,6 +6,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
+import com.petitemaisonepouvante.stock.observability.ReservationMetrics;
 import com.petitemaisonepouvante.stock.reservation.ReservationService;
 import com.petitemaisonepouvante.stock.web.CorrelationIdFilter;
 
@@ -17,10 +18,12 @@ import tools.jackson.databind.json.JsonMapper;
 public class OrderPlacedListener {
 
     private final ReservationService reservations;
+    private final ReservationMetrics metrics;
     private final JsonMapper json;
 
-    public OrderPlacedListener(ReservationService reservations, JsonMapper json) {
+    public OrderPlacedListener(ReservationService reservations, ReservationMetrics metrics, JsonMapper json) {
         this.reservations = reservations;
+        this.metrics = metrics;
         this.json = json;
     }
 
@@ -31,7 +34,7 @@ public class OrderPlacedListener {
             MDC.put(CorrelationIdFilter.MDC_KEY, correlationId.toString());
         }
         try {
-            reservations.reserve(parse(message.getBody()));
+            metrics.record(reservations.reserve(parse(message.getBody())));
         } finally {
             MDC.remove(CorrelationIdFilter.MDC_KEY);
         }

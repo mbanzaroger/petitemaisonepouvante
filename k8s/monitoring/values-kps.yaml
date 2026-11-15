@@ -1,0 +1,34 @@
+# kube-prometheus-stack réduit au besoin du staging (kind, un nœud) : Prometheus, Alertmanager, Grafana.
+# Les règles et le tableau de bord de la boutique viennent de infra/monitoring (source unique, voir install.sh).
+defaultRules:
+  create: false
+kubeControllerManager: { enabled: false }
+kubeScheduler: { enabled: false }
+kubeEtcd: { enabled: false }
+kubeProxy: { enabled: false }
+nodeExporter: { enabled: false }
+kubeStateMetrics: { enabled: false }
+prometheus:
+  prometheusSpec:
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+    retention: 2d
+    # Prend en compte les ServiceMonitor et PrometheusRule de tous les espaces de noms, sans étiquette « release »
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    resources:
+      requests: { cpu: 100m, memory: 400Mi }
+      limits: { memory: 1Gi }
+alertmanager:
+  enabled: true
+grafana:
+  # Mot de passe administrateur généré à l'exécution (secret grafana-admin), jamais versionné
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL

@@ -1,0 +1,50 @@
+# Règles d'alerte de la boutique (US5). Source unique : chargée telle quelle par Prometheus en local
+# (docker compose) et convertie en PrometheusRule sur Kubernetes par k8s/monitoring/install.sh.
+# Les requêtes de supervision (/actuator/*) sont exclues des indicateurs RED.
+groups:
+  - name: pme-red
+    rules:
+      - alert: ServiceIndisponible
+        expr: up{service=~"catalog-service|order-service|stock-service"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.service }} ne répond plus à la collecte depuis 1 minute"
+      - alert: TauxErreurEleve
+        expr: |
+          sum by (service) (rate(http_server_requests_seconds_count{status=~"5..", uri!~"/actuator.*"}[2m]))
+            / sum by (service) (rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[2m])) > 0.01
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Plus de 1 % de réponses 5xx sur {{ $labels.service }} (objectif : < 1 %)"
+      - alert: LatenceP95Elevee
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le, service) (rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[5m]))) > 0.3
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Latence p95 > 300 ms sur {{ $labels.service }} (indicateur 3)"
+  - name: pme-saga
+    rules:
+      - alert: BoiteEnvoiBloquee
+        expr: max by (service) (pme_outbox_pending) > 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $value }} événement(s) non publié(s) depuis 2 minutes sur {{ $labels.service }} : RabbitMQ injoignable ?"
+      - alert: MessagesEnRebut
+        expr: sum by (queue) (rabbitmq_detailed_queue_messages_ready{queue=~".+[.]dlq"}) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value }} message(s) dans la file de rebut {{ $labels.queue }} : analyser puis rejouer ou purger"
+      - alert: TauxAnnulationEleve
+        expr: |
+          sum(increase(pme_orders_total{event="cancelled"}[15m]))
+            / clamp_min(sum(increase(pme_orders_total{event=~"confirmed|cancelled"}[15m])), 1) > 0.2
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Plus de 20 % des commandes annulées sur 15 minutes : ruptures de stock à traiter"

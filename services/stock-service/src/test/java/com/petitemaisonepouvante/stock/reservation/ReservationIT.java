@@ -40,6 +40,7 @@ import com.petitemaisonepouvante.stock.AbstractIntegrationTest;
 import com.petitemaisonepouvante.stock.messaging.Events;
 import com.petitemaisonepouvante.stock.messaging.Messaging;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -63,6 +64,9 @@ class ReservationIT extends AbstractIntegrationTest {
 
     @Autowired
     private ReservationService reservations;
+
+    @Autowired
+    private MeterRegistry meters;
 
     private Queue results;
 
@@ -142,8 +146,10 @@ class ReservationIT extends AbstractIntegrationTest {
     }
 
     @Test
-    @DisplayName("Un OrderPlaced rejoué (même eventId) ne décrémente le stock qu'une seule fois")
+    @DisplayName("Un OrderPlaced rejoué (même eventId) ne décrémente le stock qu'une seule fois ; US5 : doublons comptés")
     void idempotence() {
+        double duplicatesBefore = reservationCount("duplicate");
+        double reservedBefore = reservationCount("reserved");
         UUID product = newProduct(10);
         UUID order = UUID.randomUUID();
         Events.OrderPlaced event = event(order, product, 4);
@@ -156,6 +162,14 @@ class ReservationIT extends AbstractIntegrationTest {
         assertThat(second == null || !order.toString().equals(json.readTree(second.getBody()).get("orderId").asString()))
                 .as("aucun second résultat pour cette commande").isTrue();
         assertThat(available(product)).isEqualTo(6);
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(reservationCount("duplicate")).isGreaterThanOrEqualTo(duplicatesBefore + 2);
+            assertThat(reservationCount("reserved")).isGreaterThanOrEqualTo(reservedBefore + 1);
+        });
+    }
+
+    private double reservationCount(String outcome) {
+        return meters.get("pme.stock.reservations").tag("outcome", outcome).counter().count();
     }
 
     @Test

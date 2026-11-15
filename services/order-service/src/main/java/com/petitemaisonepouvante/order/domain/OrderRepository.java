@@ -2,6 +2,7 @@ package com.petitemaisonepouvante.order.domain;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -86,15 +87,19 @@ public class OrderRepository {
     /**
      * Transition idempotente : seule une commande encore PENDING change d'état.
      * Un événement rejoué ou en retard ne modifie donc jamais une commande déjà finalisée.
+     *
+     * @return l'instant de création de la commande si la transition a eu lieu (mesure de la durée de saga), vide sinon
      */
-    public boolean completeIfPending(UUID id, OrderStatus status) {
+    public Optional<Instant> completeIfPending(UUID id, OrderStatus status) {
         return jdbc.sql("""
                 update customer_order set status = :status, updated_at = now()
                 where id = :id and status = 'PENDING'
+                returning created_at
                 """)
                 .param("status", status.name())
                 .param("id", id)
-                .update() == 1;
+                .query((rs, row) -> rs.getObject("created_at", OffsetDateTime.class).toInstant())
+                .optional();
     }
 
     private List<Order> withLines(List<Order> orders) {
