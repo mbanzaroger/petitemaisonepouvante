@@ -19,6 +19,9 @@ grafana() { curl -sS -u "admin:$GRAFANA_PASSWORD" "$@"; }
 kubectl -n monitoring port-forward svc/kps-kube-prometheus-stack-prometheus 9090:9090 >/dev/null 2>&1 & pids+=($!)
 kubectl -n monitoring port-forward svc/kps-grafana 3000:80 >/dev/null 2>&1 & pids+=($!)
 
+for _ in $(seq 1 30); do
+  curl -sf http://localhost:9090/-/ready >/dev/null && curl -sf http://localhost:3000/api/health >/dev/null && break; sleep 2
+done
 echo "Attente de la découverte des cibles (3 services + RabbitMQ)…"
 targets=0
 for _ in $(seq 1 40); do
@@ -43,9 +46,11 @@ check "Boîte d'envoi vide (aucun événement bloqué)" 0 "$(promq 'sum(pme_outb
 check "Files de rebut supervisées" 2 "$(promq 'count(rabbitmq_detailed_queue_messages_ready{queue=~".+[.]dlq"})')"
 check "Règles d'alerte de la boutique chargées" 6 "$rules"
 check "Tableau de bord Grafana pme-red (panneaux)" 10 "$panels"
-via_grafana=$(grafana -H 'Content-Type: application/json' http://localhost:3000/api/ds/query -d \
+grafana -H 'Content-Type: application/json' http://localhost:3000/api/ds/query -d \
   '{"from":"now-15m","to":"now","queries":[{"refId":"A","datasource":{"uid":"prometheus"},"expr":"sum(pme_orders_total)","instant":true}]}' \
-  | jq -r '.results.A.frames[0].data.values[1][0] // 0')
+  > "$RESULTS.grafana"
+via_grafana=$(jq -r '.results.A.frames[0].data.values[1][0] // 0' "$RESULTS.grafana" 2>/dev/null || echo 0)
+[ "$(positive "$via_grafana")" = oui ] || { echo "Réponse Grafana :"; head -c 600 "$RESULTS.grafana"; echo; }
 check "Métriques lisibles dans Grafana (source « prometheus »)" oui "$(positive "$via_grafana")"
 
 kubectl -n pme logs deploy/order-service --tail=-1 | grep -F "$CORRELATION_ID" > "$RESULTS.order"

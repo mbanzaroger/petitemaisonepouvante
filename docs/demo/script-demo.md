@@ -30,7 +30,7 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 kind create cluster --name pme
 for s in catalog-service order-service stock-service; do
   docker build -t "$s:demo" "services/$s" && kind load docker-image "$s:demo" --name pme
-  (cd k8s/overlays/staging && kustomize edit set image "$s=$s:demo")
+  (cd k8s/overlays/staging && kustomize edit set image "ghcr.io/mbanzaroger/petitemaisonepouvante/$s=$s:demo")
 done
 bash k8s/staging-bootstrap.sh                 # variables écrites dans /tmp/pme-staging/staging.env
 kubectl apply -k k8s/overlays/staging

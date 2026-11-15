@@ -66,7 +66,8 @@ jobs:
             # Image publiée par la CI (push sur develop/main) ; à défaut (lancement manuel sur une branche), construite ici.
             docker pull "$image" || docker build -t "$image" "$dir"
             kind load docker-image "$image" --name pme-staging
-            (cd "$OVERLAY" && kustomize edit set image "$svc=$image")
+            # Le nom à remplacer est celui produit par la base (registre compris), sinon l'image :develop resterait.
+            (cd "$OVERLAY" && kustomize edit set image "$prefix/$svc=$image")
           done
 
       - name: Socle du cluster (Envoy Gateway, cert-manager, Keycloak, opérateur RabbitMQ)
@@ -80,6 +81,12 @@ jobs:
           for _ in $(seq 1 12); do kubectl apply -k "$OVERLAY" && break; sleep 5; done
           kubectl -n pme wait rabbitmqcluster/pme-rabbit --for=condition=AllReplicasReady --timeout=600s
           kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=600s
+          # Garde-fou : chaque service tourne bien avec l'image du commit déployé
+          for svc in catalog-service order-service stock-service; do
+            deployed=$(kubectl -n pme get "deploy/$svc" -o jsonpath='{.spec.template.spec.containers[0].image}')
+            echo "$svc → $deployed"
+            case "$deployed" in *":sha-$SHA") ;; *) echo "::error::$svc ne déploie pas l'image du commit ($deployed)"; exit 1 ;; esac
+          done
           echo "127.0.0.1 api.pme.local keycloak.pme.local" | sudo tee -a /etc/hosts
 
       - name: Smoke tests
