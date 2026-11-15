@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Socle de l'environnement de staging (appelé par .github/workflows/cd.yml, utilisable en local sur kind) :
-# Envoy Gateway + cert-manager (TLS), Keycloak (OIDC), opérateur RabbitMQ, secrets générés à l'exécution.
+# Envoy Gateway + cert-manager (TLS), Keycloak (OIDC), opérateur RabbitMQ, metrics-server, secrets générés à l'exécution.
 # Exporte BASE_URL, KEYCLOAK_URL, PME_CA_CERT et les mots de passe de test (masqués dans les logs GitHub).
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 EG_VERSION="${EG_VERSION:-v1.10.0}"
 CM_VERSION="${CM_VERSION:-v1.21.3}"
 RABBIT_OPERATOR_VERSION="${RABBIT_OPERATOR_VERSION:-v2.23.3}"
+METRICS_SERVER_VERSION="${METRICS_SERVER_VERSION:-v0.9.1}"
 WORK="${WORK:-${RUNNER_TEMP:-/tmp}/pme-staging}"; mkdir -p "$WORK"
 ENV_FILE="${GITHUB_ENV:-$WORK/staging.env}"
 log() { printf '\n\033[1;34m▸ %s\033[0m\n' "$*"; }
@@ -27,6 +28,13 @@ helm upgrade --install cert-manager jetstack/cert-manager --version "$CM_VERSION
 log "Opérateur RabbitMQ $RABBIT_OPERATOR_VERSION"
 kubectl apply -f "https://github.com/rabbitmq/cluster-operator/releases/download/$RABBIT_OPERATOR_VERSION/cluster-operator.yml"
 kubectl -n rabbitmq-system rollout status deploy/rabbitmq-cluster-operator --timeout=180s
+
+log "metrics-server $METRICS_SERVER_VERSION (mise à l'échelle horizontale, HPA)"
+kubectl apply -f "https://github.com/kubernetes-sigs/metrics-server/releases/download/$METRICS_SERVER_VERSION/components.yaml"
+# kind : certificats des kubelets auto-signés. Option réservée à ce cluster de test, jamais en production.
+kubectl -n kube-system patch deployment metrics-server --type=json \
+  -p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+kubectl -n kube-system rollout status deployment/metrics-server --timeout=180s
 
 log "PKI, Gateway HTTPS *.pme.local"
 kubectl apply -f platform/pki.yaml

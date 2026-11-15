@@ -7,7 +7,17 @@ name: CD staging
 
 on:
   workflow_call:
+    inputs:
+      charge:
+        description: Lancer le test de charge JMeter (indicateur 3)
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      charge:
+        description: Lancer le test de charge JMeter (indicateur 3)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -113,6 +123,19 @@ jobs:
         if: steps.ready.outputs.ok == 'true' && env.GRAFANA_PASSWORD != ''
         run: bash k8s/monitoring/verify.sh
 
+      - name: Test de charge JMeter (indicateur 3, p95 < 300 ms et erreurs < 1 %)
+        if: steps.ready.outputs.ok == 'true' && inputs.charge && env.BASE_URL != ''
+        run: bash load-tests/run.sh
+
+      - name: Rapport de charge
+        if: always() && inputs.charge && steps.ready.outputs.ok == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: charge-${{ env.SHA }}
+          path: load-tests/target/
+          if-no-files-found: ignore
+          retention-days: 30
+
       - name: Rapport Cucumber
         if: always() && steps.ready.outputs.ok == 'true'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -146,3 +169,4 @@ jobs:
           kubectl get events --all-namespaces --sort-by=.lastTimestamp | tail -50
           for d in catalog-service order-service stock-service; do kubectl -n pme logs "deploy/$d" --tail=60 || true; done
           kubectl get servicemonitor,prometheusrule -A 2>/dev/null || true
+          kubectl get hpa -A 2>/dev/null || true
