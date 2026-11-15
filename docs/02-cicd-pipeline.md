@@ -41,6 +41,8 @@ flowchart LR
 
 Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call`) appelé par le job `CD staging` de `ci.yml` une fois le check « Résultat CI » vert, uniquement sur un push vers `develop` ou `main`. Il déploie donc toujours le commit qui vient d'être validé (`github.sha`). Un déclencheur `workflow_run` avait été utilisé au départ : CodeQL l'a signalé (2 alertes élevées « Cache Poisoning via execution of untrusted code »), car le SHA déployé provenait d'un autre workflow et le code s'exécutait dans le contexte privilégié de la branche par défaut. Le lancement manuel (`workflow_dispatch`) reste possible sur une branche pour valider un changement d'infrastructure avant fusion.
 
+**Garde-fou de traçabilité** : après le déploiement, le CD vérifie que chaque service tourne avec l'image `sha-<commit>` et échoue sinon. Il a été ajouté le 15/11/2026 après la découverte, pendant l'US5, qu'une surcharge Kustomize (`kustomize edit set image <service>=…`) ne visait plus le nom d'image produit par la base : le staging déployait silencieusement l'image `:develop` au lieu de celle du commit testé. Les métriques métier de l'US5, absentes du staging, ont révélé l'écart.
+
 ## Étape → outil → indicateur alimenté
 
 | Étape | Outil | Workflow / job | Bloquant | Indicateur alimenté (`04-indicateurs-qualite.md`) |
