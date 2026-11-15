@@ -8,7 +8,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.." || exit 1
 ZAP_IMAGE="${ZAP_IMAGE:-ghcr.io/zaproxy/zaproxy:stable}"
 OUT="$PWD/zap"; mkdir -p "$OUT" && chmod 777 "$OUT"
 cp .zap/rules.tsv docs/api/openapi.yaml "$OUT/"
-SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/stdout}"
+SUMMARY="${GITHUB_STEP_SUMMARY:-/dev/null}"
 
 token=$(curl -sS --cacert "$PME_CA_CERT" -X POST "$KEYCLOAK_URL/realms/pme/protocol/openid-connect/token" \
   -d grant_type=password -d client_id=pme-tests -d username=alice --data-urlencode password="$PME_ALICE_PASSWORD" \
@@ -43,5 +43,5 @@ table() { # table <rapport JSON> <libellé>
   echo "|---|---|---|---|"
   table "$OUT/zap-baseline.json" baseline
   table "$OUT/zap-api.json" API
-} >> "$SUMMARY"
+} | tee -a "$SUMMARY"
 [ "$baseline" -eq 0 ] && [ "$api" -eq 0 ]
