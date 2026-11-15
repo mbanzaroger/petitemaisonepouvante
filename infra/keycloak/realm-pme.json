@@ -1,0 +1,146 @@
+{
+  "realm": "pme",
+  "enabled": true,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "CUSTOMER",
+        "description": "Client : passer et consulter ses commandes"
+      },
+      {
+        "name": "MODERATOR",
+        "description": "Modération de l'espace communautaire"
+      },
+      {
+        "name": "ADMIN",
+        "description": "Gestion du catalogue et du stock"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "pme-web",
+      "name": "SPA petitemaisonepouvante.com",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "https://app.pme.local/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173",
+        "https://app.pme.local"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-pme-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "pme-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "pme-tests",
+      "name": "Tests automatisés (mot de passe direct, jamais en production)",
+      "publicClient": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "protocolMappers": [
+        {
+          "name": "audience-pme-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "pme-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "email": "alice@pme.local",
+      "emailVerified": true,
+      "firstName": "Alice",
+      "lastName": "Cliente",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${PME_ALICE_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CUSTOMER"
+      ]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "email": "bob@pme.local",
+      "emailVerified": true,
+      "firstName": "Bob",
+      "lastName": "Visiteur",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${PME_BOB_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": []
+    },
+    {
+      "username": "carol",
+      "enabled": true,
+      "email": "carol@pme.local",
+      "emailVerified": true,
+      "firstName": "Carol",
+      "lastName": "Cliente",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${PME_CAROL_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CUSTOMER"
+      ]
+    },
+    {
+      "username": "admin-pme",
+      "enabled": true,
+      "email": "admin-pme@pme.local",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Administrateur",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${PME_ADMIN_PME_PASSWORD}",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ]
+    }
+  ]
+}
