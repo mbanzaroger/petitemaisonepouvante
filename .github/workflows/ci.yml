@@ -291,7 +291,11 @@ jobs:
   cd-staging:
     name: CD staging
     needs: ci-ok
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
+    # !cancelled() : sans fonction de statut, GitHub saute ce job dès qu'un ancêtre est « skipped »
+    # (titre de PR, revue des dépendances : jobs propres aux PR), même si « Résultat CI » est vert.
+    if: >-
+      !cancelled() && needs.ci-ok.result == 'success' && github.event_name == 'push' &&
+      (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
     permissions:
       contents: read
       packages: read
