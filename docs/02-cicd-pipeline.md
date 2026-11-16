@@ -20,7 +20,10 @@ flowchart LR
         C8["Trivy image<br/>bloquant"]
         C9["SBOM SPDX"]
         C10["Push GHCR<br/>(push uniquement)"]
+        F1["Front-end : ESLint jsx-a11y,<br/>TypeScript, Vitest ≥ 80 %, build"]
+        F2["Image web-frontend<br/>lecture seule, en-têtes, Trivy, SBOM"]
         C2 --> C5 --> C6
+        C2 --> F1 --> F2
         C3 --> C7
         C5 --> C7 --> C8 --> C9 --> C10
         OK{{"Résultat CI<br/>check exigé"}}
@@ -29,7 +32,7 @@ flowchart LR
     CI -->|"push vert sur develop / main<br/>(workflow réutilisable)"| CD
     subgraph CD["cd.yml — staging éphémère"]
         direction TB
-        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D7["Acceptation<br/>Cucumber"] --> D8["Supervision US5<br/>métriques, alertes, logs"] --> D6["DAST<br/>OWASP ZAP"]
+        D1["Cluster kind"] --> D2["Images du commit<br/>chargées"] --> D3["Socle : Envoy Gateway, cert-manager,<br/>Keycloak, RabbitMQ"] --> D4["kubectl apply -k<br/>overlay staging"] --> D5["Smoke tests"] --> D7["Acceptation<br/>Cucumber"] --> D9["Site : e2e Playwright<br/>+ accessibilité axe"] --> D8["Supervision US5<br/>métriques, alertes, logs"] --> D6["DAST OWASP ZAP<br/>API et site"]
     end
     REL["Release publiée<br/>tag vX.Y.Z sur main"] --> R
     subgraph R["release.yml"]
@@ -41,7 +44,7 @@ flowchart LR
 
 Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call`) appelé par le job `CD staging` de `ci.yml` une fois le check « Résultat CI » vert, uniquement sur un push vers `develop` ou `main`. Il déploie donc toujours le commit qui vient d'être validé (`github.sha`). Un déclencheur `workflow_run` avait été utilisé au départ : CodeQL l'a signalé (2 alertes élevées « Cache Poisoning via execution of untrusted code »), car le SHA déployé provenait d'un autre workflow et le code s'exécutait dans le contexte privilégié de la branche par défaut. Le lancement manuel (`workflow_dispatch`) reste possible sur une branche pour valider un changement d'infrastructure avant fusion.
 
-**Garde-fou de traçabilité** : après le déploiement, le CD vérifie que chaque service tourne avec l'image `sha-<commit>` et échoue sinon. Il a été ajouté le 15/11/2026 après la découverte, pendant l'US5, qu'une surcharge Kustomize (`kustomize edit set image <service>=…`) ne visait plus le nom d'image produit par la base : le staging déployait silencieusement l'image `:develop` au lieu de celle du commit testé. Les métriques métier de l'US5, absentes du staging, ont révélé l'écart.
+**Garde-fou de traçabilité** : après le déploiement, le CD vérifie que chaque service (et le site `web-frontend`, depuis le 16/11/2026) tourne avec l'image `sha-<commit>` et échoue sinon. Il a été ajouté le 15/11/2026 après la découverte, pendant l'US5, qu'une surcharge Kustomize (`kustomize edit set image <service>=…`) ne visait plus le nom d'image produit par la base : le staging déployait silencieusement l'image `:develop` au lieu de celle du commit testé. Les métriques métier de l'US5, absentes du staging, ont révélé l'écart.
 
 ## Étape → outil → indicateur alimenté
 
@@ -56,6 +59,11 @@ Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call
 | Tests unitaires | JUnit 5, Mockito | `ci.yml` / `build-test` | Oui | 1 — couverture ≥ 80 % (JaCoCo, contrôlée dans le job) |
 | Tests d'intégration | Testcontainers (PostgreSQL, RabbitMQ réels) | `ci.yml` / `build-test` | Oui | 1 et fiabilité |
 | Tests d'acceptation | Cucumber, Gherkin en français (US1 à US4, 401/403/404), contre le staging déployé | `cd.yml` | Oui | Adéquation fonctionnelle |
+| Front-end : lint et types | ESLint (`jsx-a11y` strict, règles React), TypeScript strict | `ci.yml` / `frontend` | Oui | Maintenabilité, accessibilité |
+| Front-end : tests | Vitest + Testing Library (composants rendus, API simulée), build sans code en ligne | `ci.yml` / `frontend` | Oui | 1 — couverture ≥ 80 % (lignes, `coverage-summary.json`) |
+| Image du site | Démarrage en lecture seule et contrôle des en-têtes, Trivy, SBOM | `ci.yml` / `frontend-image` | Oui | 4 |
+| Tests de bout en bout | Playwright (Chromium) contre le site déployé : parcours confirmé et annulé, connexion Keycloak réelle, en-têtes, absence de jeton dans le stockage, compte sans rôle | `cd.yml` | Oui | Adéquation fonctionnelle, sécurité |
+| Accessibilité | axe-core (WCAG 2.2 A/AA, base du RGAA 4.1) sur 8 pages ou états, captures jointes au rapport | `cd.yml` (Playwright) | Oui (0 violation) | Utilisabilité (ISO 25010) |
 | Règles d'alerte | `promtool check config` et `test rules` (`infra/monitoring/alerts.test.yml`) | `ci.yml` / `lint` | Oui | Fiabilité de la supervision |
 | Analyse statique | SonarQube Cloud (Quality Gate attendu) | `ci.yml` / `build-test` | Oui | 2 — dette ≤ 5 %, duplication ≤ 3 % |
 | SAST | CodeQL `java-kotlin` (security-extended) | `codeql.yml` | Alertes dans Security | 4 |
@@ -64,7 +72,7 @@ Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call
 | Déploiement | kind + Kustomize | `cd.yml` | Oui | Disponibilité (rollout réussi) |
 | Smoke tests | `scripts/smoke-test.sh` | `cd.yml` | Oui | Disponibilité |
 | Supervision | kube-prometheus-stack, `k8s/monitoring/verify.sh` (cibles, métriques, 6 alertes chargées, Grafana, logs corrélés) | `cd.yml` | Oui | US5 ; mesure du p95 (indicateur 3) |
-| DAST | OWASP ZAP : baseline passif puis scan actif de l'API à partir du contrat OpenAPI, authentifié (`scripts/dast.sh`) | `cd.yml` | Oui pour les règles qualifiées FAIL dans `.zap/rules.tsv` (injections, en-têtes de sécurité corrigés) | 4 |
+| DAST | OWASP ZAP : baseline passif puis scan actif de l'API à partir du contrat OpenAPI, authentifié, et baseline du site (`scripts/dast.sh`) | `cd.yml` | Oui pour les règles qualifiées FAIL dans `.zap/rules.tsv` (API : injections, en-têtes) et `.zap/rules-site.tsv` (site : CSP, anti-clickjacking, Permissions-Policy) | 4 |
 | Charge | JMeter (hors pipeline, démonstration en soutenance) | `load-tests/` | – | 3 — p95 < 300 ms, erreurs < 1 % |
 | Production | Environnement `production` avec approbation | `release.yml` / `production` | Validation manuelle | – |
 
@@ -72,6 +80,7 @@ Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call
 - **Trivy à la place d'OWASP Dependency-Check pour la SCA** : un seul outil couvre dépendances, images et IaC ; pas de clé NVD ; exécution en quelques secondes. Dependency-Check reste l'alternative évaluée dans l'expérimentation E2.
 - **SonarQube Cloud** (gratuit pour un dépôt public) plutôt qu'un serveur SonarQube auto-hébergé : pas d'infrastructure à maintenir. Le job est activé dès que le secret `SONAR_TOKEN` existe.
 - **CodeQL** ajouté : SAST natif GitHub, alertes centralisées dans l'onglet Security avec Trivy.
+- **Playwright + axe-core** pour le front-end plutôt que Cypress : navigateurs réels pilotés sans proxy, intégration axe officielle, rapport HTML autonome avec captures. Les traces Playwright ne sont pas conservées en CI, car elles enregistrent les valeurs saisies (mots de passe éphémères du staging).
 - **Actions épinglées par SHA de commit** : réponse directe à la compromission de `trivy-action` de mars 2026 (GHSA-69fq-xp46-6x23), où 76 tags de version ont été redirigés vers un code malveillant.
 
 *Le déploiement en production n'est pas pénalisé s'il n'est pas implémenté (consignes) : le job `production` s'arrête après l'approbation tant qu'aucun cluster n'est configuré.*

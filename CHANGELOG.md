@@ -4,6 +4,23 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [1.1.0] - 2026-11-16
+### Ajouté
+- Site web `web-frontend` (#92, ADR-002 révisé) : SPA React 19 + TypeScript — catalogue filtrable et paginé, fiche produit, panier, connexion Keycloak (code + PKCE S256, jetons en mémoire), commande, suivi en direct du statut de la saga, historique.
+- Accessibilité (RGAA 4.1) : lien d'évitement, titre et focus à chaque navigation, zones de statut, tableaux et formulaires étiquetés, contrastes vérifiés ; `eslint-plugin-jsx-a11y` strict.
+- Image nginx non root en lecture seule, `config.json` par environnement ; service `web-frontend` dans docker compose (http://localhost:5173).
+- Kubernetes : site sur `app.pme.local` derrière le Gateway, même origine que l'API ; NetworkPolicy sans sortie.
+- CI : job « Front-end » (lint, types, 67 tests Vitest, couverture ≥ 80 %) et image `web-frontend` (Trivy, SBOM, GHCR).
+- CD : tests de bout en bout Playwright et contrôles axe sur le staging ; baseline ZAP du site (`.zap/rules-site.tsv`).
+
+### Modifié
+- ADR-002 révisé : le front-end minimal remplace la démonstration par l'API seule.
+- Royaume `pme` : redirections du client `pme-web` pour le port 8443, retour après déconnexion, pages de connexion en français.
+- Release et rapport de sécurité hebdomadaire : image `web-frontend` incluse ; Dependabot : npm et image du site.
+
+### Sécurité
+- CSP stricte sans script ni style en ligne, `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, `Permissions-Policy`, COOP et CORP sur le site ; aucun jeton dans le stockage du navigateur.
+
 ## [1.0.0] - 2026-11-15
 ### Ajouté
 - Trame de soutenance minutée, notes et questions probables (`docs/soutenance/support.md`) ; support de présentation (#40).
@@ -70,7 +87,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Cadrage technique v1.0, ADR-001 (microservices), schémas d'architecture, de CI/CD et de saga, backlog US1 à US5.
 - Infrastructure locale de développement (docker-compose) et squelette de CI.
 
-[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.0.0...develop
+[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.1.0...develop
+[1.1.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.4.0...v0.5.0

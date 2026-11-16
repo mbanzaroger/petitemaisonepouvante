@@ -1,5 +1,8 @@
 # Exposition par Gateway API (ADR-003). Le Gateway « pme-gateway » (plateforme) termine le TLS ;
 # chaque route porte sa politique : catalogue public, commandes réservées à CUSTOMER, stock réservé à ADMIN.
+# Le site (app.pme.local) et l'API partagent la même origine pour le navigateur : les routes catalogue et
+# commandes répondent aussi sur app.pme.local (ni CORS ni cookie ; ADR-002 révisé). api.pme.local reste l'entrée
+# des intégrations et des tests.
 # Les services valident aussi le jeton eux-mêmes (défense en profondeur).
 # En-têtes de réponse ajoutés au Gateway (DAST ZAP, J4) : HSTS, puisque le TLS se termine ici et que les services
 # ne voient que du HTTP, et Cross-Origin-Resource-Policy « same-origin » (une API n'a pas à être chargée par une
@@ -10,7 +13,7 @@ metadata:
   name: catalog
 spec:
   parentRefs: [{ name: pme-gateway }]
-  hostnames: ["api.pme.local"]
+  hostnames: ["api.pme.local", "app.pme.local"]
   rules:
     - matches:
         - { path: { type: PathPrefix, value: /api/v1/products }, method: GET }
@@ -29,7 +32,7 @@ metadata:
   name: orders
 spec:
   parentRefs: [{ name: pme-gateway }]
-  hostnames: ["api.pme.local"]
+  hostnames: ["api.pme.local", "app.pme.local"]
   rules:
     - matches: [{ path: { type: PathPrefix, value: /api/v1/orders } }]
       filters:
@@ -56,6 +59,24 @@ spec:
               - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
               - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: stock-service, port: 8083 }]
+---
+# Site web : tout le reste de app.pme.local est servi par web-frontend (nginx), qui pose ses propres en-têtes
+# (CSP, anti-clickjacking) ; le Gateway ajoute HSTS puisque le TLS se termine ici.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: web
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: / } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+      backendRefs: [{ name: web-frontend, port: 8080 }]
 ---
 # Chemins inconnus : réponse 404 problem+json produite par le Gateway, avec les en-têtes de sécurité
 # (sans cette route, Envoy répond lui-même sans HSTS). Les routes plus précises restent prioritaires.

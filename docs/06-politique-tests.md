@@ -12,7 +12,9 @@ Garantir l'adéquation fonctionnelle, la fiabilité et la non-régression, et re
 | Acceptation | Scénarios Gherkin du backlog (US1 à US4) | Cucumber | À chaque PR | ~10 % | 100 % verts |
 | Sécurité | Tests négatifs 401/403, SAST, SCA, scan d'image, DAST | CodeQL, SonarQube Cloud, Trivy, ZAP | Pipeline | – | 0 vulnérabilité critique/haute |
 | Charge | Tenue en charge du catalogue et de la commande | JMeter (ou Siege) | Avant release, démonstration en soutenance | – | p95 < 300 ms, erreurs < 1 % |
-| Accessibilité | Contrôles automatisés RGAA sur les pages clés | axe | À chaque PR front | – | 0 erreur bloquante |
+| Front-end : unitaires et composants | Règles du panier, appels API et erreurs problem+json, authentification, pages rendues avec une API simulée (rôles, focus, annonces) | Vitest, Testing Library | À chaque PR | 67 tests | Couverture des lignes ≥ 80 % |
+| Front-end : bout en bout | Parcours réel dans Chromium sur le staging : connexion Keycloak (PKCE), commande confirmée puis annulée, historique, en-têtes, jetons hors du stockage | Playwright | À chaque déploiement en staging | 6 tests | 100 % verts |
+| Accessibilité | Pages et états clés (catalogue, fiche, panier, suivi, historique, connexion requise, page introuvable) ; règles `jsx-a11y` à l'écriture | axe-core (WCAG 2.2 A/AA), ESLint `jsx-a11y` strict | À chaque PR (lint) et à chaque déploiement (axe) | – | 0 violation axe ; audit RGAA manuel avant mise en ligne (R-13) |
 
 ## Règles
 1. **Tout bug corrigé reçoit un test de non-régression** avant ou avec le correctif.
@@ -26,9 +28,9 @@ Garantir l'adéquation fonctionnelle, la fiabilité et la non-régression, et re
 ## Environnements
 | Environnement | Tests exécutés |
 |---|---|
-| Poste local | Unitaires, intégration (Testcontainers) |
-| CI (GitHub Actions) | Unitaires, intégration, acceptation, SAST, SCA, scan d'image |
-| Staging | Smoke tests, DAST (ZAP), test de charge |
+| Poste local | Unitaires, intégration (Testcontainers) ; front-end : `npm test` |
+| CI (GitHub Actions) | Unitaires, intégration, acceptation, SAST, SCA, scan d'image ; front-end : lint, types, Vitest |
+| Staging | Smoke tests, Cucumber, bout en bout Playwright + axe, DAST (ZAP, API et site), test de charge |
 
 ## Critères d'entrée et de sortie
 - **Entrée en test d'acceptation** : build vert, Quality Gate passé.
@@ -37,7 +39,8 @@ Garantir l'adéquation fonctionnelle, la fiabilité et la non-régression, et re
 ## Traçabilité vers les indicateurs
 | Indicateur | Source de la mesure |
 |---|---|
-| Couverture ≥ 80 % | Rapport JaCoCo importé dans SonarQube |
+| Couverture ≥ 80 % | Rapport JaCoCo importé dans SonarQube ; `coverage-summary.json` de Vitest pour le front-end |
 | Dette ≤ 5 %, duplication ≤ 3 % | SonarQube |
 | p95 < 300 ms, erreurs < 1 % | Rapport JMeter + métriques Prometheus |
 | Vulnérabilités critiques/hautes = 0 | Rapports Trivy, CodeQL, ZAP |
+| Accessibilité (utilisabilité ISO 25010) | Résultats axe joints au rapport Playwright du CD |

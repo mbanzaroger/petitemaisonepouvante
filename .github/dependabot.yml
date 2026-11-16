@@ -23,8 +23,25 @@ updates:
       maven:
         patterns: ["*"]
 
+  - package-ecosystem: npm
+    directory: /frontend
+    target-branch: develop
+    schedule: { interval: weekly, day: monday }
+    labels: ["type:dependencies"]
+    commit-message: { prefix: build }
+    open-pull-requests-limit: 3
+    # Une PR groupée par semaine ; les mises à jour majeures (React, Vite, ESLint…) restent séparées pour revue.
+    groups:
+      npm-mineures:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # Node 22 LTS (image de build) : types alignés sur la version d'exécution
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: docker
-    directories: ["/services/*"]
+    directories: ["/services/*", "/frontend"]
     target-branch: develop
     schedule: { interval: weekly, day: monday }
     labels: ["type:dependencies"]

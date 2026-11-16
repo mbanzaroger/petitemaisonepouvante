@@ -24,14 +24,27 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [catalog-service, order-service, stock-service]
+        service: [catalog-service, order-service, stock-service, web-frontend]
     steps:
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # Une image pas encore publiée sur develop (nouveau composant en cours de revue) est signalée, pas en échec.
+      - name: Image publiée ?
+        id: present
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}/${{ matrix.service }}:develop
+        run: |
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$IMAGE n'est pas encore publiée : rapport ignoré"
+          fi
       - name: Trivy image (toutes sévérités, avec et sans correctif)
+        if: steps.present.outputs.ok == 'true'
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository }}/${{ matrix.service }}:develop
@@ -41,6 +54,7 @@ jobs:
           ignore-unfixed: false
           exit-code: "0"
       - name: Synthèse
+        if: steps.present.outputs.ok == 'true'
         env:
           SERVICE: ${{ matrix.service }}
         run: |
@@ -61,6 +75,7 @@ jobs:
               "trivy-$SERVICE.json"
           } | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.present.outputs.ok == 'true'
         with:
           name: trivy-${{ matrix.service }}
           path: trivy-${{ matrix.service }}.json

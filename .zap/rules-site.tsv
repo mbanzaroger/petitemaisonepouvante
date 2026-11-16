@@ -1,0 +1,26 @@
+10038	FAIL	Content-Security-Policy absente : la CSP stricte est posée par nginx sur toutes les réponses du site
+10055	FAIL	CSP affaiblie (unsafe-inline, unsafe-eval, joker, directive sans repli) : interdit
+10020	FAIL	Anti-clickjacking : X-Frame-Options DENY et frame-ancestors 'none'
+10063	FAIL	Permissions-Policy : posée par nginx (caméra, micro, géolocalisation, paiement, USB désactivés)
+10017	FAIL	Script inclus depuis un autre domaine : aucune ressource tierce
+10035	FAIL	HSTS : ajouté par la route « web » du Gateway ; échec si l'en-tête disparaît
+90004	WARN	Isolation (Spectre) : CORP same-origin et COOP same-origin posés par nginx ; COEP non déployé, car il bloquerait l'iframe de vérification de session Keycloak (docs/13 §7)
+10021	FAIL	X-Content-Type-Options : envoyé par nginx (nosniff), contrôlé aussi par les tests e2e
+10037	FAIL	X-Powered-By : aucune technologie ne doit être annoncée
+10098	FAIL	CORS trop permissif : aucune origine n'est autorisée sur l'API (le site est servi sur la même origine, ADR-002 révisé)
+10049	IGNORE	Informatif : cache long voulu pour /assets (noms à empreinte), no-cache pour index.html, no-store pour config.json
+6	FAIL	Traversée de répertoire
+7	FAIL	Inclusion de fichier distant
+40003	FAIL	Injection CRLF
+40012	FAIL	XSS réfléchi
+40014	FAIL	XSS persistant
+40018	FAIL	Injection SQL
+40022	FAIL	Injection SQL PostgreSQL (temporisation)
+40046	FAIL	SSRF
+90019	FAIL	Injection de code côté serveur
+90020	FAIL	Injection de commande système
+90023	FAIL	XXE
+90035	FAIL	Injection de gabarit côté serveur (SSTI)
+10015	IGNORE	Informatif : no-cache voulu sur index.html (nouvelle version servie à chaque visite), cache long sur /assets
+10109	IGNORE	Informatif : application monopage détectée (attendu)
+10027	IGNORE	Faux positif qualifié : mots repérés dans le code minifié des bibliothèques (React, keycloak-js) ; aucun commentaire du projet n'est livré

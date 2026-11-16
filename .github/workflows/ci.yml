@@ -270,10 +270,121 @@ jobs:
           docker tag "$IMAGE:sha-$GITHUB_SHA" "$IMAGE:$GITHUB_REF_NAME"
           docker push "$IMAGE:$GITHUB_REF_NAME"
 
+  frontend:
+    name: Front-end (lint, types, tests, couverture)
+    needs: [secrets]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Dépendances (lockfile, sans scripts d'installation)
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Lint (ESLint, dont jsx-a11y strict pour le RGAA)
+        run: npm run lint
+      - name: Types (TypeScript strict)
+        run: npm run typecheck
+      - name: Tests unitaires et de composants (Vitest + Testing Library) avec couverture
+        run: npm run test:coverage
+      - name: Indicateur 1 — couverture des lignes
+        run: |
+          lines=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+          branches=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
+          echo "### web-frontend : couverture des lignes ${lines} % (branches ${branches} %, seuil ${COVERAGE_MIN} %)" >> "$GITHUB_STEP_SUMMARY"
+          awk -v l="$lines" -v m="$COVERAGE_MIN" 'BEGIN { exit (l + 0 >= m + 0) ? 0 : 1 }' \
+            || { echo "::error::Couverture des lignes ${lines} % < ${COVERAGE_MIN} %"; exit 1; }
+      - name: Build de production (aucun script ni style en ligne)
+        run: |
+          npm run build
+          if grep -Eq '<script>|<style>|style=' dist/index.html; then
+            echo "::error::index.html contient du code en ligne, incompatible avec la CSP"; exit 1
+          fi
+      - name: Rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rapports-web-frontend
+          path: frontend/coverage/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  frontend-image:
+    name: Image, scan et SBOM (web-frontend)
+    needs: [frontend, sca]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}/web-frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Nom de l'image
+        id: img
+        run: echo "name=${IMAGE,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build de l'image (tag = SHA du commit)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: frontend
+          load: true
+          tags: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+      - name: Démarrage en lecture seule et en-têtes de sécurité
+        env:
+          IMAGE_REF: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+        run: |
+          docker run -d --name web --read-only --tmpfs /tmp --tmpfs /etc/nginx/conf.d:uid=101,gid=101 \
+            --cap-drop ALL --security-opt no-new-privileges -e KEYCLOAK_URL=https://keycloak.example.test \
+            -p 127.0.0.1:18080:8080 "$IMAGE_REF"
+          for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:18080/healthz >/dev/null 2>&1 && break; sleep 1; done
+          headers=$(curl -fsSI http://127.0.0.1:18080/panier)
+          echo "$headers"
+          echo "$headers" | grep -qi "^content-security-policy: .*connect-src 'self' https://keycloak.example.test"
+          echo "$headers" | grep -qi '^x-frame-options: DENY'
+          curl -fsS http://127.0.0.1:18080/config.json | jq -e '.keycloakUrl == "https://keycloak.example.test"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/v1/orders)" = 404
+          test "$(docker inspect -f '{{.Config.User}}' web)" = 101
+          docker rm -f web
+      - name: Indicateur 4 — scan de l'image (bloquant critique/haute)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: SBOM (SPDX)
+        uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          image: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
+          artifact-name: sbom-web-frontend.spdx.json
+          upload-release-assets: false
+      - name: Connexion à GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publication sur GHCR (main, develop)
+        if: github.event_name == 'push'
+        env:
+          IMAGE_NAME: ${{ steps.img.outputs.name }}
+        run: |
+          docker push "$IMAGE_NAME:sha-$GITHUB_SHA"
+          docker tag "$IMAGE_NAME:sha-$GITHUB_SHA" "$IMAGE_NAME:$GITHUB_REF_NAME"
+          docker push "$IMAGE_NAME:$GITHUB_REF_NAME"
+
   ci-ok:
     name: Résultat CI
     if: always()
-    needs: [detect, pr-title, lint, secrets, sca, dependency-review, build-test, image]
+    needs: [detect, pr-title, lint, secrets, sca, dependency-review, build-test, image, frontend, frontend-image]
     runs-on: ubuntu-latest
     steps:
       - name: Agréger les résultats
