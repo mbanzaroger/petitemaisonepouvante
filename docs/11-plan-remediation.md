@@ -34,6 +34,7 @@ Priorités :
 | **R-10** Durcissement des bases | V-21 | UID/GID > 10000 et limites CPU pour PostgreSQL, ou bases managées UE en production | Réduit l'impact d'une évasion de conteneur ; un service managé apporte sauvegardes et correctifs | 1 j | P3 — 13/02/2027 | Trivy config sans KSV-0011, KSV-0020, KSV-0021 |
 | **R-11** Latence de la saga | — (constat du test de charge) | Réveiller le publieur de la boîte d'envoi après validation (PostgreSQL `LISTEN/NOTIFY`) au lieu d'un relevé toutes les 500 ms | Durée de saga p95 de 0,8 s due à la conception ; le client voit sa commande confirmée plus vite | 1 j | P3 — 13/02/2027 | Durée de saga p95 < 200 ms au palier nominal |
 | **R-12** Tests complémentaires | — (limites de `docs/14`) | Test d'endurance de 2 h, tests de panne (nœud RabbitMQ, base), charge depuis un générateur séparé du cluster | Les mesures actuelles partagent la machine du système testé et ne couvrent ni les fuites mémoire ni les pannes en charge | 2 j | P3 — 13/02/2027 | Rapports d'endurance et de panne archivés |
+| **R-13** Accessibilité du site | V-26 | Audit RGAA 4.1 manuel des 106 critères sur l'échantillon de pages (lecteurs d'écran NVDA et VoiceOver, navigation clavier, zoom 200 %), déclaration d'accessibilité et schéma pluriannuel publiés ; thème de connexion Keycloak aux couleurs du site, audité lui aussi | Obligation légale pour un site marchand dès que l'entreprise dépasse le seuil des microentreprises (directive 2019/882 transposée, en vigueur depuis juin 2025) ; les contrôles automatisés (axe) ne couvrent qu'environ 30 % des critères | 3 j | **P1** — avant mise en ligne | Grille RGAA remplie, taux de conformité publié, déclaration en ligne |
 
 **Risques acceptés** (aucune action) : V-22, identifiants de développement de l'historique Git, jamais valides ailleurs que sur un poste ; V-24, option `--kubelet-insecure-tls` limitée au cluster kind du staging.
 
@@ -57,6 +58,7 @@ gantt
     section P1 (avant production)
     R-02 Keycloak de production            :r2, 2026-12-07, 3d
     R-03 Coffre de secrets                 :r3, 2026-12-10, 3d
+    R-13 Audit RGAA du site                :r13, 2026-12-15, 3d
     section P3 (90 jours)
     R-04 Image JRE minimale                :r4, 2027-01-11, 2d
     R-10 Durcissement des bases            :r10, 2027-01-13, 1d
@@ -67,13 +69,13 @@ gantt
 
 | Priorité | Actions | Effort |
 |---|---|---|
-| P1 (avant production) | R-02, R-03 (+ R-05 pour la production) | 6 j |
+| P1 (avant production) | R-02, R-03, R-13 (+ R-05 pour la production) | 9 j |
 | P2 (30 jours) | R-01, R-05, R-06, R-07, R-08, R-09 | 11,5 j |
 | P3 (90 jours) | R-04, R-10, R-11, R-12 | 6 j |
-| **Total** | 12 actions | **23,5 jours-personne** |
+| **Total** | 13 actions | **26,5 jours-personne** |
 
 ## 4. Suivi
 
-- Chaque action est une issue GitHub (labels `type:security`, `phase:3-remediation`, priorité ; jalon « Remédiation (après le POC) ») et suit le flux habituel : branche, PR, CI verte, preuve dans le résumé du run. Correspondance : R-01 #73, R-02 #74, R-03 #75, R-04 #76, R-05 #77, R-06 #78, R-07 #79, R-08 #32, R-09 #80, R-10 #81, R-11 #82, R-12 #83.
+- Chaque action est une issue GitHub (labels `type:security`, `phase:3-remediation`, priorité ; jalon « Remédiation (après le POC) ») et suit le flux habituel : branche, PR, CI verte, preuve dans le résumé du run. Correspondance : R-01 #73, R-02 #74, R-03 #75, R-04 #76, R-05 #77, R-06 #78, R-07 #79, R-08 #32, R-09 #80, R-10 #81, R-11 #82, R-12 #83, R-13 #94.
 - Le registre (`docs/13`) est mis à jour à chaque clôture ; l'indicateur 4 est relu à chaque jalon.
 - Le rapport de sécurité hebdomadaire et la veille (avis GitHub, Debian, OWASP) peuvent ajouter des constats : ils entrent dans le registre avec la sévérité retenue et le délai de la politique.
