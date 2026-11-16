@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       services: ${{ steps.list.outputs.services }}
+      prerelease: ${{ steps.release.outputs.prerelease }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -33,6 +34,13 @@ jobs:
           services=$(find services -mindepth 2 -maxdepth 2 -name Dockerfile -printf '%h\n' 2>/dev/null \
             | xargs -r -n1 basename | sort | jq -R . | jq -sc .)
           echo "services=${services:-[]}" >> "$GITHUB_OUTPUT"
+      # Lu sur la release elle-même : un relancement manuel (workflow_dispatch) d'une préversion ne doit
+      # ni publier « latest » ni demander la mise en production.
+      - name: Préversion ?
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "prerelease=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq .isPrerelease)" >> "$GITHUB_OUTPUT"
 
   docs:
     name: Archive de la documentation
@@ -59,7 +67,9 @@ jobs:
       contents: write
       packages: write
     strategy:
-      fail-fast: true
+      # Une image en échec ne doit pas annuler la publication des autres (SBOM, provenance) : la mise en
+      # production reste bloquée par « needs.images.result », qui vaut « failure » dès qu'une image échoue.
+      fail-fast: false
       matrix:
         service: ${{ fromJSON(needs.detect.outputs.services) }}
     steps:
@@ -69,7 +79,7 @@ jobs:
       - name: Tags de l'image
         id: meta
         env:
-          PRERELEASE: ${{ github.event.release.prerelease || false }}
+          PRERELEASE: ${{ needs.detect.outputs.prerelease }}
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY,,}/${{ matrix.service }}"
           version="${TAG#v}"
@@ -105,17 +115,27 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: "1"
-      - name: SBOM joint à la release
+      # SBOM écrit dans un fichier puis joint par ce job seulement : l'option « upload-release-assets » de
+      # sbom-action relit les artefacts de tout le run et échouait (404) quand les jobs parallèles écrivaient
+      # les leurs (releases v0.4.0, v0.5.0 et v1.0.0 du 16/11/2026).
+      - name: SBOM (SPDX)
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
           image: ${{ steps.meta.outputs.ref }}
-          artifact-name: sbom-${{ matrix.service }}-${{ env.TAG }}.spdx.json
-          upload-release-assets: true
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}-${{ env.TAG }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: SBOM joint à la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SBOM: sbom-${{ matrix.service }}-${{ env.TAG }}.spdx.json
+        run: gh release upload "$TAG" "$SBOM" --clobber --repo "$GITHUB_REPOSITORY"
 
   production:
     name: Mise en production (approbation requise)
     needs: [detect, images, docs]
-    if: always() && needs.docs.result == 'success' && needs.images.result != 'failure' && !github.event.release.prerelease
+    if: always() && needs.docs.result == 'success' && needs.images.result == 'success' && needs.detect.outputs.prerelease == 'false'
     runs-on: ubuntu-latest
     environment:
       name: production
