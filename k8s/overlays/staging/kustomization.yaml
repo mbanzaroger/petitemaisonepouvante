@@ -11,6 +11,7 @@ configMapGenerator:
     literals:
       - jwt-jwk-set-uri=http://keycloak:8080/realms/pme/protocol/openid-connect/certs
       - jwt-issuer-uri=https://keycloak.pme.local:8443/realms/pme
+      - keycloak-public-url=https://keycloak.pme.local:8443
 patches:
   - target: { kind: SecurityPolicy }
     patch: |-

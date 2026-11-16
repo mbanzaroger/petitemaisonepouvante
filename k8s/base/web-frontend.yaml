@@ -1,0 +1,62 @@
+# web-frontend : SPA React servie par nginx non root (UID 101), système de fichiers en lecture seule.
+# Seuls /tmp (cache, PID) et /etc/nginx/conf.d (gabarits rendus au démarrage) sont inscriptibles.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  labels: { app: web-frontend, app.kubernetes.io/part-of: petitemaisonepouvante }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app: web-frontend }
+  template:
+    metadata:
+      labels: { app: web-frontend, app.kubernetes.io/part-of: petitemaisonepouvante }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: web-frontend
+          image: web-frontend
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8080 }
+          env:
+            - name: KEYCLOAK_URL
+              valueFrom: { configMapKeyRef: { name: pme-config, key: keycloak-public-url } }
+            - { name: KEYCLOAK_REALM, value: pme }
+            - { name: KEYCLOAK_CLIENT_ID, value: pme-web }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 20m, memory: 32Mi }
+            limits: { cpu: 200m, memory: 128Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: conf, mountPath: /etc/nginx/conf.d }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+        - { name: conf, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-frontend
+  labels: { app: web-frontend }
+spec:
+  selector: { app: web-frontend }
+  ports:
+    - { name: http, port: 8080, targetPort: http }
