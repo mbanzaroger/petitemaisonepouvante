@@ -28,13 +28,16 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "redirectUris": [
-        "https://app.pme.local/*"
+        "https://app.pme.local/*",
+        "https://app.pme.local:8443/*"
       ],
       "webOrigins": [
-        "https://app.pme.local"
+        "https://app.pme.local",
+        "https://app.pme.local:8443"
       ],
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "+"
       },
       "protocolMappers": [
         {
@@ -144,5 +147,10 @@
         "ADMIN"
       ]
     }
-  ]
+  ],
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "fr"
+  ],
+  "defaultLocale": "fr"
 }

@@ -1,7 +1,7 @@
 # Environnement local de développement et de démonstration de secours (sans Kubernetes).
 # Prérequis : infra/.env (généré par infra/init-env.sh, jamais versionné). Tous les ports sont liés à 127.0.0.1.
 #   docker compose up -d                  → bases, broker, Keycloak, Prometheus, Grafana
-#   docker compose --profile app up -d    → idem + les 3 microservices construits depuis services/
+#   docker compose --profile app up -d    → idem + les 3 microservices et le site (http://localhost:5173)
 name: pme
 
 x-postgres: &postgres
@@ -153,3 +153,15 @@ services:
       stock-db: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       keycloak: { condition: service_healthy }
+
+  web-frontend:
+    <<: *service
+    build: ../frontend
+    environment:
+      KEYCLOAK_URL: http://localhost:8080
+    tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101"]
+    volumes: ["./web/api.conf:/etc/nginx/pme-api/api.conf:ro"]
+    ports: ["127.0.0.1:5173:8080"]
+    depends_on:
+      catalog-service: { condition: service_started }
+      order-service: { condition: service_started }

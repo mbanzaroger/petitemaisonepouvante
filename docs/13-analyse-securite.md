@@ -1,6 +1,6 @@
 # 13 — Analyse de sécurité de la V1
 
-> **Issue** : #38 · **Date** : 15/11/2026 · **Périmètre** : les 3 services, le Gateway (Envoy Gateway), Keycloak, RabbitMQ, PostgreSQL, le staging Kubernetes et la chaîne CI/CD.
+> **Issue** : #38 · **Date** : 15/11/2026, complétée le 16/11/2026 pour le site web (#92, §7) · **Périmètre** : le site `web-frontend`, les 3 services, le Gateway (Envoy Gateway), Keycloak, RabbitMQ, PostgreSQL, le staging Kubernetes et la chaîne CI/CD.
 > **Suite** : chaque constat ouvert a une action dans le plan de remédiation (`docs/11-plan-remediation.md`).
 > **Référentiels** : OWASP Top 10 2021 (comme la politique de sécurité, `docs/07` §10), sévérités et délais de la politique de sécurité (§6).
 
@@ -13,10 +13,11 @@
 | Images | Trivy image : bloquant en CI (critique/haute corrigeable), **rapport hebdomadaire toutes sévérités** (`security-report.yml`) | 3 images publiées sur GHCR | Chaque build, hebdomadaire | Système de base : 8 hautes, 47 moyennes, 23 basses, 6 indéterminées, **toutes sans correctif publié** (V-01) |
 | Infrastructure as Code | Trivy config sur le **rendu Kustomize** du staging | Manifestes réellement appliqués | Chaque PR, hebdomadaire | 4 règles basses ou moyennes (V-15, V-21), 1 exception datée (V-16) |
 | Secrets | gitleaks (historique complet sur lancement manuel) | Dépôt et historique | Chaque PR et push | 0 secret ; 2 faux positifs qualifiés dans `.gitleaksignore` (V-22) |
-| DAST | OWASP ZAP baseline (passif) + scan actif de l'API depuis le contrat OpenAPI, authentifié | Staging déployé | Chaque déploiement | Après corrections : 0 échec, 0 avertissement ; 120 règles passées sur l'API (V-03, V-04) |
+| DAST | OWASP ZAP baseline (passif) + scan actif de l'API depuis le contrat OpenAPI, authentifié ; baseline du site depuis le 16/11/2026 | Staging déployé | Chaque déploiement | API, après corrections : 0 échec, 0 avertissement, 120 règles passées (V-03, V-04) ; site : 0 échec, 63 règles passées, 1 avertissement qualifié (V-25) et 4 alertes informatives qualifiées |
 | Charge et volume | JMeter : palier nominal et palier de stress | Staging déployé | À la demande | p95 7 ms au nominal ; 1 904 req/s acceptées sans plafond sur le catalogue (V-11) |
 | Qualité | SonarQube Cloud | Code des services | Chaque PR | Inactif, en attente du jeton (V-20) |
 | Revue manuelle | Modèle STRIDE (`docs/05`), configuration, pipeline | Ensemble du système | Jalon J4 | Constats V-02, V-10, V-12 à V-14, V-17 à V-19, V-23, V-24 |
+| Site web (16/11/2026) | ESLint `jsx-a11y`, Vitest, Playwright (en-têtes, stockage, rôles), axe-core, ZAP baseline du site, Trivy (lockfile npm et image nginx) | SPA et image `web-frontend` | Chaque PR et chaque déploiement | Constats V-25 à V-27 (§7) |
 
 **Rapport consolidé** : le workflow « Rapport de sécurité » (`.github/workflows/security-report.yml`) relance chaque lundi les scans des images (toutes sévérités, avec ou sans correctif) et de la configuration Kubernetes rendue. Il complète la CI, réglée pour ne bloquer que ce qui est corrigeable.
 
@@ -26,12 +27,12 @@ Décompte par sévérité **retenue** (après réévaluation dans le contexte, v
 
 | Statut | Critique | Haute | Moyenne | Basse | Total |
 |---|---|---|---|---|---|
-| Corrigé ou évité | 2 | 3 | 3 | 2 | 10 |
-| Exception datée ou risque accepté | — | — | 1 | 3 | 4 |
-| À traiter (plan de remédiation) | — | 1 | 7 | 2 | 10 |
-| **Total** | **2** | **4** | **11** | **7** | **24** |
+| Corrigé ou évité | 3 | 3 | 3 | 2 | 11 |
+| Exception datée ou risque accepté | — | — | 1 | 4 | 5 |
+| À traiter (plan de remédiation) | — | 1 | 8 | 2 | 11 |
+| **Total** | **3** | **4** | **12** | **8** | **27** |
 
-**Indicateur 4** (`docs/04`) : **0 vulnérabilité critique ou haute corrigeable non traitée**. Le seul constat de sévérité haute encore ouvert (V-17) ne concerne que la future production : il est bloquant pour la mise en production et planifié en priorité 1. Les 8 vulnérabilités hautes du système de base (V-01) n'ont pas de correctif publié ; elles relèvent d'une exception justifiée, conformément à la politique de sécurité (§6).
+**Indicateur 4** (`docs/04`) : **0 vulnérabilité critique ou haute corrigeable non traitée** (la critique du site, V-27, a été bloquée par la CI puis corrigée avant fusion). Le seul constat de sévérité haute encore ouvert (V-17) ne concerne que la future production : il est bloquant pour la mise en production et planifié en priorité 1. Les 8 vulnérabilités hautes du système de base (V-01) n'ont pas de correctif publié ; elles relèvent d'une exception justifiée, conformément à la politique de sécurité (§6).
 
 ## 3. Registre des vulnérabilités
 
@@ -63,6 +64,9 @@ Sévérité *outil* : celle du scanner ou de la règle. Sévérité *retenue* : 
 | V-22 | Identifiants de développement par défaut dans l'historique Git (premier docker compose) | gitleaks (scan complet) | A07 | — → Basse | Nulle : jamais utilisés hors du poste, remplacés par des secrets générés (#61) | Risque accepté (historique conservé) |
 | V-23 | Durée de conservation des commandes non définie | Revue (RGPD art. 5.1.e) | — | — → Moyenne | Sans objet (conformité) | À traiter (R-09) |
 | V-24 | `metrics-server` avec `--kubelet-insecure-tls` | Revue manuelle | A02 | — → Basse | Nulle hors du cluster de test | Risque accepté (kind uniquement) |
+| V-25 | Site sans `Cross-Origin-Embedder-Policy` : isolation contre les attaques de type Spectre incomplète | ZAP 90004 (site) | A05 | Basse | Très faible : aucune ressource tierce chargée, COOP et CORP `same-origin` posés ; COEP bloquerait l'iframe de vérification de session Keycloak | Risque accepté (WARN qualifié dans `.zap/rules-site.tsv`) |
+| V-26 | Accessibilité contrôlée automatiquement seulement (axe, `jsx-a11y`) : pas d'audit RGAA manuel ni de déclaration d'accessibilité | Revue (RGAA 4.1) | — | — → **Moyenne** | Sans objet (conformité légale, exclusion d'utilisateurs) | À traiter (R-13, #94) |
+| V-27 | Image `nginx-unprivileged:1.30-alpine` : 1 critique (brotli) et 12 hautes (curl, expat, libxslt, musl, zlib) corrigées par Alpine mais pas encore dans l'image amont | Trivy image (bloquant, CI de la PR #93) | A06 | **Critique** | Faible : nginx ne décompresse pas de brotli ni n'exécute curl ; conteneur non root en lecture seule | **Corrigé** : `apk upgrade` à la construction, scan vert |
 
 ## 4. Résultats sans constat
 
@@ -85,3 +89,28 @@ Sévérité *outil* : celle du scanner ou de la règle. Sévérité *retenue* : 
 ## 6. Points forts à conserver
 
 Défense en profondeur sur l'authentification (Gateway et services), NetworkPolicies en refus par défaut, conteneurs non root en lecture seule sans capacités, actions épinglées par SHA, SBOM et provenance des images, secrets générés à l'exécution et jamais versionnés, alertes testées en CI, et une chaîne qui a **elle-même détecté** quatre des constats corrigés (V-05, V-06, V-07, V-08).
+
+## 7. Site web (`web-frontend`, 16/11/2026)
+
+Le site ajoute une surface exposée : du code exécuté dans le navigateur des clients, une dépendance à l'écosystème npm et une image nginx. Analyse STRIDE ciblée et mesures retenues (ADR-002 révisé) :
+
+| Menace | Scénario | Mesures | Preuve |
+|---|---|---|---|
+| Injection de script (XSS) | Un nom de produit ou un détail d'erreur malveillant exécute du code dans la page | React échappe tout texte affiché (aucun `dangerouslySetInnerHTML`) ; CSP `script-src 'self'` sans `unsafe-inline` ni `unsafe-eval` ; seul le détail des refus métier (422) est affiché, les autres erreurs ont un message fixe | Build vérifié sans code en ligne (CI) ; en-têtes contrôlés par Playwright et ZAP (10038, 10055 bloquants) ; test unitaire « détail technique jamais affiché » |
+| Vol de jeton | Un script injecté ou une extension lit le jeton d'accès | Jetons **en mémoire** (keycloak-js), jamais dans `localStorage`, `sessionStorage` ni cookie ; durée de vie de 5 min, renouvelés 30 s avant expiration ; `Referrer-Policy: no-referrer` | Test Playwright « aucun jeton n'est conservé dans le stockage du navigateur » |
+| Interception du code d'autorisation | Le code renvoyé par Keycloak est réutilisé par un tiers | Flux code + **PKCE S256** exigé par le client `pme-web` ; redirections limitées au site (`https://app.pme.local[:8443]/*`) ; réponse dans le fragment d'URL, effacé aussitôt | Configuration du royaume ; test unitaire de l'initialisation |
+| Requête intersite (CSRF) | Une page tierce déclenche une commande au nom du client | Aucun cookie ni authentification « ambiante » vers l'API : le jeton est ajouté explicitement par le site ; même origine, aucune règle CORS | Test Playwright : `fetch` avec `credentials: 'include'` sans jeton → 401 |
+| Détournement de clics | Le site est intégré dans un cadre invisible | `frame-ancestors 'none'` et `X-Frame-Options: DENY` (la page de vérification de session n'accepte que le site lui-même) | ZAP 10020 bloquant |
+| Élévation de privilèges | Un compte sans rôle accède aux commandes | Le site masque les actions, mais le Gateway **et** le service refusent (défense en profondeur) | Test Playwright avec `bob` ; tests Cucumber 403 |
+| Chaîne d'approvisionnement npm | Paquet compromis ou script d'installation malveillant | Versions exactes et lockfile, `npm ci --ignore-scripts`, Dependabot hebdomadaire, Trivy sur le lockfile ; seules 4 bibliothèques livrées (React, React DOM, React Router, keycloak-js) | CI « SCA » et « Front-end » |
+| Conteneur | Prise de contrôle de nginx | Image non root (UID 101), système de fichiers en lecture seule, capacités retirées, aucune sortie réseau (NetworkPolicy), correctifs Alpine appliqués à la construction (V-27) | CI : démarrage en lecture seule, Trivy bloquant |
+| Divulgation | Fichiers cachés, version du serveur | `server_tokens off`, 404 sur les fichiers commençant par un point, configuration publique limitée à l'URL de Keycloak, au royaume et au client | ZAP baseline du site |
+
+**Risques résiduels** : un script injecté malgré la CSP pourrait appeler l'API **pendant** la session (le jeton en mémoire reste utilisable par la page) ; la CSP et l'échappement systématique rendent ce scénario improbable. La page de connexion Keycloak garde le thème par défaut : son accessibilité sera auditée avec celle du site (R-13).
+
+**Résultats** (CD du 16/11/2026 sur la branche du site, staging kind) :
+- Playwright : **6 tests sur 6** verts — parcours confirmé et parcours annulé faute de stock, en-têtes et CSP, aucun jeton dans le stockage, compte sans rôle refusé, lien d'évitement ;
+- axe-core : **0 violation** sur 8 pages ou états (catalogue, fiche produit, panier visiteur et vide, suivi de commande, historique, connexion requise, page introuvable) ;
+- ZAP baseline du site : **0 échec**, 63 règles passées ; COEP absent (V-25, risque accepté) ; 4 alertes informatives qualifiées dans `.zap/rules-site.tsv` (cache voulu, application monopage, mots repérés dans le code minifié des bibliothèques) ;
+- incident de chaîne : le port-forward vers le Gateway est tombé pendant le scan actif de l'API d'un premier run ; le site est désormais scanné avant le scan actif et l'accès est vérifié, puis relancé si besoin, avant chaque scan (`scripts/dast.sh`).
+

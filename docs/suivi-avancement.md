@@ -11,6 +11,7 @@ Le suivi détaillé est tenu dans GitHub : [jalons](https://github.com/mbanzarog
 | J3 — Développement du POC | v0.5.0 | 24/01/2027 | ✅ Terminé le 15/11/2026 | #25 à #31, #33 à #35 |
 | J4 — Sécurité, charge, remédiation | v0.6.0 | 07/02/2027 | ✅ Terminé le 15/11/2026 | #36 à #39 |
 | J5 — Soutenance | v1.0.0 | 25/02/2027 | 🟡 En cours : support livré (#40), répétitions et vidéo à faire (#41) | #40, #41 |
+| Site web (ADR-002 révisé) | v1.1.0 | 16/11/2026 | ✅ Livré le 16/11/2026 | #92 |
 | Remédiation (après le POC) | — | 13/02/2027 | 🔲 Planifié (`docs/11-plan-remediation.md`) | #32, #73 à #83 |
 
 ## Point d'avancement du 15/11/2026
@@ -21,6 +22,10 @@ Les jalons J3 et J4 sont livrés avec plus de dix semaines d'avance sur le rétr
 3. aux actions P2 du plan de remédiation les moins coûteuses (R-07 routage des alertes, R-01 limitation de débit du catalogue), si elles n'exposent pas la démonstration à un risque : gel des changements maintenu à partir du 22/02/2027.
 
 Écart à signaler : SonarQube Cloud, prévu en S5 avec US1 et US2, attend l'action du Lead Dev ; l'indicateur 2 n'est donc pas encore mesuré.
+
+## Point d'avancement du 16/11/2026
+
+Après vérification du backend, l'utilisateur a relevé l'absence d'interface. Arbitrage de périmètre : l'ADR-002 est révisé et le **site web minimal** (#92) est livré dans la journée, sur la marge gagnée en J3 et J4, sans toucher aux services : SPA React sécurisée (PKCE, jetons en mémoire, CSP stricte) et accessible, tests unitaires et de bout en bout, contrôles axe et ZAP à chaque déploiement. La démonstration de la soutenance passe désormais par le site ; la collection Bruno reste le plan B et sert aux cas d'erreur (401, 403, 404). Nouvelle action de remédiation : audit RGAA manuel avant mise en ligne (R-13).
 
 ## Rétroplanning — soutenance le vendredi 26/02/2027
 

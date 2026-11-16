@@ -19,6 +19,7 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 - Chiffrement au repos des volumes et des Secrets Kubernetes.
 - Requêtes SQL paramétrées uniquement ; validation stricte des entrées ; échappement des sorties.
 - En-têtes de sécurité (CSP, X-Content-Type-Options, X-Frame-Options) ; CORS restreint au domaine de l'application.
+- **Navigateur** (site web, ADR-002 révisé) : jetons d'accès **en mémoire uniquement** (jamais `localStorage`, `sessionStorage` ni cookie lisible), flux code + PKCE S256, CSP stricte sans script ni style en ligne (`script-src 'self'`), `frame-ancestors 'none'`, `Referrer-Policy: no-referrer`, `Permissions-Policy` restrictive ; site et API sur la **même origine**, aucune règle CORS ouverte ; aucune ressource tierce (polices, scripts, mesure d'audience) ; aucune donnée personnelle dans le stockage du navigateur (le panier ne contient que des identifiants de produits et des quantités).
 - **Paiement** : externalisé à un prestataire certifié (le service ne stocke aucune donnée de carte) ; hors périmètre du POC.
 
 ## 3. Secrets
@@ -33,6 +34,7 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 
 ## 5. Chaîne d'approvisionnement logicielle
 - Dépendances figées ; mises à jour automatisées (Dependabot ou Renovate) ; SCA et scan d'image à chaque build ; SBOM généré à chaque release.
+- **npm** (site web) : versions exactes et `package-lock.json` versionné, installation par `npm ci --ignore-scripts` (aucun script d'installation exécuté), Dependabot hebdomadaire, Trivy sur le lockfile ; seules les bibliothèques d'exécution (React, React Router, keycloak-js) sont livrées dans le bundle.
 - Images issues de sources officielles ; tag immuable par SHA de commit.
 - Image de base issue d'une **branche maintenue** (ex. distroless Debian 13 et non Debian 12, plus reconstruite) ; le scan Trivy de l'image est bloquant (constat de l'expérimentation E2).
 - Actions GitHub tierces épinglées par SHA de commit, jamais par tag de version (leçon de la compromission de `trivy-action`, mars 2026).
