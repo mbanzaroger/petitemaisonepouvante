@@ -1,0 +1,53 @@
+# SPA petitemaisonepouvante.com servie par nginx non root (port 8080). Gabarit traité par envsubst au démarrage :
+# seules les variables définies (KEYCLOAK_URL, KEYCLOAK_REALM, KEYCLOAK_CLIENT_ID) sont remplacées.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+    charset utf-8;
+    client_max_body_size 1k;
+
+    # Accès à l'API : 404 dans l'image ; derrière le Gateway, les routes /api/v1/* vont directement aux services.
+    # En local (docker compose), ce fichier est remplacé par un relais vers les services (infra/web/api.conf).
+    include /etc/nginx/pme-api/*.conf;
+
+    # Configuration de l'environnement, lue par la SPA au démarrage (aucune URL codée dans le bundle).
+    location = /config.json {
+        include /etc/nginx/conf.d/pme/securite.conf;
+        add_header Cache-Control "no-store" always;
+        default_type application/json;
+        return 200 '{"keycloakUrl":"${KEYCLOAK_URL}","realm":"${KEYCLOAK_REALM}","clientId":"${KEYCLOAK_CLIENT_ID}"}';
+    }
+
+    # Fichiers produits par Vite (nom avec empreinte) : cache long.
+    location /assets/ {
+        include /etc/nginx/conf.d/pme/securite.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Page chargée dans une iframe de la SPA pour la vérification silencieuse de session Keycloak.
+    location = /silent-check-sso.html {
+        include /etc/nginx/conf.d/pme/securite-iframe.conf;
+        add_header Cache-Control "no-cache" always;
+    }
+
+    location ~ /\. {
+        include /etc/nginx/conf.d/pme/securite.conf;
+        return 404;
+    }
+
+    # Routage côté client : toute autre adresse renvoie index.html (jamais mis en cache).
+    location / {
+        include /etc/nginx/conf.d/pme/securite.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri /index.html;
+    }
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 'ok';
+    }
+}

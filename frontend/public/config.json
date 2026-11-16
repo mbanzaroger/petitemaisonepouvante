@@ -1,0 +1,1 @@
+{ "keycloakUrl": "http://localhost:8080", "realm": "pme", "clientId": "pme-web" }
