@@ -16,7 +16,9 @@ ENV KEYCLOAK_URL=http://localhost:8080 \
     KEYCLOAK_REALM=pme \
     KEYCLOAK_CLIENT_ID=pme-web
 USER root
-RUN rm -f /etc/nginx/conf.d/default.conf /usr/share/nginx/html/*
+# Correctifs Alpine publiés après l'image nginx (brotli, curl, expat, musl, zlib… : Trivy, 16/11/2026)
+RUN apk upgrade --no-cache \
+    && rm -f /etc/nginx/conf.d/default.conf /usr/share/nginx/html/*
 COPY nginx/templates /etc/nginx/templates
 COPY nginx/pme-api /etc/nginx/pme-api
 COPY --from=build /app/dist /usr/share/nginx/html
