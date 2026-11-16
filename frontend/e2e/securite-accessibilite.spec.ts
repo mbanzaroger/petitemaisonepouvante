@@ -40,6 +40,8 @@ test.describe('Sécurité du site', () => {
 test.describe('Accessibilité (RGAA 4.1, contrôles automatisables)', () => {
   test('lien d’évitement, focus visible et pages sans violation axe', async ({ page }, testInfo) => {
     await page.goto('/');
+    // La SPA lit config.json avant son premier rendu : attendre la page avant de tabuler.
+    await expect(page.getByRole('heading', { level: 1, name: 'Catalogue' })).toBeVisible();
     await page.keyboard.press('Tab');
     const evitement = page.getByRole('link', { name: 'Aller au contenu' });
     await expect(evitement).toBeFocused();
