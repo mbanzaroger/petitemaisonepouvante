@@ -20,21 +20,41 @@ if [ -n "${GITHUB_ACTIONS:-}" ] && [ -n "$token" ]; then echo "::add-mask::$toke
 
 zap() { docker run --rm --network host -v "$OUT:/zap/wrk:rw" "$@"; }
 
+# Le staging est joint par un « kubectl port-forward » (staging-bootstrap.sh) qui peut tomber sous la charge du
+# scan actif (run du 16/11/2026 : site injoignable ensuite). Il est vérifié, et relancé si besoin, avant chaque scan.
+acces_gateway() {
+  curl -s --max-time 5 --cacert "$PME_CA_CERT" -o /dev/null "$BASE_URL/api/v1/categories" && return 0
+  echo "::warning::Accès au Gateway perdu (port-forward) : relance"
+  local svc
+  svc=$(kubectl -n envoy-gateway-system get svc \
+    -l gateway.envoyproxy.io/owning-gateway-name=pme-gateway,gateway.envoyproxy.io/owning-gateway-namespace=pme \
+    -o jsonpath='{.items[0].metadata.name}')
+  nohup kubectl -n envoy-gateway-system port-forward "svc/$svc" 8443:443 > /dev/null 2>&1 &
+  for _ in $(seq 1 30); do
+    curl -s --max-time 3 --cacert "$PME_CA_CERT" -o /dev/null "$BASE_URL/api/v1/categories" && return 0
+    sleep 1
+  done
+  echo "::error::Gateway injoignable après relance du port-forward"; return 1
+}
+
+acces_gateway
 echo "▸ Scan passif (baseline) du catalogue public"
 zap "$ZAP_IMAGE" zap-baseline.py -t "$BASE_URL/api/v1/products" -c rules.tsv \
   -r zap-baseline.html -J zap-baseline.json -I
 baseline=$?
 
+acces_gateway
+echo "▸ Scan passif (baseline) du site : SPA servie par nginx derrière le Gateway"
+zap "$ZAP_IMAGE" zap-baseline.py -t "$SITE_URL/" -c rules-site.tsv \
+  -r zap-site.html -J zap-site.json -I
+site=$?
+
+acces_gateway
 echo "▸ Scan actif de l'API (contrat OpenAPI, jeton CUSTOMER)"
 zap -e ZAP_AUTH_HEADER=Authorization -e ZAP_AUTH_HEADER_VALUE="Bearer $token" "$ZAP_IMAGE" \
   zap-api-scan.py -t openapi.yaml -f openapi -O "$BASE_URL" -c rules.tsv \
   -r zap-api.html -J zap-api.json -I
 api=$?
-
-echo "▸ Scan passif (baseline) du site : SPA servie par nginx derrière le Gateway"
-zap "$ZAP_IMAGE" zap-baseline.py -t "$SITE_URL/" -c rules-site.tsv \
-  -r zap-site.html -J zap-site.json -I
-site=$?
 
 table() { # table <rapport JSON> <libellé>
   [ -f "$1" ] || { echo "| $2 | rapport absent | | |"; return; }
