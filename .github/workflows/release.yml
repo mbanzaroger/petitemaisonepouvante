@@ -28,11 +28,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.TAG }}
-      - name: Services avec Dockerfile
+      - name: Images à publier (services avec Dockerfile et site web-frontend)
         id: list
         run: |
-          services=$(find services -mindepth 2 -maxdepth 2 -name Dockerfile -printf '%h\n' 2>/dev/null \
-            | xargs -r -n1 basename | sort | jq -R . | jq -sc .)
+          services=$({
+            find services -mindepth 2 -maxdepth 2 -name Dockerfile -printf '%h\n' 2>/dev/null | xargs -r -n1 basename
+            if [ -f frontend/Dockerfile ]; then echo web-frontend; fi
+          } | sort | jq -R . | jq -sc .)
           echo "services=${services:-[]}" >> "$GITHUB_OUTPUT"
       # Lu sur la release elle-même : un relancement manuel (workflow_dispatch) d'une préversion ne doit
       # ni publier « latest » ni demander la mise en production.
@@ -100,7 +102,7 @@ jobs:
       - name: Build et publication (attestations de provenance et SBOM)
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: services/${{ matrix.service }}
+          context: ${{ matrix.service == 'web-frontend' && 'frontend' || format('services/{0}', matrix.service) }}
           push: true
           provenance: mode=max
           sbom: true
