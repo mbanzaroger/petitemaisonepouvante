@@ -13,7 +13,7 @@
 | Images | Trivy image : bloquant en CI (critique/haute corrigeable), **rapport hebdomadaire toutes sévérités** (`security-report.yml`) | 3 images publiées sur GHCR | Chaque build, hebdomadaire | Système de base : 8 hautes, 47 moyennes, 23 basses, 6 indéterminées, **toutes sans correctif publié** (V-01) |
 | Infrastructure as Code | Trivy config sur le **rendu Kustomize** du staging | Manifestes réellement appliqués | Chaque PR, hebdomadaire | 4 règles basses ou moyennes (V-15, V-21), 1 exception datée (V-16) |
 | Secrets | gitleaks (historique complet sur lancement manuel) | Dépôt et historique | Chaque PR et push | 0 secret ; 2 faux positifs qualifiés dans `.gitleaksignore` (V-22) |
-| DAST | OWASP ZAP baseline (passif) + scan actif de l'API depuis le contrat OpenAPI, authentifié | Staging déployé | Chaque déploiement | Après corrections : 0 échec, 0 avertissement ; 120 règles passées sur l'API (V-03, V-04) |
+| DAST | OWASP ZAP baseline (passif) + scan actif de l'API depuis le contrat OpenAPI, authentifié ; baseline du site depuis le 16/11/2026 | Staging déployé | Chaque déploiement | API, après corrections : 0 échec, 0 avertissement, 120 règles passées (V-03, V-04) ; site : 0 échec, 63 règles passées, 1 avertissement qualifié (V-25) et 4 alertes informatives qualifiées |
 | Charge et volume | JMeter : palier nominal et palier de stress | Staging déployé | À la demande | p95 7 ms au nominal ; 1 904 req/s acceptées sans plafond sur le catalogue (V-11) |
 | Qualité | SonarQube Cloud | Code des services | Chaque PR | Inactif, en attente du jeton (V-20) |
 | Revue manuelle | Modèle STRIDE (`docs/05`), configuration, pipeline | Ensemble du système | Jalon J4 | Constats V-02, V-10, V-12 à V-14, V-17 à V-19, V-23, V-24 |
@@ -108,5 +108,9 @@ Le site ajoute une surface exposée : du code exécuté dans le navigateur des c
 
 **Risques résiduels** : un script injecté malgré la CSP pourrait appeler l'API **pendant** la session (le jeton en mémoire reste utilisable par la page) ; la CSP et l'échappement systématique rendent ce scénario improbable. La page de connexion Keycloak garde le thème par défaut : son accessibilité sera auditée avec celle du site (R-13).
 
-**Résultats** (CD du 16/11/2026, staging) : parcours confirmé et annulé dans Chromium, 0 violation axe sur 8 pages ou états, en-têtes et stockage conformes ; ZAP baseline du site : voir §1 et le résumé du run.
+**Résultats** (CD du 16/11/2026 sur la branche du site, staging kind) :
+- Playwright : **6 tests sur 6** verts — parcours confirmé et parcours annulé faute de stock, en-têtes et CSP, aucun jeton dans le stockage, compte sans rôle refusé, lien d'évitement ;
+- axe-core : **0 violation** sur 8 pages ou états (catalogue, fiche produit, panier visiteur et vide, suivi de commande, historique, connexion requise, page introuvable) ;
+- ZAP baseline du site : **0 échec**, 63 règles passées ; COEP absent (V-25, risque accepté) ; 4 alertes informatives qualifiées dans `.zap/rules-site.tsv` (cache voulu, application monopage, mots repérés dans le code minifié des bibliothèques) ;
+- incident de chaîne : le port-forward vers le Gateway est tombé pendant le scan actif de l'API d'un premier run ; le site est désormais scanné avant le scan actif et l'accès est vérifié, puis relancé si besoin, avant chaque scan (`scripts/dast.sh`).
 
