@@ -355,6 +355,12 @@ jobs:
           test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18080/api/v1/orders)" = 404
           test "$(docker inspect -f '{{.Config.User}}' web)" = 101
           docker rm -f web
+          # Relais local de l'API (docker compose) : le site doit démarrer même si aucun service n'est joignable
+          docker run -d --name web-local --read-only --tmpfs /tmp --tmpfs /etc/nginx/conf.d:uid=101,gid=101 \
+            -v "$PWD/infra/web/api.conf:/etc/nginx/pme-api/api.conf:ro" -p 127.0.0.1:18081:8080 "$IMAGE_REF"
+          for _ in $(seq 1 20); do curl -fsS http://127.0.0.1:18081/healthz >/dev/null 2>&1 && break; sleep 1; done
+          curl -fsS http://127.0.0.1:18081/healthz || { docker logs web-local; exit 1; }
+          docker rm -f web-local
       - name: Indicateur 4 — scan de l'image (bloquant critique/haute)
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
