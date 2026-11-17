@@ -1,8 +1,8 @@
 # Exposition par Gateway API (ADR-003). Le Gateway « pme-gateway » (plateforme) termine le TLS ;
 # chaque route porte sa politique : catalogue public, commandes réservées à CUSTOMER, stock réservé à ADMIN.
-# Le site (app.pme.local) et l'API partagent la même origine pour le navigateur : les routes catalogue et
-# commandes répondent aussi sur app.pme.local (ni CORS ni cookie ; ADR-002 révisé). api.pme.local reste l'entrée
-# des intégrations et des tests.
+# Le site (app.pme.local) et l'API partagent la même origine pour le navigateur : les routes catalogue,
+# commandes et stock (espace administrateur) répondent aussi sur app.pme.local (ni CORS ni cookie ;
+# ADR-002 révisé). api.pme.local reste l'entrée des intégrations et des tests.
 # Les services valident aussi le jeton eux-mêmes (défense en profondeur).
 # En-têtes de réponse ajoutés au Gateway (DAST ZAP, J4) : HSTS, puisque le TLS se termine ici et que les services
 # ne voient que du HTTP, et Cross-Origin-Resource-Policy « same-origin » (une API n'a pas à être chargée par une
@@ -49,7 +49,7 @@ metadata:
   name: stock
 spec:
   parentRefs: [{ name: pme-gateway }]
-  hostnames: ["api.pme.local"]
+  hostnames: ["api.pme.local", "app.pme.local"]
   rules:
     - matches: [{ path: { type: PathPrefix, value: /api/v1/stock } }]
       filters:

@@ -4,6 +4,19 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [1.2.0] - 2026-11-17
+### Ajouté
+- Espace administrateur (#100) : page « Stock » réservée au rôle ADMIN, niveaux lus en direct, filtre des produits à surveiller ; route stock ouverte sur `app.pme.local` (JWT + ADMIN au Gateway).
+- Pages de conformité : plan du site, déclaration d'accessibilité (non conforme tant que l'audit R-13 n'est pas réalisé), mentions légales, données personnelles et cookies ; pied de page dédié.
+- Thème de connexion Keycloak « pme » aux couleurs du site, en français (docker compose et staging).
+- Panier revalidé à l'ouverture (prix et disponibilité) ; filet d'erreur ; pages chargées à la demande.
+- Observabilité du site : journaux nginx JSON sans adresse IP, `X-Correlation-Id` envoyé par le navigateur et affiché en cas d'erreur, exporteur nginx (sidecar), ServiceMonitor, 3 panneaux Grafana, contrôles US5.
+- CI : budget de poids du bundle ; CD : Lighthouse (bureau) avec seuils sur 3 pages, 10 tests Playwright, axe sur 14 pages dont la connexion.
+
+### Modifié
+- Alerte `ServiceIndisponible` étendue au site ; `verify.sh` attend 5 cibles et 14 panneaux.
+- « Mes commandes » n'apparaît plus qu'aux clients ; CLS corrigé (gouttière de défilement, place du bouton de connexion).
+
 ## [1.1.0] - 2026-11-16
 ### Ajouté
 - Site web `web-frontend` (#92, ADR-002 révisé) : SPA React 19 + TypeScript — catalogue filtrable et paginé, fiche produit, panier, connexion Keycloak (code + PKCE S256, jetons en mémoire), commande, suivi en direct du statut de la saga, historique.
@@ -87,7 +100,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Cadrage technique v1.0, ADR-001 (microservices), schémas d'architecture, de CI/CD et de saga, backlog US1 à US5.
 - Infrastructure locale de développement (docker-compose) et squelette de CI.
 
-[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.1.0...develop
+[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.2.0...develop
+[1.2.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.6.0...v1.0.0
 [0.6.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.5.0...v0.6.0

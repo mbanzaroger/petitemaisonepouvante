@@ -19,3 +19,9 @@ export function lireProduit(id: string, signal?: AbortSignal): Promise<Product> 
 export function listerCategories(signal?: AbortSignal): Promise<string[]> {
   return appelApi<string[]>('/api/v1/categories', { signal });
 }
+
+/** Relecture groupée (50 identifiants au plus) : prix et disponibilité à jour des produits du panier. */
+export function lireProduits(ids: string[], signal?: AbortSignal): Promise<Product[]> {
+  const params = new URLSearchParams({ ids: ids.slice(0, 50).join(',') });
+  return appelApi<Product[]>(`/api/v1/products?${params.toString()}`, { signal });
+}

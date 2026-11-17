@@ -56,6 +56,13 @@ sed -e "s/__ALICE_PASSWORD__/$alice_pw/" -e "s/__BOB_PASSWORD__/$bob_pw/" -e "s/
 kubectl -n pme create configmap keycloak-realm --from-file=realm-pme.json="$WORK/realm-pme.json" \
   --dry-run=client -o yaml | kubectl apply -f -
 rm -f "$WORK/realm-pme.json"
+# Thème de connexion « pme » (source unique : infra/keycloak/themes, monté aussi par docker compose)
+theme=../infra/keycloak/themes/pme/login
+kubectl -n pme create configmap keycloak-theme-pme \
+  --from-file=theme.properties="$theme/theme.properties" \
+  --from-file=pme.css="$theme/resources/css/pme.css" \
+  --from-file=messages_fr.properties="$theme/messages/messages_fr.properties" \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 log "Keycloak"
 kubectl apply -f platform/keycloak.yaml

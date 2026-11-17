@@ -5,7 +5,7 @@ groups:
   - name: pme-red
     rules:
       - alert: ServiceIndisponible
-        expr: up{service=~"catalog-service|order-service|stock-service"} == 0
+        expr: up{service=~"catalog-service|order-service|stock-service|web-frontend"} == 0
         for: 1m
         labels: { severity: critical }
         annotations:

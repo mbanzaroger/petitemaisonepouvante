@@ -12,7 +12,7 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 
 | Composant | Rôle | Statut |
 |---|---|---|
-| `web-frontend` | Site : catalogue, panier, connexion, commande, suivi, historique (React + TypeScript, ADR-002) | Livré (v1.1.0) |
+| `web-frontend` | Site : catalogue, panier, connexion, commande, suivi, historique, espace administrateur (stock), pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété en v1.2.0) |
 | `catalog-service` | Produits, catégories, prix | Livré (v0.5.0) |
 | `order-service` | Commandes, statuts, historique, saga (boîte d'envoi) | Livré (v0.5.0) |
 | `stock-service` | Stock, réservations idempotentes | Livré (v0.5.0) |
@@ -23,7 +23,10 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 |---|---|
 | ![Catalogue du site : filtre par catégorie, produits, ajout au panier annoncé](docs/assets/site-catalogue.png) | ![Suivi d'une commande confirmée : statut, dates, total et articles](docs/assets/site-suivi.png) |
 
-*Captures du site avec les données de démonstration du catalogue ; l'historique est en `docs/assets/site-historique.png`.*
+| Espace administrateur (stock) | Connexion (thème Keycloak du site) |
+| ![Page Stock réservée aux administrateurs : disponible, réservé et état par produit](docs/assets/site-stock.png) | ![Page de connexion Keycloak aux couleurs du site, en français](docs/assets/site-connexion.png) |
+
+*Captures du site avec les données de démonstration ; l'historique est en `docs/assets/site-historique.png`.*
 
 ## Documentation
 - [Architecture technique + sécurité](docs/01-architecture.md)
@@ -53,7 +56,7 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 ```bash
 infra/init-env.sh                              # génère infra/.env (mots de passe aléatoires, jamais versionné)
 cd infra && docker compose --profile app up -d --build
-# Site http://localhost:5173 (connexion avec alice ou carol) — l'API y est relayée sur la même origine
+# Site http://localhost:5173 (alice ou carol : client ; admin-pme : stock) — l'API y est relayée sur la même origine
 # API : catalogue http://localhost:8081, commandes :8082, stock :8083 (ports liés à 127.0.0.1)
 # Keycloak http://localhost:8080 (admin / KEYCLOAK_ADMIN_PASSWORD) · RabbitMQ http://localhost:15672
 # Prometheus http://localhost:9090 · Grafana http://localhost:3000 (tableau de bord « PME — RED des microservices »)
@@ -94,5 +97,6 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] DAST de l'API, test de charge (indicateur 3), analyse de sécurité et plan de remédiation (v0.6.0)
 - [x] Support de soutenance, trame et script de démonstration (v1.0.0)
 - [x] Site web : SPA React sécurisée et accessible, e2e et axe en staging (v1.1.0, ADR-002 révisé)
+- [x] Site web v2 : espace administrateur, conformité RGAA/RGPD, thème de connexion, Lighthouse, observabilité (v1.2.0)
 - [ ] Répétitions chronométrées et vidéo de secours (#41)
 - [ ] SonarQube Cloud, indicateur 2 (#32)

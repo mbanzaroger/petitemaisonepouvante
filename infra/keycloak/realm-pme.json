@@ -148,5 +148,8 @@
   "supportedLocales": [
     "fr"
   ],
-  "defaultLocale": "fr"
+  "defaultLocale": "fr",
+  "displayName": "La Petite Maison de l'Épouvante",
+  "displayNameHtml": "La Petite Maison de l&#39;Épouvante",
+  "loginTheme": "pme"
 }

@@ -1,4 +1,5 @@
 import type { Product } from '../api/types';
+import { formaterPrix } from '../format';
 
 // Mêmes bornes que la validation de l'API (PlaceOrderRequest) : 1 à 10 par ligne, 20 lignes au plus.
 export const QUANTITE_MAX = 10;
@@ -57,6 +58,41 @@ export function modifierQuantite(lignes: LignePanier[], productId: string, quant
 
 export function retirerDuPanier(lignes: LignePanier[], productId: string): LignePanier[] {
   return lignes.filter((ligne) => ligne.productId !== productId);
+}
+
+/**
+ * Aligne le panier sur le catalogue (prix et noms à jour) et décrit les changements de prix à annoncer.
+ * Renvoie le même tableau s'il n'y a rien à changer (pas de rendu inutile).
+ */
+export function synchroniserPanier(
+  lignes: LignePanier[],
+  produits: Product[],
+): { lignes: LignePanier[]; changements: string[] } {
+  const parId = new Map(produits.map((produit) => [produit.id, produit]));
+  const changements: string[] = [];
+  let modifie = false;
+  const nouvelles = lignes.map((ligne) => {
+    const produit = parId.get(ligne.productId);
+    if (!produit) return ligne;
+    const prix = produit.price.amountCents;
+    if (prix === ligne.prixCentimes && produit.name === ligne.nom && produit.price.currency === ligne.devise) {
+      return ligne;
+    }
+    modifie = true;
+    if (prix !== ligne.prixCentimes) {
+      changements.push(
+        `Le prix de « ${produit.name} » est passé de ${formaterPrix(ligne.prixCentimes, ligne.devise)} à ${formaterPrix(prix, produit.price.currency)}.`,
+      );
+    }
+    return { ...ligne, nom: produit.name, prixCentimes: prix, devise: produit.price.currency };
+  });
+  return { lignes: modifie ? nouvelles : lignes, changements };
+}
+
+/** Lignes dont le produit n'existe plus ou n'est plus disponible à la vente. */
+export function lignesIndisponibles(lignes: LignePanier[], produits: Product[]): Set<string> {
+  const disponibles = new Set(produits.filter((p) => p.available).map((p) => p.id));
+  return new Set(lignes.filter((l) => !disponibles.has(l.productId)).map((l) => l.productId));
 }
 
 export function totalPanier(lignes: LignePanier[]): number {

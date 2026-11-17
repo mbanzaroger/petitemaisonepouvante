@@ -5,16 +5,24 @@ export const MUG = { id: '0f6c1a10-0008-4000-8000-000000000008', nom: 'Mug « Le
 /** Stock initial de 2 : une commande de 10 est annulée par la saga (scénario d'échec). */
 export const BUSTE = { id: '0f6c1a10-0002-4000-8000-000000000002', nom: "Buste de L'Orc peint à la main" };
 
-export function motDePasse(utilisateur: 'alice' | 'bob'): string {
-  const valeur = process.env[`PME_${utilisateur.toUpperCase()}_PASSWORD`];
-  if (!valeur) throw new Error(`PME_${utilisateur.toUpperCase()}_PASSWORD non défini`);
+export type Utilisateur = 'alice' | 'bob' | 'admin-pme';
+
+export function motDePasse(utilisateur: Utilisateur): string {
+  const variable = `PME_${utilisateur.toUpperCase().replace('-', '_')}_PASSWORD`;
+  const valeur = process.env[variable];
+  if (!valeur) throw new Error(`${variable} non défini`);
   return valeur;
 }
 
-/** Connexion par la page de Keycloak (flux code + PKCE), puis retour sur la page de départ. */
-export async function seConnecter(page: Page, utilisateur: 'alice' | 'bob', bouton = 'Se connecter') {
+/** Ouvre la page de connexion de Keycloak (flux code + PKCE) depuis un bouton du site. */
+export async function ouvrirConnexion(page: Page, bouton = 'Se connecter') {
   await page.getByRole('button', { name: bouton, exact: true }).first().click();
-  await page.waitForURL(/\/realms\/pme\/protocol\/openid-connect\/auth/);
+  await page.waitForURL(/\/realms\/pme\/(protocol\/openid-connect\/auth|login-actions)/);
+}
+
+/** Connexion par la page de Keycloak, puis retour sur la page de départ. */
+export async function seConnecter(page: Page, utilisateur: Utilisateur, bouton = 'Se connecter') {
+  await ouvrirConnexion(page, bouton);
   await page.locator('#username').fill(utilisateur);
   await page.locator('#password').fill(motDePasse(utilisateur));
   await page.locator('#kc-login').click();

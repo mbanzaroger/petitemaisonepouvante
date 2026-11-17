@@ -1,0 +1,42 @@
+/* Couleurs du site (contrastes vérifiés : texte ≥ 4,5:1, composants ≥ 3:1), sans image ni police externes. */
+:root {
+  --keycloak-bg-logo-url: none;
+  --keycloak-card-top-color: #b3261e;
+  --pf-v5-global--primary-color--100: #b3261e;
+  --pf-v5-global--primary-color--200: #8f1d17;
+  --pf-v5-global--link--Color: #8f1d17;
+  --pf-v5-global--link--Color--hover: #5f130f;
+  --pf-v5-global--BorderColor--100: #6b5d55;
+}
+
+.login-pf body {
+  background: #16110f;
+}
+
+#kc-header-wrapper {
+  color: #f2e8d8;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 1.5rem 1rem;
+}
+
+.pf-v5-c-login__main-header {
+  border-top-width: 6px;
+}
+
+.pf-v5-c-button.pf-m-primary {
+  font-weight: 600;
+}
+
+:focus-visible {
+  outline: 3px solid #b3261e;
+  outline-offset: 2px;
+}
+
+.pf-v5-c-login__main-footer-band a {
+  text-decoration: underline;
+}

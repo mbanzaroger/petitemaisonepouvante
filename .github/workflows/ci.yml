@@ -305,6 +305,9 @@ jobs:
           if grep -Eq '<script>|<style>|style=' dist/index.html; then
             echo "::error::index.html contient du code en ligne, incompatible avec la CSP"; exit 1
           fi
+      - name: Budget de poids (gzip)
+        run: |
+          { echo "### web-frontend : budget de poids"; echo; npm run --silent budget; } | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Rapport de couverture
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

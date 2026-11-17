@@ -16,7 +16,7 @@
 | 3 | Palier nominal : p95 **7 ms**, **0 %** d'erreurs (63 req/s) ; stress : p95 93 ms, 0 % à 1 904 req/s | ✅ tenu | `docs/14-test-de-charge.md` |
 | 4 | **0** vulnérabilité critique ou haute corrigeable non traitée ; 8 hautes sans correctif du système de base sous exception datée | ✅ tenu | `docs/13-analyse-securite.md` |
 
-**Mesure complémentaire (site web, 16/11/2026)** : accessibilité contrôlée par axe-core (WCAG 2.2 A/AA) sur les pages clés à chaque déploiement en staging, seuil **0 violation** (caractéristique « utilisabilité » d'ISO 25010). Ce contrôle automatisé ne remplace pas l'audit RGAA manuel prévu avant la mise en ligne (R-13).
+**Mesure complémentaire (site web, 16/11/2026)** : accessibilité contrôlée par axe-core (WCAG 2.2 A/AA) sur les pages clés à chaque déploiement en staging, seuil **0 violation** (caractéristique « utilisabilité » d'ISO 25010). Ce contrôle automatisé ne remplace pas l'audit RGAA manuel prévu avant la mise en ligne (R-13). Depuis le 17/11/2026, Lighthouse complète l'indicateur 3 côté navigateur (performance ≥ 85 sur le catalogue, une fiche produit et le plan du site) et un budget de poids (≤ 110 Ko au premier affichage) bloque en CI un bundle qui gonflerait.
 
 ## Pourquoi ces indicateurs limitent la dette technique
 - **Seuils bloquants** : un build qui dégrade un indicateur échoue ; la dette ne peut pas s'accumuler silencieusement.

@@ -8,6 +8,7 @@ import {
   nombreArticles,
   retirerDuPanier,
   stockerPanier,
+  synchroniserPanier,
   totalPanier,
   type LignePanier,
 } from './panier';
@@ -28,17 +29,27 @@ export function PanierProvider({ children }: { children: ReactNode }) {
     return resultat.message;
   }, []);
 
+  const synchroniser = useCallback((produits: Product[]) => {
+    const resultat = synchroniserPanier(lignesCourantes.current, produits);
+    if (resultat.lignes !== lignesCourantes.current) {
+      lignesCourantes.current = resultat.lignes;
+      setLignes(resultat.lignes);
+    }
+    return resultat.changements;
+  }, []);
+
   const panier = useMemo<Panier>(
     () => ({
       lignes,
       nombreArticles: nombreArticles(lignes),
       totalCentimes: totalPanier(lignes),
       ajouter,
+      synchroniser,
       modifierQuantite: (productId, quantite) => setLignes((courantes) => modifierQuantite(courantes, productId, quantite)),
       retirer: (productId) => setLignes((courantes) => retirerDuPanier(courantes, productId)),
       vider: () => setLignes([]),
     }),
-    [lignes, ajouter],
+    [lignes, ajouter, synchroniser],
   );
 
   return <PanierContext value={panier}>{children}</PanierContext>;
