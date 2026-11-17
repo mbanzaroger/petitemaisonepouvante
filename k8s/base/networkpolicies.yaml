@@ -40,7 +40,7 @@ metadata:
   name: allow-prometheus-scrape
 spec:
   podSelector:
-    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service] }]
+    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, web-frontend] }]
   policyTypes: [Ingress]
   ingress:
     - from:

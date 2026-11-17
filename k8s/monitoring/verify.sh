@@ -22,10 +22,10 @@ kubectl -n monitoring port-forward svc/kps-grafana 3000:80 >/dev/null 2>&1 & pid
 for _ in $(seq 1 30); do
   curl -sf http://localhost:9090/-/ready >/dev/null && curl -sf http://localhost:3000/api/health >/dev/null && break; sleep 2
 done
-echo "Attente de la découverte des cibles (3 services + RabbitMQ)…"
+echo "Attente de la découverte des cibles (3 services, RabbitMQ, site)…"
 targets=0
 for _ in $(seq 1 40); do
-  targets=$(promq 'count(up{namespace="pme"} == 1)'); [ "$targets" -ge 4 ] 2>/dev/null && break; sleep 5
+  targets=$(promq 'count(up{namespace="pme"} == 1)'); [ "$targets" -ge 5 ] 2>/dev/null && break; sleep 5
 done
 echo "Attente des règles et du tableau de bord…"
 for _ in $(seq 1 24); do
@@ -35,7 +35,7 @@ for _ in $(seq 1 24); do
 done
 
 echo "| Contrôle | Attendu | Obtenu | |" > "$RESULTS.md"; echo "|---|---|---|---|" >> "$RESULTS.md"
-check "Cibles collectées et actives (3 services + RabbitMQ)" 4 "$targets"
+check "Cibles collectées et actives (3 services, RabbitMQ, site)" 5 "$targets"
 check "RED : requêtes HTTP mesurées hors /actuator" oui "$(positive "$(promq 'sum(http_server_requests_seconds_count{namespace="pme",uri!~"/actuator.*"})')")"
 check "Saga : commandes créées comptées" oui "$(positive "$(promq 'sum(pme_orders_total{event="placed"})')")"
 check "Saga : commandes confirmées comptées" oui "$(positive "$(promq 'sum(pme_orders_total{event="confirmed"})')")"
@@ -45,7 +45,7 @@ check "Saga : durées mesurées (histogramme)" oui "$(positive "$(promq 'sum(pme
 check "Boîte d'envoi vide (aucun événement bloqué)" 0 "$(promq 'sum(pme_outbox_pending)')"
 check "Files de rebut supervisées" 2 "$(promq 'count(rabbitmq_detailed_queue_messages_ready{queue=~".+[.]dlq"})')"
 check "Règles d'alerte de la boutique chargées" 6 "$rules"
-check "Tableau de bord Grafana pme-red (panneaux)" 11 "$panels"
+check "Tableau de bord Grafana pme-red (panneaux)" 14 "$panels"
 grafana -H 'Content-Type: application/json' http://localhost:3000/api/ds/query -d \
   '{"from":"now-15m","to":"now","queries":[{"refId":"A","datasource":{"uid":"prometheus"},"expr":"sum(pme_orders_total)","instant":true}]}' \
   > "$RESULTS.grafana"
@@ -59,6 +59,15 @@ check "Corrélation $CORRELATION_ID : logs order-service (création, publication
   "$([ "$(wc -l < "$RESULTS.order")" -ge 3 ] && echo oui || echo non)"
 check "Corrélation $CORRELATION_ID : logs stock-service (réservation, publication)" oui \
   "$([ "$(wc -l < "$RESULTS.stock")" -ge 2 ] && echo oui || echo non)"
+
+# Site : métriques nginx, journaux JSON et appels du navigateur corrélés jusqu'aux services (tests e2e du CD)
+check "Site : requêtes servies mesurées (exporteur nginx)" oui \
+  "$(positive "$(promq 'sum(nginx_http_requests_total{service="web-frontend"})')")"
+kubectl -n pme logs deploy/web-frontend -c web-frontend --tail=200 \
+  | jq -cR 'fromjson? | select(.service == "web-frontend")' > "$RESULTS.web" || true
+check "Site : journaux d'accès au format JSON" oui "$([ -s "$RESULTS.web" ] && echo oui || echo non)"
+check "Site : appels du navigateur (web-…) corrélés dans les logs order-service" oui \
+  "$(kubectl -n pme logs deploy/order-service --tail=-1 | grep -q 'web-' && echo oui || echo non)"
 
 cat "$RESULTS" >> "$RESULTS.md"
 {
