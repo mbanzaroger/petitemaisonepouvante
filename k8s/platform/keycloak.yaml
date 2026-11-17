@@ -76,10 +76,21 @@ spec:
             - name: realm
               mountPath: /opt/keycloak/data/import
               readOnly: true
+            - name: theme
+              mountPath: /opt/keycloak/themes/pme
+              readOnly: true
       volumes:
         - name: realm
           configMap:
             name: keycloak-realm
+        # Thème de connexion aux couleurs du site (k8s/staging-bootstrap.sh) : arborescence reconstituée par « items »
+        - name: theme
+          configMap:
+            name: keycloak-theme-pme
+            items:
+              - { key: theme.properties, path: login/theme.properties }
+              - { key: pme.css, path: login/resources/css/pme.css }
+              - { key: messages_fr.properties, path: login/messages/messages_fr.properties }
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
