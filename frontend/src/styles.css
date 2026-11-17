@@ -28,6 +28,11 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Réserve la place de la barre de défilement : le contenu centré ne se décale pas quand la page s'allonge. */
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -167,6 +172,8 @@ a:hover {
   align-items: center;
   gap: 0.75rem;
   margin-left: auto;
+  /* Place réservée au bouton de connexion, affiché après la vérification de session : pas de décalage (CLS). */
+  min-height: 2.75rem;
 }
 
 .utilisateur {
@@ -484,4 +491,93 @@ p.statut {
   .bouton {
     border: 2px solid ButtonText;
   }
+}
+
+/* Espace administrateur */
+.barre-outils {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.case {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.case input {
+  width: 1.4rem;
+  height: 1.4rem;
+  accent-color: var(--rouge);
+}
+
+.case label {
+  font-weight: 400;
+}
+
+.etat-stock {
+  font-weight: 700;
+}
+
+.etat-correct {
+  color: var(--succes);
+}
+
+.etat-bas,
+.etat-non-suivi {
+  color: var(--attente);
+}
+
+.etat-epuise,
+.badge-indispo {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* Pages d'information */
+.texte-long {
+  max-width: 48rem;
+}
+
+.texte-long h2 {
+  margin-top: 2rem;
+}
+
+.texte-long li + li {
+  margin-top: 0.35rem;
+}
+
+.plan ul ul {
+  margin-top: 0.35rem;
+}
+
+.plan li {
+  margin-bottom: 0.35rem;
+}
+
+.reference {
+  font-size: 0.95rem;
+  color: var(--texte-attenue);
+}
+
+.reference code {
+  color: var(--texte);
+  word-break: break-all;
+}
+
+.pied nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pied a {
+  color: var(--texte);
 }

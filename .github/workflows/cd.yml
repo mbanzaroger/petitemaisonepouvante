@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   staging:
-    name: Déploiement staging (kind) + smoke + e2e + supervision + DAST
+    name: Déploiement staging (kind) + smoke + e2e + Lighthouse + supervision + DAST
     # Un cluster kind par runner : rien n'est partagé entre branches, seuls les runs d'une même branche se suivent.
     concurrency:
       group: cd-staging-${{ github.ref }}
@@ -133,6 +133,30 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npx playwright install --with-deps chromium
           npx playwright test
+
+      - name: Lighthouse (performance, accessibilité, bonnes pratiques, référencement)
+        if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('frontend/scripts/lighthouse-seuils.mjs') != ''
+        working-directory: frontend
+        run: |
+          # Chromium installé par Playwright à l'étape précédente ; version de Lighthouse épinglée
+          CHROME_PATH=$(node -e "import('@playwright/test').then((m) => console.log(m.chromium.executablePath()))")
+          export CHROME_PATH
+          mkdir -p lighthouse
+          for page in "catalogue|/" "fiche-produit|/produits/0f6c1a10-0008-4000-8000-000000000008" "plan-du-site|/plan-du-site"; do
+            npx -y lighthouse@13.6.0 "https://app.pme.local:8443${page#*|}" --preset=desktop \
+              --chrome-flags="--headless=new --no-sandbox --ignore-certificate-errors" \
+              --output=json --output=html --output-path="lighthouse/${page%%|*}" --quiet
+          done
+          { echo "## Lighthouse (site, staging)"; echo; node scripts/lighthouse-seuils.mjs lighthouse; } | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Rapport Lighthouse
+        if: always() && steps.ready.outputs.ok == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse-staging-${{ env.SHA }}
+          path: frontend/lighthouse/
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Rapport Playwright (captures et résultats axe)
         if: always() && steps.ready.outputs.ok == 'true'

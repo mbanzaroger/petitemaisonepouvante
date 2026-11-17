@@ -14,6 +14,7 @@
 | Logs corrélés | `X-Correlation-Id` → MDC → motif de log `[service,correlationId]`, propagé en REST et dans les messages | `CorrelationIdFilter`, `CatalogClient`, `OutboxPublisher`, listeners |
 | Alertes | 6 règles Prometheus, **testées en CI** avec `promtool test rules` | `infra/monitoring/alerts.yml`, `alerts.test.yml` |
 | Tableau de bord | Grafana `pme-red`, provisionné sans clic | `infra/monitoring/grafana/dashboards/pme-red.json` |
+| Site web (17/11/2026) | Journaux d'accès nginx en JSON ; `stub_status` lu par le sidecar `nginx-prometheus-exporter` ; `X-Correlation-Id` (`web-…`) envoyé à chaque appel du navigateur | `frontend/nginx/`, `k8s/base/web-frontend.yaml`, `frontend/src/api/client.ts` |
 
 **Source unique** : règles et tableau de bord sont versionnés une seule fois dans `infra/monitoring/`. Docker compose les monte tels quels en local ; sur Kubernetes, `k8s/monitoring/install.sh` convertit `alerts.yml` en `PrometheusRule` et charge le tableau de bord dans un ConfigMap lu par Grafana. Le poste du développeur et le staging affichent donc exactement les mêmes indicateurs.
 
@@ -29,7 +30,7 @@ sequenceDiagram
     participant DB as Base orders (outbox)
     participant MQ as RabbitMQ
     participant S as stock-service
-    C->>G: POST /api/v1/orders + X-Correlation-Id: abc
+    C->>G: POST /api/v1/orders + X-Correlation-Id: abc (web-… depuis le site)
     G->>O: requête transmise (en-tête conservé)
     Note over O: CorrelationIdFilter : MDC correlationId=abc<br/>(généré s'il est absent ou invalide)
     O->>CA: GET /api/v1/products?ids=… + X-Correlation-Id: abc
@@ -43,6 +44,8 @@ sequenceDiagram
     MQ->>O: StockReserved
     Note over O: StockResultListener : MDC depuis l'en-tête, commande CONFIRMED
 ```
+
+**Depuis le navigateur** (17/11/2026) : le site génère un identifiant `web-<uuid>` pour chaque appel et l'envoie dans `X-Correlation-Id`. En cas d'erreur, il l'affiche au client (« communiquez cette référence au support ») : le support retrouve alors les lignes de tous les services avec un simple `grep`, sans aucune donnée personnelle échangée.
 
 Le correlationId est accepté seulement s'il respecte `[A-Za-z0-9-]{1,64}` : un client ne peut pas injecter de contenu arbitraire dans les journaux (OWASP A09). Il traverse aussi l'asynchrone : il est stocké avec l'événement dans la boîte d'envoi, donc même un événement publié plusieurs minutes plus tard (broker indisponible) reste rattaché à la requête d'origine.
 
@@ -69,6 +72,8 @@ Les threads diffèrent (requête HTTP, publication planifiée, consommateur Rabb
 | `pme_outbox_pending` | jauge | `service` | Événements écrits mais pas encore publiés (broker injoignable si elle reste > 0) |
 | `rabbitmq_detailed_queue_messages_ready` | jauge | `queue` | Messages en attente par file, dont les files de rebut `*.dlq` |
 | `jvm_memory_used_bytes` | jauge | `area` | Mémoire JVM |
+| `nginx_http_requests_total` | compteur | `service` = `web-frontend` | Requêtes servies par le site (pages, fichiers, configuration) |
+| `nginx_connections_active` | jauge | `service` | Connexions ouvertes sur nginx |
 
 Les compteurs métier ne bougent **qu'après validation de la transaction** (`TransactionSynchronization.afterCommit`) : une commande annulée par un rollback n'est jamais comptée.
 
@@ -79,12 +84,13 @@ Les compteurs métier ne bougent **qu'après validation de la transaction** (`Tr
 | RED | Débit (req/s), erreurs 5xx (%), latence p95 avec seuil 300 ms (indicateur 3), mémoire JVM |
 | Saga de commande | Commandes par étape, durée de saga p95, réservations par issue, boîte d'envoi en attente, messages en file de rebut |
 | Capacité | Instances actives par service (mise à l'échelle horizontale, test de charge) |
+| Site web (nginx) | Requêtes servies par seconde, connexions actives |
 
 ## 5. Alertes
 
 | Alerte | Condition | Gravité | Première action |
 |---|---|---|---|
-| `ServiceIndisponible` | cible `up == 0` pendant 1 min | critique | `kubectl -n pme get pods`, événements et logs du pod |
+| `ServiceIndisponible` | cible `up == 0` pendant 1 min (3 services et site) | critique | `kubectl -n pme get pods`, événements et logs du pod |
 | `TauxErreurEleve` | > 1 % de 5xx (hors `/actuator`) pendant 2 min | critique | Filtrer les logs `ERROR` du service ; vérifier ses dépendances (base, catalogue, broker) |
 | `LatenceP95Elevee` | p95 > 300 ms pendant 5 min | avertissement | Panneau latence par service ; saturation CPU ou mémoire, requêtes SQL lentes |
 | `BoiteEnvoiBloquee` | `pme_outbox_pending > 0` pendant 2 min | critique | RabbitMQ joignable ? Les commandes restent PENDING mais aucun événement n'est perdu : ils partiront au retour du broker |
@@ -99,13 +105,15 @@ Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas n
 
 | Contrôle | Attendu |
 |---|---|
-| Cibles collectées et actives | 3 services + RabbitMQ |
+| Cibles collectées et actives | 3 services, RabbitMQ et site (5) |
 | Métriques RED et métier (commandes créées, confirmées, annulées, réservations, durées) | présentes et non nulles |
 | Boîte d'envoi | vide |
 | Files de rebut supervisées | 2 |
 | Règles d'alerte chargées dans Prometheus | 6 |
-| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | 11 panneaux, valeur non nulle |
+| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | 14 panneaux, valeur non nulle |
 | Logs reliés par `smoke-saga-1` | ≥ 3 lignes dans order-service, ≥ 2 dans stock-service |
+| Site : requêtes mesurées par l'exporteur nginx, journaux d'accès JSON | présents |
+| Site : appels du navigateur (`web-…`, tests Playwright) retrouvés dans les logs d'order-service | présents |
 
 Le résultat (tableau et lignes de logs corrélées) est publié dans le résumé du run GitHub Actions.
 
@@ -114,21 +122,33 @@ Le résultat (tableau et lignes de logs corrélées) est publié dans le résum�
 ```bash
 cd infra && ./init-env.sh && docker compose --profile app up -d --build
 # Grafana : http://localhost:3000 (admin / GRAFANA_ADMIN_PASSWORD de infra/.env) → « PME — RED et saga des microservices »
-# Prometheus : http://localhost:9090/alerts → 6 règles chargées
+# Prometheus : http://localhost:9090/alerts → 6 règles chargées ; http://localhost:9090/targets → 5 cibles, dont web-frontend
+docker compose logs web-frontend | tail -5                   # journaux d'accès JSON du site
 docker compose logs order-service stock-service | grep <correlationId>
 ```
 
 ## 7. Diagnostiquer une commande restée PENDING
 
-1. Récupérer l'en-tête `X-Correlation-Id` de la réponse `202` (ou le fournir à l'appel).
+1. Récupérer l'en-tête `X-Correlation-Id` de la réponse `202` (ou le fournir à l'appel) ; depuis le site, c'est la référence `web-…` affichée avec le message d'erreur.
 2. `kubectl -n pme logs deploy/order-service | grep <id>` : la commande est-elle créée ? l'événement est-il publié ?
 3. Si l'événement n'est pas publié : panneau « Boîte d'envoi en attente » et alerte `BoiteEnvoiBloquee` → broker.
 4. `kubectl -n pme logs deploy/stock-service | grep <id>` : réservation faite ou refusée ? Rien : panneau « Messages en file de rebut » (message illisible ou en échec après 3 tentatives).
 5. Résultat publié mais commande toujours PENDING : vérifier la file `order.stock-result` et sa file de rebut.
 
-## 8. Limites et évolutions
+## 8. Site web : journaux sobres
+
+Une ligne d'accès du site (`kubectl -n pme logs deploy/web-frontend -c web-frontend`) :
+
+```json
+{"time":"2026-11-17T13:34:36+01:00","service":"web-frontend","method":"GET","path":"/config.json","status":200,"bytes":74,"duration_s":0.000,"requestId":"…","correlationId":""}
+```
+
+Ni adresse IP ni agent utilisateur : le site n'en a pas besoin pour diagnostiquer, et le point d'entrée (Gateway) les journalise déjà pour la sécurité (minimisation, page « Données personnelles »). `requestId` relie la ligne au journal d'accès d'Envoy. Les sondes `/healthz` ne sont pas journalisées.
+
+## 9. Limites et évolutions
 
 - **Logs non centralisés** : lus avec `kubectl logs` / `docker compose logs`. Loki (léger, indexé par libellés) est l'option retenue par E4 si la centralisation devient nécessaire ; ELK a été écarté pour son coût mémoire.
 - **Pas de traces distribuées** : le correlationId suffit pour 3 services. Au-delà, OpenTelemetry (Micrometer Tracing) donnerait la durée de chaque segment ; le nom d'en-tête pourra alors s'aligner sur `traceparent` (W3C).
 - **Alertes non routées** : Alertmanager les reçoit ; en production, router les critiques vers l'astreinte (messagerie, courriel) et définir les silences de maintenance.
+- **Mesures côté navigateur** : les Core Web Vitals sont mesurés par Lighthouse à chaque déploiement (`docs/06`), pas encore sur les visites réelles ; une mesure terrain (RUM) passerait par un point de collecte interne, sans outil tiers.
 - **Staging éphémère** : les métriques disparaissent avec le cluster kind ; en production, conserver au moins 15 jours de rétention (retours d'expérience et suivi de l'indicateur 3).

@@ -1,4 +1,4 @@
-# Collecte des métriques Actuator des trois services et de la profondeur des files RabbitMQ (US5).
+# Collecte des métriques Actuator des trois services, de nginx (site) et de la profondeur des files RabbitMQ (US5).
 # Le libellé « service » ajouté par l'opérateur Prometheus vaut le nom du Service Kubernetes :
 # les requêtes du tableau de bord et des alertes sont donc identiques en local et en staging.
 apiVersion: monitoring.coreos.com/v1
@@ -29,4 +29,18 @@ spec:
       path: /metrics/detailed
       params:
         family: [queue_coarse_metrics, queue_consumer_count]
+      interval: 15s
+---
+# Site : exporteur nginx (sidecar du pod web-frontend), qui lit stub_status en local.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pme-web
+  namespace: pme
+spec:
+  selector:
+    matchLabels: { app: web-frontend }
+  endpoints:
+    - port: metrics
+      path: /metrics
       interval: 15s

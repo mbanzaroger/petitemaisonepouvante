@@ -12,6 +12,7 @@ Le suivi détaillé est tenu dans GitHub : [jalons](https://github.com/mbanzarog
 | J4 — Sécurité, charge, remédiation | v0.6.0 | 07/02/2027 | ✅ Terminé le 15/11/2026 | #36 à #39 |
 | J5 — Soutenance | v1.0.0 | 25/02/2027 | 🟡 En cours : support livré (#40), répétitions et vidéo à faire (#41) | #40, #41 |
 | Site web (ADR-002 révisé) | v1.1.0 | 16/11/2026 | ✅ Livré le 16/11/2026 | #92 |
+| Site web v2 : administration, conformité, qualité web, observabilité | v1.2.0 | 17/11/2026 | ✅ Livré le 17/11/2026 | #100 |
 | Remédiation (après le POC) | — | 13/02/2027 | 🔲 Planifié (`docs/11-plan-remediation.md`) | #32, #73 à #83 |
 
 ## Point d'avancement du 15/11/2026

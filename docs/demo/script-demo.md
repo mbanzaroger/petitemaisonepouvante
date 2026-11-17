@@ -12,7 +12,7 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 ## Préparation (la veille)
 1. Vérifier que le dernier run **CD staging** de `develop` est vert (Actions) : il prouve le déploiement, les tests de bout en bout et Cucumber.
 2. Démarrer l'environnement A, ouvrir Bruno (`docs/api/bruno/`), renseigner les 4 mots de passe secrets depuis `infra/.env`.
-3. Ouvrir dans le navigateur : le dépôt (README), le dernier run CI, le kanban, Grafana (`http://localhost:3000`), le site (`http://localhost:5173`) dans une fenêtre privée, et le rapport Playwright du dernier CD (artefact `e2e-staging-…`, captures et résultats axe).
+3. Ouvrir dans le navigateur : le dépôt (README), le dernier run CI, le kanban, Grafana (`http://localhost:3000`), le site (`http://localhost:5173`) dans une fenêtre privée, une seconde fenêtre privée connectée avec `admin-pme` sur « Stock », et les rapports Playwright et Lighthouse du dernier CD (artefacts `e2e-staging-…` et `lighthouse-staging-…`).
 4. Lancer une fois le test de charge (`load-tests/`) pour réchauffer les services.
 
 ## Déroulé de la démonstration
@@ -21,7 +21,7 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 | 1 min | Pipeline | Dernier run CI : tests unitaires + Testcontainers, couverture, Trivy, SBOM ; CodeQL | Tous les jobs verts, résumé « Indicateur 1 » |
 | 1 min | Catalogue (US1) | Site : filtre « Goodies », fiche du mug, ajout au panier (annonce) ; au clavier : Tab → « Aller au contenu » | Liste paginée, zone de statut, focus visible |
 | 1 min | Sécurité (US2) | Site : « Se connecter pour commander » → page Keycloak (PKCE) → retour au panier conservé ; outils de développement : CSP dans les en-têtes, `localStorage` sans jeton ; Bruno 04 à 06 (401, 403) | Connexion sans mot de passe côté site ; jetons en mémoire ; refus sans jeton ou sans rôle |
-| 2 min | Saga (US3) | Site : « Valider la commande » → suivi « En attente » puis « Confirmée » ; puis 10 bustes de l'Orc (stock 2) → « Annulée » | Statut annoncé sans recharger ; annulation expliquée |
+| 2 min | Saga (US3) | Site : « Valider la commande » → suivi « En attente » puis « Confirmée » ; fenêtre `admin-pme` : « Actualiser » sur « Stock » → le mug passe de disponible à réservé ; puis 10 bustes de l'Orc (stock 2) → « Annulée » | Statut annoncé sans recharger ; effet de la saga visible côté exploitation ; annulation expliquée |
 | 1 min | Historique (US4) | Site : « Mes commandes » ; Bruno 13 (commande d'autrui → 404) | Seules ses commandes ; 404 sur celle d'autrui |
 | 2 min | Charge et observabilité | Test de charge JMeter (`load-tests/README.md`, commande « sur le poste ») avec Grafana « PME — RED et saga des microservices » à l'écran ; puis `grep` d'un correlationId dans les logs des 2 services | Débit, p95 < 300 ms, 0 % d'erreurs, commandes par étape ; mêmes identifiants dans order-service et stock-service |
 | (option) | Kubernetes | `kubectl get pods,hpa,networkpolicy,gateway,httproute -n pme` ; dernier run CD lancé avec la case « charge » | Déploiements durcis, flux réseau explicites, montée du catalogue à 3 instances |

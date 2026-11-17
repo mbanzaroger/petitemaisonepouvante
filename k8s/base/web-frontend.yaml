@@ -1,5 +1,6 @@
 # web-frontend : SPA React servie par nginx non root (UID 101), système de fichiers en lecture seule.
 # Seuls /tmp (cache, PID) et /etc/nginx/conf.d (gabarits rendus au démarrage) sont inscriptibles.
+# Sidecar nginx-prometheus-exporter pour la supervision (docs/12).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -47,6 +48,20 @@ spec:
           volumeMounts:
             - { name: tmp, mountPath: /tmp }
             - { name: conf, mountPath: /etc/nginx/conf.d }
+        # Exporteur Prometheus : lit stub_status sur 127.0.0.1:8081 (même pod) et expose /metrics sur 9113.
+        - name: nginx-exporter
+          image: nginx/nginx-prometheus-exporter:1.5.3
+          imagePullPolicy: IfNotPresent
+          args: ["--nginx.scrape-uri=http://127.0.0.1:8081/stub_status", "--web.listen-address=:9113"]
+          ports:
+            - { name: metrics, containerPort: 9113 }
+          resources:
+            requests: { cpu: 5m, memory: 16Mi }
+            limits: { cpu: 50m, memory: 32Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
       volumes:
         - { name: tmp, emptyDir: {} }
         - { name: conf, emptyDir: {} }
@@ -60,3 +75,4 @@ spec:
   selector: { app: web-frontend }
   ports:
     - { name: http, port: 8080, targetPort: http }
+    - { name: metrics, port: 9113, targetPort: metrics }

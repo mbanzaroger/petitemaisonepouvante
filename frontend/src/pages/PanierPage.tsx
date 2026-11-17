@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { lireProduits } from '../api/catalogue';
 import { versApiError, type ApiError } from '../api/client';
 import { passerCommande } from '../api/commandes';
 import { estClient, useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
-import { QUANTITE_MAX } from '../cart/panier';
+import { QUANTITE_MAX, lignesIndisponibles } from '../cart/panier';
 import { MessageErreur } from '../components/Etats';
 import { formaterPrix } from '../format';
+import { useRessource } from '../hooks/useRessource';
 import { useTitre } from '../hooks/useTitre';
 
 const QUANTITES = Array.from({ length: QUANTITE_MAX }, (_, i) => i + 1);
 
-function Commander() {
+function Commander({ bloque }: { bloque: boolean }) {
   const auth = useAuth();
   const panier = usePanier();
   const naviguer = useNavigate();
@@ -56,7 +58,14 @@ function Commander() {
   return (
     <div className="commande-action">
       {erreur && <MessageErreur erreur={erreur} />}
-      <button type="button" className="bouton bouton-principal" onClick={() => void valider()} disabled={envoi}>
+      {bloque && <p id="commande-bloquee">Retirez les produits indisponibles pour valider la commande.</p>}
+      <button
+        type="button"
+        className="bouton bouton-principal"
+        onClick={() => void valider()}
+        disabled={envoi || bloque}
+        aria-describedby={bloque ? 'commande-bloquee' : undefined}
+      >
         {envoi ? 'Envoi de la commande…' : 'Valider la commande'}
       </button>
     </div>
@@ -66,6 +75,16 @@ function Commander() {
 export function PanierPage() {
   useTitre('Panier');
   const panier = usePanier();
+  // Revalidation à l'ouverture (et quand la liste des produits change) : prix et disponibilité à jour.
+  const ids = panier.lignes.map((ligne) => ligne.productId).sort();
+  const revalidation = useRessource(ids.length > 0 ? `revalidation:${ids.join(',')}` : null, async (signal) => {
+    const produits = await lireProduits(ids, signal);
+    return { produits, changements: panier.synchroniser(produits) };
+  });
+  const indisponibles = revalidation.donnees
+    ? lignesIndisponibles(panier.lignes, revalidation.donnees.produits)
+    : new Set<string>();
+  const changements = revalidation.donnees?.changements ?? [];
 
   if (panier.lignes.length === 0) {
     return (
@@ -83,6 +102,15 @@ export function PanierPage() {
   return (
     <>
       <h1 tabIndex={-1}>Panier</h1>
+      <div role="status" className="annonce">
+        {changements.length > 0 && (
+          <div className="alerte">
+            {changements.map((texte) => (
+              <p key={texte}>{texte}</p>
+            ))}
+          </div>
+        )}
+      </div>
       <div className="tableau-defilant">
         <table className="tableau">
           <caption>Contenu du panier</caption>
@@ -104,6 +132,7 @@ export function PanierPage() {
                 <tr key={ligne.productId}>
                   <th scope="row">
                     <Link to={`/produits/${ligne.productId}`}>{ligne.nom}</Link>
+                    {indisponibles.has(ligne.productId) && <span className="badge-indispo"> Indisponible</span>}
                   </th>
                   <td>{formaterPrix(ligne.prixCentimes, ligne.devise)}</td>
                   <td>
@@ -148,7 +177,7 @@ export function PanierPage() {
         </table>
       </div>
       <p className="note">Le montant définitif est calculé à la validation, au prix du catalogue.</p>
-      <Commander />
+      <Commander bloque={indisponibles.size > 0} />
     </>
   );
 }

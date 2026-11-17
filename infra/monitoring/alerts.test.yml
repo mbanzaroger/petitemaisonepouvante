@@ -32,6 +32,19 @@ tests:
             exp_annotations:
               summary: "stock-service ne répond plus à la collecte depuis 1 minute"
 
+  - name: Site arrêté (exporteur nginx muet)
+    interval: 30s
+    input_series:
+      - series: 'up{service="web-frontend"}'
+        values: '1 1 0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ServiceIndisponible
+        exp_alerts:
+          - exp_labels: { severity: critical, service: web-frontend }
+            exp_annotations:
+              summary: "web-frontend ne répond plus à la collecte depuis 1 minute"
+
   - name: Broker injoignable, la boîte d'envoi grossit
     interval: 30s
     input_series:

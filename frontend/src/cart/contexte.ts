@@ -9,6 +9,8 @@ export interface Panier {
   /** Ajoute le produit et renvoie le message à annoncer à l'utilisateur. */
   ajouter(produit: Product, quantite: number): string;
   modifierQuantite(productId: string, quantite: number): void;
+  /** Met le panier à jour avec le catalogue et renvoie les changements de prix à annoncer. */
+  synchroniser(produits: Product[]): string[];
   retirer(productId: string): void;
   vider(): void;
 }

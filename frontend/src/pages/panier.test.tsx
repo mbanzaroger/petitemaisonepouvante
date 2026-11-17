@@ -63,7 +63,7 @@ describe('Panier', () => {
     await utilisateur.click(screen.getByRole('button', { name: 'Valider la commande' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Commande n° 9A1B2C3D' })).toBeInTheDocument();
     expect(screen.getByText('Merci ! Votre commande a bien été enregistrée.')).toBeInTheDocument();
-    const init = fetch.mock.calls[0]![1]!;
+    const init = fetch.mock.calls.find(([, options]) => options?.method === 'POST')![1]!;
     expect(JSON.parse(String(init.body))).toEqual({
       lines: [
         { productId: produit(4).id, quantity: 2 },
@@ -90,3 +90,38 @@ describe('Panier', () => {
     expect(screen.queryByRole('button', { name: /commander|Valider/ })).not.toBeInTheDocument();
   });
 });
+
+describe('Revalidation du panier', () => {
+  beforeEach(remplirPanier);
+
+  it('annonce un changement de prix et met le total à jour', async () => {
+    const fetch = simulerApi({
+      'GET /api/v1/products': () => json([produit(4, { price: { amountCents: 2000, currency: 'EUR' } }), produit(8)]),
+    });
+    rendreApp('/panier');
+    const annonce = await screen.findByText(/Le prix de « Produit 04 » est passé de/);
+    expect(annonce).toHaveTextContent(/10,04.*20,00/);
+    expect(screen.getByRole('row', { name: /Total estimé/ })).toHaveTextContent(/50,08/);
+    const url = String(fetch.mock.calls[0]![0]);
+    expect(url).toContain('ids=');
+    expect(decodeURIComponent(url)).toContain(produit(4).id);
+  });
+
+  it('signale un produit devenu indisponible et bloque la validation', async () => {
+    simulerApi({ 'GET /api/v1/products': () => json([produit(4, { available: false }), produit(8)]) });
+    const { utilisateur } = rendreApp('/panier', fausseAuth(CLIENT));
+    expect(await screen.findByText('Indisponible')).toBeInTheDocument();
+    const bouton = screen.getByRole('button', { name: 'Valider la commande' });
+    expect(bouton).toBeDisabled();
+    expect(bouton).toHaveAccessibleDescription('Retirez les produits indisponibles pour valider la commande.');
+    await utilisateur.click(screen.getByRole('button', { name: 'Retirer « Produit 04 » du panier' }));
+    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Valider la commande' })).toBeEnabled());
+  });
+
+  it('traite un produit disparu du catalogue comme indisponible', async () => {
+    simulerApi({ 'GET /api/v1/products': () => json([produit(8)]) });
+    rendreApp('/panier', fausseAuth(CLIENT));
+    expect(await screen.findByText('Indisponible')).toBeInTheDocument();
+  });
+});
+

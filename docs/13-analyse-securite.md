@@ -106,11 +106,22 @@ Le site ajoute une surface exposée : du code exécuté dans le navigateur des c
 | Conteneur | Prise de contrôle de nginx | Image non root (UID 101), système de fichiers en lecture seule, capacités retirées, aucune sortie réseau (NetworkPolicy), correctifs Alpine appliqués à la construction (V-27) | CI : démarrage en lecture seule, Trivy bloquant |
 | Divulgation | Fichiers cachés, version du serveur | `server_tokens off`, 404 sur les fichiers commençant par un point, configuration publique limitée à l'URL de Keycloak, au royaume et au client | ZAP baseline du site |
 
+**Compléments du 17/11/2026 (#100)** :
+
+| Évolution | Effet sur la surface d'attaque | Mesure |
+|---|---|---|
+| Espace administrateur (stock) servi sur `app.pme.local` | La route `/api/v1/stock` devient joignable depuis l'origine du site | Même `SecurityPolicy` qu'`api.pme.local` (JWT valide **et** rôle ADMIN au Gateway), contrôle répété dans stock-service ; test Playwright : un client est refusé |
+| Identifiant de corrélation envoyé par le navigateur | Valeur choisie par le client, écrite dans les journaux | Format imposé `[A-Za-z0-9-]{1,64}` par les services (sinon remplacé), aucune donnée personnelle ; affiché au client seulement pour les erreurs techniques |
+| Journaux d'accès nginx | Nouvelle source de données personnelles possible | Format JSON sans adresse IP ni agent utilisateur ; sondes non journalisées |
+| Thème Keycloak « pme » | Ressources servies par Keycloak | CSS seulement, aucun script ni ressource externe ; contrôlé par axe dans le parcours |
+| Exporteur nginx (sidecar) | Port 9113 ouvert dans le pod | `stub_status` limité à 127.0.0.1, NetworkPolicy : collecte depuis le namespace `monitoring` seulement, conteneur non root en lecture seule |
+
 **Risques résiduels** : un script injecté malgré la CSP pourrait appeler l'API **pendant** la session (le jeton en mémoire reste utilisable par la page) ; la CSP et l'échappement systématique rendent ce scénario improbable. La page de connexion Keycloak garde le thème par défaut : son accessibilité sera auditée avec celle du site (R-13).
 
 **Résultats** (CD du 16/11/2026 sur la branche du site, staging kind) :
 - Playwright : **6 tests sur 6** verts — parcours confirmé et parcours annulé faute de stock, en-têtes et CSP, aucun jeton dans le stockage, compte sans rôle refusé, lien d'évitement ;
 - axe-core : **0 violation** sur 8 pages ou états (catalogue, fiche produit, panier visiteur et vide, suivi de commande, historique, connexion requise, page introuvable) ;
 - ZAP baseline du site : **0 échec**, 63 règles passées ; COEP absent (V-25, risque accepté) ; 4 alertes informatives qualifiées dans `.zap/rules-site.tsv` (cache voulu, application monopage, mots repérés dans le code minifié des bibliothèques) ;
+- CD du 17/11/2026 (site v2, branche) : **10 tests Playwright sur 10**, axe sans violation sur **14 pages ou états** dont la page de connexion Keycloak ; Lighthouse (bureau) **100 / 100 / 100 / 100** sur le catalogue, une fiche produit et le plan du site ; ZAP du site toujours sans échec ; supervision : 5 cibles, journaux JSON du site et appels `web-…` retrouvés dans les logs d'order-service ;
 - incident de chaîne : le port-forward vers le Gateway est tombé pendant le scan actif de l'API d'un premier run ; le site est désormais scanné avant le scan actif et l'accès est vérifié, puis relancé si besoin, avant chaque scan (`scripts/dast.sh`).
 
