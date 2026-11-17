@@ -1,5 +1,8 @@
 import { screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+// Le titre du document est posé par un effet (useTitre) : il est attendu, pas lu immédiatement.
+const titreAttendu = (titre: string) => vi.waitFor(() => expect(document.title).toBe(titre));
 import { json, page, produit, rendreApp, simulerApi } from '../test/outils';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -21,7 +24,7 @@ describe('Catalogue', () => {
     expect(screen.getByText('2 produits')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ajouter « Produit 02 » au panier' })).toBeDisabled();
     expect(screen.getByText('Indisponible')).toBeInTheDocument();
-    expect(document.title).toBe("Catalogue – La Petite Maison de l'Épouvante");
+    await titreAttendu("Catalogue – La Petite Maison de l'Épouvante");
   });
 
   it('filtre par catégorie via un bouton explicite (pas de changement de contexte au choix)', async () => {
@@ -38,7 +41,7 @@ describe('Catalogue', () => {
     expect(await screen.findByRole('link', { name: 'Produit 03' })).toBeInTheDocument();
     expect(screen.getByText('1 produit dans la catégorie « Blu-ray »')).toBeInTheDocument();
     expect(fetch.mock.calls.some(([url]) => String(url).includes('category=Blu-ray'))).toBe(true);
-    expect(document.title).toBe("Catalogue : Blu-ray – La Petite Maison de l'Épouvante");
+    await titreAttendu("Catalogue : Blu-ray – La Petite Maison de l'Épouvante");
     await utilisateur.selectOptions(screen.getByLabelText('Catégorie'), '');
     await utilisateur.click(screen.getByRole('button', { name: 'Filtrer' }));
     expect(await screen.findByRole('link', { name: 'Produit 01' })).toBeInTheDocument();
@@ -105,7 +108,7 @@ describe('Fiche produit', () => {
     simulerApi({});
     rendreApp('/produits/inconnu');
     expect(await screen.findByRole('heading', { level: 1, name: 'Produit introuvable' })).toBeInTheDocument();
-    expect(document.title).toBe("Produit introuvable – La Petite Maison de l'Épouvante");
+    await titreAttendu("Produit introuvable – La Petite Maison de l'Épouvante");
   });
 
   it('propose de réessayer en cas de panne', async () => {

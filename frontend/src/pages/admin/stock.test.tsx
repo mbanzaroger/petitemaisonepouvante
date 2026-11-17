@@ -56,7 +56,7 @@ describe('Espace administrateur : stock', () => {
     expect(ligne('Produit 04')).toHaveTextContent(/–\s*–\s*Non suivi/);
     expect(screen.getByRole('status')).toHaveTextContent(/3 produits à surveiller sur cette page/);
     expect(appels).toEqual(Array(4).fill('Bearer jeton-de-test'));
-    expect(document.title).toBe("Stock – La Petite Maison de l'Épouvante");
+    await vi.waitFor(() => expect(document.title).toBe("Stock – La Petite Maison de l'Épouvante"));
   });
 
   it('filtre les produits à surveiller et actualise à la demande', async () => {
