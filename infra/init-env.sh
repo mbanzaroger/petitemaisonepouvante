@@ -20,3 +20,5 @@ PME_CAROL_PASSWORD=$(pw)
 PME_ADMIN_PME_PASSWORD=$(pw)
 ENV
 echo "infra/.env créé (droits 600). Comptes de test : alice (CUSTOMER), bob (sans rôle), carol (CUSTOMER), admin-pme (ADMIN)."
+# Dans un GitHub Codespace, le navigateur ne voit pas localhost : adresse publique du site (infra/codespaces.sh)
+if [ -n "${CODESPACE_NAME:-}" ]; then ./codespaces.sh; fi

@@ -6,7 +6,7 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 |---|---|---|
 | Démarrage | `infra/init-env.sh` puis `cd infra && docker compose --profile app up -d --build` (≈ 3 min) | `kind create cluster --name pme` puis la procédure ci-dessous (≈ 8 min) |
 | Ce que l'on montre | Parcours métier dans le site, Grafana, test de charge | Gateway TLS + JWT, NetworkPolicies, saga sur Kubernetes |
-| Site | http://localhost:5173 | https://app.pme.local:8443 (certificat de l'AC du cluster à accepter) |
+| Site | http://localhost:5173 (dans un Codespace : `bash infra/codespaces.sh`, puis l'adresse `https://…-5173.app.github.dev`) | https://app.pme.local:8443 (certificat de l'AC du cluster à accepter) |
 | Requêtes | Collection Bruno, environnement `local` | Collection Bruno, environnement `staging` |
 
 ## Préparation (la veille)

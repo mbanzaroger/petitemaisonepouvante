@@ -2,6 +2,7 @@
 # Prérequis : infra/.env (généré par infra/init-env.sh, jamais versionné). Tous les ports sont liés à 127.0.0.1.
 #   docker compose up -d                  → bases, broker, Keycloak, Prometheus, Grafana
 #   docker compose --profile app up -d    → idem + les 3 microservices et le site (http://localhost:5173)
+#   Dans un GitHub Codespace : lancer d'abord infra/codespaces.sh (adresse publique du site, Keycloak sur la même origine)
 name: pme
 
 x-postgres: &postgres
@@ -63,7 +64,8 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Lancez infra/init-env.sh}
-      KC_HOSTNAME: http://localhost:8080
+      # Adresse vue par le navigateur : http://localhost:8080 en local, l'adresse du site en mode Codespaces
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HEALTH_ENABLED: "true"
       # Mots de passe des comptes de test, injectés dans le royaume importé (placeholders ${...})
@@ -71,6 +73,8 @@ services:
       PME_BOB_PASSWORD: ${PME_BOB_PASSWORD:?Lancez infra/init-env.sh}
       PME_CAROL_PASSWORD: ${PME_CAROL_PASSWORD:?Lancez infra/init-env.sh}
       PME_ADMIN_PME_PASSWORD: ${PME_ADMIN_PME_PASSWORD:?Lancez infra/init-env.sh}
+      # Adresse du site autorisée en redirection pour le client pme-web (placeholder du royaume importé)
+      PME_SITE_URL: ${PME_SITE_URL:-http://localhost:5173}
     volumes:
       - ./keycloak/realm-pme.json:/opt/keycloak/data/import/realm-pme.json:ro
       - ./keycloak/themes/pme:/opt/keycloak/themes/pme:ro
@@ -112,7 +116,7 @@ services:
       DB_USER: catalog
       DB_PASSWORD: ${CATALOG_DB_PASSWORD}
       JWT_JWK_SET_URI: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
-      JWT_ISSUER_URI: http://localhost:8080/realms/pme
+      JWT_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/pme
     ports: ["127.0.0.1:8081:8081"]
     depends_on:
       catalog-db: { condition: service_healthy }
@@ -130,7 +134,7 @@ services:
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
       CATALOG_URL: http://catalog-service:8081
       JWT_JWK_SET_URI: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
-      JWT_ISSUER_URI: http://localhost:8080/realms/pme
+      JWT_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/pme
     ports: ["127.0.0.1:8082:8082"]
     depends_on:
       orders-db: { condition: service_healthy }
@@ -149,7 +153,7 @@ services:
       RABBIT_USER: pme
       RABBIT_PASSWORD: ${RABBIT_PASSWORD}
       JWT_JWK_SET_URI: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
-      JWT_ISSUER_URI: http://localhost:8080/realms/pme
+      JWT_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/pme
     ports: ["127.0.0.1:8083:8083"]
     depends_on:
       stock-db: { condition: service_healthy }
@@ -160,7 +164,7 @@ services:
     <<: *service
     build: ../frontend
     environment:
-      KEYCLOAK_URL: http://localhost:8080
+      KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
     tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101"]
     volumes: ["./web/api.conf:/etc/nginx/pme-api/api.conf:ro"]
     ports: ["127.0.0.1:5173:8080"]
