@@ -3,6 +3,11 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
 ## [Non publié]
+### Ajouté
+- Mode GitHub Codespaces (`infra/codespaces.sh`) : le site est servi sur l'adresse publique du Codespace et Keycloak est relayé sur la même origine ; adresses paramétrées par `PME_SITE_URL` et `KEYCLOAK_PUBLIC_URL` (valeurs locales inchangées par défaut).
+
+### Corrigé
+- En local, le site démarre même si un service n'est pas encore joignable (résolution DNS à la demande, #105).
 
 ## [1.2.0] - 2026-11-17
 ### Ajouté
