@@ -19,6 +19,17 @@ Livrer la SPA `web-frontend` **minimale** du schéma d'architecture, limitée au
 | Accessibilité | RGAA 4.1 : lien d'évitement, titre et focus à chaque navigation, zones de statut, tableaux et formulaires étiquetés, contrastes ≥ 4,5:1 | Obligation légale pour un site marchand (directive européenne 2019/882 transposée, en vigueur depuis juin 2025, hors microentreprises) et engagement d'image auprès d'une communauté de fans |
 | Qualité | ESLint (`jsx-a11y` strict), Vitest + Testing Library (couverture ≥ 80 %), Playwright + axe sur le staging, ZAP baseline du site | Mêmes indicateurs que les services (`docs/04`) |
 
+## Compléments du 17/11/2026 (#100)
+
+| Sujet | Décision | Raison |
+|---|---|---|
+| Espace administrateur | Page « Stock » réservée au rôle ADMIN, lue en direct sur `GET /api/v1/stock/{id}` ; route stock ouverte aussi sur `app.pme.local`, avec la même `SecurityPolicy` (JWT + ADMIN) | Montrer l'effet de la saga côté exploitation et le contrôle d'accès par rôle de bout en bout |
+| Conformité | Plan du site (RGAA 12.1), déclaration d'accessibilité « non conforme » tant que l'audit n'est pas fait, mentions légales, données personnelles et cookies ; mention de l'état de conformité dans le pied de page | Exigences du RGAA et du RGPD ; ne rien affirmer qui ne soit mesuré |
+| Page de connexion | Thème Keycloak « pme » (CSS seulement) aux couleurs du site, en français, contrôlé par axe | Parcours homogène ; aucune page non vérifiée dans le parcours d'achat |
+| Robustesse | Panier revalidé à l'ouverture, filet d'erreur, pages connectées et légales chargées à la demande | Prix affiché fidèle au prix facturé ; jamais de page blanche ; premier affichage léger |
+| Observabilité | `X-Correlation-Id` (`web-…`) envoyé par le site, journaux nginx JSON sans IP, exporteur nginx | Diagnostic de bout en bout depuis une référence donnée par le client ; minimisation des données |
+| Qualité web | Lighthouse et budget de poids en CI/CD | Rendre mesurables la performance et l'accessibilité perçues |
+
 ## Conséquences
 
 - **Positives** : parcours client démontrable dans un navigateur, sur le vrai staging (Keycloak, Gateway, saga) ; accessibilité et sécurité navigateur mesurées à chaque déploiement au lieu d'être promises ; le contrat OpenAPI et les tests d'API restent la référence.
