@@ -29,11 +29,11 @@
       "directAccessGrantsEnabled": false,
       "redirectUris": [
         "http://localhost:5173/*",
+        "${PME_SITE_URL:http://localhost:5173}/*",
         "https://app.pme.local/*"
       ],
       "webOrigins": [
-        "http://localhost:5173",
-        "https://app.pme.local"
+        "+"
       ],
       "attributes": {
         "pkce.code.challenge.method": "S256",

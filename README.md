@@ -65,6 +65,14 @@ Comptes de test du royaume `pme` (mots de passe dans `infra/.env`) : `alice` et 
 Sans `--profile app`, seules les dépendances démarrent (pour lancer les services depuis l'IDE).
 Pour travailler sur le site : `cd frontend && npm ci && npm run dev` (http://localhost:5173, à la place du conteneur `web-frontend` ; voir [`frontend/README.md`](frontend/README.md)).
 
+**Dans un GitHub Codespace**, les conteneurs ne sont pas sur votre poste : `localhost` ne répond pas dans le navigateur. Le site passe alors par l'adresse publique du Codespace, et Keycloak est relayé par le site sur la même adresse :
+
+```bash
+bash infra/codespaces.sh            # écrit PME_SITE_URL et KEYCLOAK_PUBLIC_URL dans infra/.env
+cd infra && docker compose --profile app up -d --build --force-recreate
+# Ouvrir https://<codespace>-5173.app.github.dev (onglet « Ports », port 5173)
+```
+
 ## Organisation du dépôt
 ```
 docs/            documentation, schémas (Mermaid), ADR, expérimentations
