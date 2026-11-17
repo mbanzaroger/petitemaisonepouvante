@@ -28,7 +28,7 @@ describe('Pages d’information', () => {
     const plan = await screen.findByRole('navigation', { name: 'Plan du site' });
     expect(await within(plan).findByRole('link', { name: 'Blu-ray' })).toHaveAttribute('href', '/?categorie=Blu-ray');
     expect(within(plan).getByRole('link', { name: 'Stock' })).toBeInTheDocument();
-    expect(document.title).toBe("Plan du site – La Petite Maison de l'Épouvante");
+    await vi.waitFor(() => expect(document.title).toBe("Plan du site – La Petite Maison de l'Épouvante"));
   });
 
   it('la déclaration d’accessibilité indique l’état « non conforme » et les voies de recours', async () => {
