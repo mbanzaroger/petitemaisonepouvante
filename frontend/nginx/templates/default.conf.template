@@ -1,11 +1,37 @@
 # SPA petitemaisonepouvante.com servie par nginx non root (port 8080). Gabarit traité par envsubst au démarrage :
 # seules les variables définies (KEYCLOAK_URL, KEYCLOAK_REALM, KEYCLOAK_CLIENT_ID) sont remplacées.
+
+# Journaux d'accès JSON (docs/12) : ni adresse IP ni agent utilisateur (minimisation RGPD) ; l'identifiant de
+# requête posé par le Gateway (x-request-id) relie la ligne aux journaux d'accès d'Envoy.
+log_format pme_json escape=json '{"time":"$time_iso8601","service":"web-frontend","method":"$request_method",'
+    '"path":"$uri","status":$status,"bytes":$body_bytes_sent,"duration_s":$request_time,'
+    '"requestId":"$http_x_request_id","correlationId":"$http_x_correlation_id"}';
+
+# Métriques de nginx (stub_status) pour l'exporteur Prometheus du même pod, joignable uniquement en local.
+server {
+    listen 8081;
+    server_name _;
+    server_tokens off;
+    access_log off;
+
+    location = /stub_status {
+        stub_status;
+        allow 127.0.0.1;
+        deny all;
+    }
+
+    location / {
+        return 404;
+    }
+}
+
 server {
     listen 8080;
     server_name _;
     root /usr/share/nginx/html;
     server_tokens off;
     charset utf-8;
+    access_log /dev/stdout pme_json;
     client_max_body_size 1k;
 
     # Accès à l'API : 404 dans l'image ; derrière le Gateway, les routes /api/v1/* vont directement aux services.

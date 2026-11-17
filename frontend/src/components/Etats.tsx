@@ -12,6 +12,11 @@ export function MessageErreur({ erreur, onReessayer }: { erreur: ApiError; onRee
   return (
     <div role="alert" className="alerte alerte-erreur">
       <p>{erreur.message}</p>
+      {erreur.correlationId && erreur.status !== 401 && erreur.status !== 422 && (
+        <p className="reference">
+          Si le problème persiste, communiquez cette référence au support : <code>{erreur.correlationId}</code>
+        </p>
+      )}
       {onReessayer && (
         <button type="button" className="bouton bouton-secondaire" onClick={onReessayer}>
           Réessayer

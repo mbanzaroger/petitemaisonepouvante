@@ -14,6 +14,7 @@ export default defineConfig({
       '/api/v1/products': 'http://127.0.0.1:8081',
       '/api/v1/categories': 'http://127.0.0.1:8081',
       '/api/v1/orders': 'http://127.0.0.1:8082',
+      '/api/v1/stock': 'http://127.0.0.1:8083',
     },
   },
   build: {

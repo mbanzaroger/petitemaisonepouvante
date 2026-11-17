@@ -1,0 +1,5 @@
+# Démonstrateur : pages publiques indexables, espaces personnels et d'administration exclus.
+User-agent: *
+Disallow: /commandes
+Disallow: /admin/
+Disallow: /panier

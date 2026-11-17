@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react';
 import type { TokenProvider } from '../api/types';
 
 export const ROLE_CLIENT = 'CUSTOMER';
+export const ROLE_ADMIN = 'ADMIN';
+export type Role = typeof ROLE_CLIENT | typeof ROLE_ADMIN;
 
 export interface EtatAuth {
   /** L'initialisation (vérification silencieuse de la session) est terminée. */
@@ -37,6 +39,14 @@ export function useAuth(): Auth {
   return auth;
 }
 
+export function aLeRole(auth: EtatAuth, role: Role): boolean {
+  return auth.connecte && auth.roles.includes(role);
+}
+
 export function estClient(auth: EtatAuth): boolean {
-  return auth.roles.includes(ROLE_CLIENT);
+  return aLeRole(auth, ROLE_CLIENT);
+}
+
+export function estAdmin(auth: EtatAuth): boolean {
+  return aLeRole(auth, ROLE_ADMIN);
 }

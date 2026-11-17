@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { json, simulerApi } from '../test/outils';
 import { listerCategories, listerProduits, lireProduit } from './catalogue';
-import { ApiError, appelApi, messagePourStatut, versApiError } from './client';
+import { ApiError, appelApi, messagePourStatut, nouvelIdCorrelation, versApiError } from './client';
 import { listerCommandes, lireCommande, passerCommande } from './commandes';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -70,6 +70,22 @@ describe('appelApi', () => {
     expect(urls[2]).toBe('/api/v1/orders?page=1&size=10');
     await expect(lireCommande('c 1', async () => 't')).resolves.toEqual({});
     expect(String(fetch.mock.calls[3]![0])).toBe('/api/v1/orders/c%201');
+  });
+});
+
+describe('corrélation', () => {
+  it('envoie un identifiant de corrélation par appel et le joint à l’erreur', async () => {
+    const fetch = simulerApi({ 'GET /api/v1/categories': () => json({}, 503) });
+    const erreur = (await listerCategories().catch((e: unknown) => e)) as ApiError;
+    const envoye = (fetch.mock.calls[0]![1]!.headers as Record<string, string>)['X-Correlation-Id'];
+    expect(envoye).toMatch(/^web-[A-Za-z0-9-]{1,60}$/);
+    expect(erreur.correlationId).toBe(envoye);
+  });
+
+  it('reste valide pour les services (lettres, chiffres, tirets, 64 caractères au plus), même sans crypto.randomUUID', () => {
+    expect(nouvelIdCorrelation()).toMatch(/^[A-Za-z0-9-]{1,64}$/);
+    vi.stubGlobal('crypto', {});
+    expect(nouvelIdCorrelation()).toMatch(/^web-[A-Za-z0-9-]{1,60}$/);
   });
 });
 
