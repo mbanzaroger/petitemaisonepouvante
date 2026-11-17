@@ -164,10 +164,7 @@ services:
     tmpfs: ["/tmp", "/etc/nginx/conf.d:uid=101,gid=101"]
     volumes: ["./web/api.conf:/etc/nginx/pme-api/api.conf:ro"]
     ports: ["127.0.0.1:5173:8080"]
-    depends_on:
-      catalog-service: { condition: service_started }
-      order-service: { condition: service_started }
-      stock-service: { condition: service_started }
+    # Pas de dépendance de démarrage : le relais de l'API résout les services à la demande (infra/web/api.conf).
 
   # Exporteur Prometheus du site : partage le réseau du conteneur web-frontend pour lire stub_status en local.
   web-frontend-exporter:
