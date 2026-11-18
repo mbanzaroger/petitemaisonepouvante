@@ -11,6 +11,8 @@ export interface EtatAuth {
   connecte: boolean;
   utilisateur?: string;
   roles: readonly string[];
+  /** La session n'a pas pu être établie (serveur d'authentification injoignable ou retour de connexion en échec). */
+  echecConnexion?: boolean;
 }
 
 /**
@@ -49,4 +51,11 @@ export function estClient(auth: EtatAuth): boolean {
 
 export function estAdmin(auth: EtatAuth): boolean {
   return aLeRole(auth, ROLE_ADMIN);
+}
+
+/** Profil affiché à côté du nom de l'utilisateur connecté (en-tête, panier). */
+export function libelleProfil(auth: EtatAuth): string {
+  if (estAdmin(auth)) return 'Administrateur';
+  if (estClient(auth)) return 'Client';
+  return 'Sans profil client';
 }
