@@ -1,0 +1,57 @@
+# Configuration de community-service. Les valeurs par défaut correspondent à infra/docker-compose.yml (développement local) ;
+# en staging et en production, les secrets (base) sont injectés par des Secrets Kubernetes.
+server:
+  port: ${SERVER_PORT:8084}
+  shutdown: graceful
+
+spring:
+  application:
+    name: community-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5436/community}
+    username: ${DB_USER:community}
+    password: ${DB_PASSWORD:community_dev}
+  flyway:
+    enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # Clés lues sur l'adresse interne de Keycloak ; émetteur et audience vérifiés dans chaque jeton.
+          jwk-set-uri: ${JWT_JWK_SET_URI:http://localhost:8080/realms/pme/protocol/openid-connect/certs}
+          issuer-uri: ${JWT_ISSUER_URI:http://localhost:8080/realms/pme}
+          audiences: pme-api
+
+pme:
+  community:
+    # Anti-flood : nombre maximal de messages par membre sur une fenêtre glissante (au-delà : 429).
+    flood:
+      max-messages: 5
+      window-seconds: 10
+    # Durées de conservation (RGPD) appliquées chaque nuit.
+    retention:
+      cron: "0 30 3 * * *"
+      notification-days: 90
+      room-message-days: 365
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    distribution:
+      # Histogrammes de latence : nécessaires au calcul du p95 (indicateur 3) dans Prometheus
+      percentiles-histogram:
+        http.server.requests: true
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},%X{correlationId:-}]"
