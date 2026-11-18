@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { lireProduits } from '../api/catalogue';
 import { versApiError, type ApiError } from '../api/client';
 import { passerCommande } from '../api/commandes';
-import { estClient, useAuth } from '../auth/auth';
+import { estClient, libelleProfil, useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { QUANTITE_MAX, lignesIndisponibles } from '../cart/panier';
 import { MessageErreur } from '../components/Etats';
@@ -34,7 +34,14 @@ function Commander({ bloque }: { bloque: boolean }) {
   if (!estClient(auth)) {
     return (
       <div role="alert" className="alerte">
-        <p>Votre compte n'a pas le profil client : il ne peut pas passer de commande.</p>
+        <p>
+          Vous êtes connecté avec le compte « {auth.utilisateur} » ({libelleProfil(auth).toLowerCase()}) : ce compte
+          n'a pas le profil client et ne peut pas passer de commande. Votre panier est conservé : connectez-vous avec un
+          compte client pour le valider.
+        </p>
+        <button type="button" className="bouton bouton-secondaire" onClick={auth.deconnecter}>
+          Changer de compte
+        </button>
       </div>
     );
   }
@@ -58,6 +65,11 @@ function Commander({ bloque }: { bloque: boolean }) {
   return (
     <div className="commande-action">
       {erreur && <MessageErreur erreur={erreur} />}
+      {erreur?.status === 401 && (
+        <button type="button" className="bouton bouton-secondaire" onClick={auth.connecter}>
+          Se reconnecter
+        </button>
+      )}
       {bloque && <p id="commande-bloquee">Retirez les produits indisponibles pour valider la commande.</p>}
       <button
         type="button"

@@ -82,7 +82,7 @@ describe('creerSourceKeycloak', () => {
     const source = creerSourceKeycloak(CONFIG);
     instances[0]!.init.mockRejectedValue(new Error('timeout'));
     await source.demarrer();
-    expect(source.etat()).toEqual({ pret: true, connecte: false, roles: [] });
+    expect(source.etat()).toEqual({ pret: true, connecte: false, roles: [], echecConnexion: true });
     expect(await source.jeton()).toBeUndefined();
   });
 
