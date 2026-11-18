@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Tests de bout en bout sur l'environnement de staging, à travers le Gateway (TLS + JWT) :
-# US1 à US4, saga complète order → stock → order, contrôle d'accès, corrélation, limitation de débit.
+# US1 à US4, saga complète order → stock → order, espace communautaire (US8 à US12), contrôle d'accès,
+# corrélation, limitation de débit.
 # Usage : scripts/smoke-test.sh https://api.pme.local:8443
 # Variables : PME_CA_CERT, KEYCLOAK_URL, PME_ALICE_PASSWORD, PME_BOB_PASSWORD, PME_CAROL_PASSWORD, PME_ADMIN_PME_PASSWORD
 set -uo pipefail
@@ -49,6 +50,20 @@ check "US4 — historique d'alice" 2 "$(api -H "Authorization: Bearer $alice" "$
 check "US4 — commande d'alice vue par carol" 404 "$(code -H "Authorization: Bearer $carol" "$BASE_URL/api/v1/orders/$order_ok")"
 check "Stock décrémenté (ADMIN)" 24 "$(api -H "Authorization: Bearer $admin" "$BASE_URL/api/v1/stock/$FIGURINE" | jq -r .available)"
 check "Stock refusé à un client (Gateway)" 403 "$(code -H "Authorization: Bearer $alice" "$BASE_URL/api/v1/stock/$FIGURINE")"
+# Espace communautaire : annonces publiques, publication et proposition entre membres, salons, modération.
+C="$BASE_URL/api/v1/community"
+annonces=$(api "$C/listings" | jq -r '.totalElements // 0')
+check "US8 — annonces de troc en lecture publique (démonstration)" oui "$([ "$annonces" -ge 3 ] && echo oui || echo non)"
+check "US8 — publication sans jeton (Gateway)" 401 "$(code -X POST -H 'Content-Type: application/json' -d '{}' "$C/listings")"
+check "US8 — publication par un compte sans profil (Gateway)" 403 "$(code -X POST -H "Authorization: Bearer $bob" -H 'Content-Type: application/json' -d '{}' "$C/listings")"
+annonce=$(api -X POST -H "Authorization: Bearer $alice" -H 'Content-Type: application/json' -d '{"type":"EXCHANGE","title":"Figurine de test (smoke)","description":"Annonce publiée par les tests de fumée.","category":"FIGURINES","condition":"GOOD","wanted":"Un Blu-ray"}' "$C/listings" | jq -r '.id // empty')
+offre=$(api -X POST -H "Authorization: Bearer $carol" -H 'Content-Type: application/json' -d '{"message":"Je propose un Blu-ray."}' "$C/listings/$annonce/offers" | jq -r '.id // empty')
+check "US9 — proposition vue par un tiers" 404 "$(code -H "Authorization: Bearer $admin" "$C/offers/$offre")"
+check "US9 — proposition acceptée par l'auteur de l'annonce" ACCEPTED "$(api -X POST -H "Authorization: Bearer $alice" "$C/offers/$offre/acceptance" | jq -r '.status // empty')"
+check "US11 — carol notifiée de l'acceptation" OFFER_ACCEPTED "$(api -H "Authorization: Bearer $carol" "$C/notifications" | jq -r '.[0].type // empty')"
+check "US10 — message dans un salon" 201 "$(code -X POST -H "Authorization: Bearer $carol" -H 'Content-Type: application/json' -d '{"content":"Bonjour depuis les tests de fumée"}' "$C/rooms/general/messages")"
+check "US12 — modération refusée à un client (Gateway)" 403 "$(code -H "Authorization: Bearer $alice" "$C/moderation/reports")"
+check "US12 — modération ouverte à ADMIN" 200 "$(code -H "Authorization: Bearer $admin" "$C/moderation/reports")"
 corr=$(api -D - -o /dev/null -H 'X-Correlation-Id: smoke-corr-42' "$BASE_URL/api/v1/categories" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-correlation-id"{print $2}')
 check "Identifiant de corrélation renvoyé" smoke-corr-42 "$corr"
 nosniff=$(api -D - -o /dev/null "$BASE_URL/api/v1/categories" | tr -d '\r' | awk -F': ' 'tolower($1)=="x-content-type-options"{print $2}')

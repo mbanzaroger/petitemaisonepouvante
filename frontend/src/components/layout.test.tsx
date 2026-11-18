@@ -44,6 +44,33 @@ describe('Gabarit', () => {
     expect(within(entete).getByText(profil)).toBeInTheDocument();
   });
 
+  it("donne accès à l'espace communautaire selon le profil", async () => {
+    simulerApi({
+      'GET /api/v1/categories': () => json([]),
+      'GET /api/v1/products': () => json(page([produit(1)])),
+      'GET /api/v1/community/notifications/unread-count': () => json({ unread: 3 }),
+    });
+    rendreApp('/', fausseAuth({ connecte: true, utilisateur: 'admin-pme', roles: ['ADMIN'] }));
+    const navigation = screen.getByRole('navigation', { name: 'Navigation principale' });
+    expect(within(navigation).getByRole('link', { name: 'Troc et dons' })).toHaveAttribute('href', '/communaute');
+    expect(within(navigation).getByRole('link', { name: 'Salons' })).toBeInTheDocument();
+    expect(within(navigation).getByRole('link', { name: 'Modération' })).toHaveAttribute('href', '/admin/moderation');
+    expect(within(navigation).queryByRole('link', { name: 'Mes commandes' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Mon espace (3 notifications non lues)' })).toHaveAttribute(
+      'href',
+      '/mon-espace',
+    );
+  });
+
+  it("n'affiche ni salons ni espace personnel à un compte sans profil", () => {
+    api();
+    rendreApp('/', fausseAuth({ connecte: true, utilisateur: 'bob', roles: [] }));
+    const navigation = screen.getByRole('navigation', { name: 'Navigation principale' });
+    expect(within(navigation).getByRole('link', { name: 'Troc et dons' })).toBeInTheDocument();
+    expect(within(navigation).queryByRole('link', { name: 'Salons' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Mon espace/ })).not.toBeInTheDocument();
+  });
+
   it('prévient quand la connexion ne peut pas être établie', () => {
     api();
     rendreApp('/', fausseAuth({ echecConnexion: true }));

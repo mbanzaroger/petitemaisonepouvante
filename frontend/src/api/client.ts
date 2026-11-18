@@ -39,18 +39,24 @@ export function nouvelIdCorrelation(): string {
   return `web-${aleatoire}`;
 }
 
-/** Le détail problem+json (RFC 9457) n'est affiché que pour les refus métier (422), rédigés pour l'utilisateur. */
+/** Statuts dont le détail problem+json (RFC 9457) est rédigé pour l'utilisateur par les services. */
+const DETAIL_AFFICHE = new Set([409, 422, 429]);
+
+/** Le détail problem+json n'est affiché que pour les conflits, refus métier et limitations (textes des services). */
 async function erreurDepuisReponse(reponse: Response, correlationId: string): Promise<ApiError> {
-  if (reponse.status === 422) {
+  if (DETAIL_AFFICHE.has(reponse.status)) {
     try {
       const probleme = (await reponse.json()) as { detail?: unknown };
       if (typeof probleme.detail === 'string' && probleme.detail.length > 0) {
-        return new ApiError(422, probleme.detail, correlationId);
+        return new ApiError(reponse.status, probleme.detail, correlationId);
       }
     } catch {
       // corps absent ou non JSON : message générique
     }
-    return new ApiError(422, 'La commande a été refusée.', correlationId);
+  }
+  if (reponse.status === 422) return new ApiError(422, 'La demande a été refusée.', correlationId);
+  if (reponse.status === 409) {
+    return new ApiError(409, "Cette action n'est plus possible : la page a changé entre-temps.", correlationId);
   }
   return new ApiError(reponse.status, messagePourStatut(reponse.status), correlationId);
 }
@@ -61,7 +67,7 @@ export function versApiError(erreur: unknown): ApiError {
 }
 
 interface Options {
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
   token?: TokenProvider;
   signal?: AbortSignal;
@@ -90,5 +96,8 @@ export async function appelApi<T>(chemin: string, { method = 'GET', body, token,
     throw new ApiError(0, versApiError(erreur).message, correlationId);
   }
   if (!reponse.ok) throw await erreurDepuisReponse(reponse, correlationId);
-  return (await reponse.json()) as T;
+  // Réponses sans corps (204, ou 202 d'un signalement) : rien à décoder.
+  if (reponse.status === 204) return undefined as T;
+  const texte = await reponse.text();
+  return (texte.length > 0 ? JSON.parse(texte) : undefined) as T;
 }

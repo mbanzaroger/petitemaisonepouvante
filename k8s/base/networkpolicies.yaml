@@ -27,7 +27,7 @@ metadata:
   name: allow-gateway-to-apps
 spec:
   podSelector:
-    matchExpressions: [{ key: app, operator: In, values: [web-frontend, catalog-service, order-service, stock-service, keycloak] }]
+    matchExpressions: [{ key: app, operator: In, values: [web-frontend, catalog-service, order-service, stock-service, community-service, keycloak] }]
   policyTypes: [Ingress]
   ingress:
     - from:
@@ -40,7 +40,7 @@ metadata:
   name: allow-prometheus-scrape
 spec:
   podSelector:
-    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, web-frontend] }]
+    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service, web-frontend] }]
   policyTypes: [Ingress]
   ingress:
     - from:
@@ -104,6 +104,19 @@ spec:
     - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
       ports: [{ port: 8080 }]
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: community-egress
+spec:
+  podSelector: { matchLabels: { app: community-service } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: community-db } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
+      ports: [{ port: 8080 }]
+---
 # Zone données : chaque base n'accepte que son service ; le broker n'accepte que order et stock (et son opérateur).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -158,3 +171,15 @@ spec:
         - podSelector:
             matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service] }]
       ports: [{ port: 8080 }]
+---
+# Base de l'espace communautaire : accessible uniquement par community-service (aucun autre service, pas le broker).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: community-db-ingress
+spec:
+  podSelector: { matchLabels: { app: community-db } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: community-service } } }]
+      ports: [{ port: 5432 }]

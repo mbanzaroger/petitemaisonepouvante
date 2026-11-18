@@ -1,0 +1,70 @@
+# community-service (espace communautaire) : utilisateur non root, système de fichiers en lecture seule, capacités retirées,
+# ressources bornées. Base dédiée community-db (zone données).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: community-service
+  labels: { app: community-service, app.kubernetes.io/part-of: petitemaisonepouvante }
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: { app: community-service }
+  template:
+    metadata:
+      labels: { app: community-service, app.kubernetes.io/part-of: petitemaisonepouvante }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: community-service
+          image: community-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - { name: http, containerPort: 8084 }
+          env:
+            - { name: DB_URL, value: "jdbc:postgresql://community-db:5432/community" }
+            - name: DB_USER
+              valueFrom: { secretKeyRef: { name: community-db, key: username } }
+            - name: DB_PASSWORD
+              valueFrom: { secretKeyRef: { name: community-db, key: password } }
+            - name: JWT_JWK_SET_URI
+              valueFrom: { configMapKeyRef: { name: pme-config, key: jwt-jwk-set-uri } }
+            - name: JWT_ISSUER_URI
+              valueFrom: { configMapKeyRef: { name: pme-config, key: jwt-issuer-uri } }
+            - { name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError" }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 5
+            failureThreshold: 36
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: http }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: http }
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - { name: tmp, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: community-service
+  labels: { app: community-service }
+spec:
+  selector: { app: community-service }
+  ports:
+    - { name: http, port: 8084, targetPort: http }

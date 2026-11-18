@@ -94,7 +94,7 @@ jobs:
           kubectl -n pme wait rabbitmqcluster/pme-rabbit --for=condition=AllReplicasReady --timeout=600s
           kubectl wait --for=condition=available deployment --all --all-namespaces --timeout=600s
           # Garde-fou : chaque service tourne bien avec l'image du commit déployé
-          for svc in catalog-service order-service stock-service web-frontend; do
+          for svc in catalog-service order-service stock-service community-service web-frontend; do
             deployed=$(kubectl -n pme get "deploy/$svc" -o jsonpath='{.spec.template.spec.containers[0].image}')
             echo "$svc → $deployed"
             case "$deployed" in *":sha-$SHA") ;; *) echo "::error::$svc ne déploie pas l'image du commit ($deployed)"; exit 1 ;; esac
@@ -112,7 +112,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Tests d'acceptation Cucumber (US1 à US4)
+      - name: Tests d'acceptation Cucumber (US1 à US4, US8 à US12)
         if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('acceptance-tests/pom.xml') != ''
         working-directory: acceptance-tests
         run: ./mvnw -B -ntp test
@@ -142,7 +142,7 @@ jobs:
           CHROME_PATH=$(node -e "import('@playwright/test').then((m) => console.log(m.chromium.executablePath()))")
           export CHROME_PATH
           mkdir -p lighthouse
-          for page in "catalogue|/" "fiche-produit|/produits/0f6c1a10-0008-4000-8000-000000000008" "plan-du-site|/plan-du-site"; do
+          for page in "catalogue|/" "fiche-produit|/produits/0f6c1a10-0008-4000-8000-000000000008" "troc|/communaute" "plan-du-site|/plan-du-site"; do
             npx -y lighthouse@13.6.0 "https://app.pme.local:8443${page#*|}" --preset=desktop \
               --chrome-flags="--headless=new --no-sandbox --ignore-certificate-errors" \
               --output=json --output=html --output-path="lighthouse/${page%%|*}" --quiet
@@ -214,6 +214,6 @@ jobs:
           kubectl get all --all-namespaces
           kubectl get gateway,httproute,securitypolicy,backendtrafficpolicy,networkpolicy -A
           kubectl get events --all-namespaces --sort-by=.lastTimestamp | tail -50
-          for d in catalog-service order-service stock-service web-frontend; do kubectl -n pme logs "deploy/$d" --tail=60 || true; done
+          for d in catalog-service order-service stock-service community-service web-frontend; do kubectl -n pme logs "deploy/$d" --tail=60 || true; done
           kubectl get servicemonitor,prometheusrule -A 2>/dev/null || true
           kubectl get hpa -A 2>/dev/null || true

@@ -8,14 +8,17 @@
 > Cas fictif : *La Petite Maison de l'Épouvante*. Rôle : Lead Developer.
 
 ## Périmètre du POC
-Fonctionnalité métier implémentée : **commander un produit dérivé (figurines, goodies, Blu-ray) avec réservation de stock**, de bout en bout dans le navigateur.
+Fonctionnalités métier implémentées, de bout en bout dans le navigateur :
+- **commander un produit dérivé (figurines, goodies, Blu-ray) avec réservation de stock** (US1 à US7) ;
+- **espace communautaire** : troc et dons entre particuliers, conversation privée et salons de discussion entre passionnés, objets recherchés et notifications, modération (US8 à US12, v1.3.0).
 
 | Composant | Rôle | Statut |
 |---|---|---|
-| `web-frontend` | Site : catalogue, panier, connexion, commande, suivi, historique, espace administrateur (stock), pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété en v1.2.0) |
+| `web-frontend` | Site : catalogue, panier, connexion, commande, suivi, historique, espace communautaire et « Mon espace », administration (stock, modération), pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété en v1.2.0 et v1.3.0) |
 | `catalog-service` | Produits, catégories, prix | Livré (v0.5.0) |
 | `order-service` | Commandes, statuts, historique, saga (boîte d'envoi) | Livré (v0.5.0) |
 | `stock-service` | Stock, réservations idempotentes | Livré (v0.5.0) |
+| `community-service` | Annonces de troc et de dons, propositions, salons, notifications, signalements et modération (ADR-004) | Livré (v1.3.0) |
 | Keycloak | Identité OIDC / rôles (client `pme-web` : code + PKCE) | `infra/`, `k8s/platform/` |
 | RabbitMQ | Saga de commande asynchrone | `infra/`, `k8s/overlays/staging/` |
 
@@ -26,7 +29,11 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 | Espace administrateur (stock) | Connexion (thème Keycloak du site) |
 | ![Page Stock réservée aux administrateurs : disponible, réservé et état par produit](docs/assets/site-stock.png) | ![Page de connexion Keycloak aux couleurs du site, en français](docs/assets/site-connexion.png) |
 
-*Captures du site avec les données de démonstration ; l'historique est en `docs/assets/site-historique.png`.*
+| Troc et dons | Proposition acceptée et conversation privée |
+|---|---|
+| ![Annonces de troc et de dons filtrables, bouton Publier une annonce](docs/assets/site-troc.png) | ![Proposition acceptée : statut, annonce, conversation entre les deux membres](docs/assets/site-proposition.png) |
+
+*Captures du site avec les données de démonstration ; l'historique, un salon de discussion et « Mon espace » sont en `docs/assets/site-historique.png`, `site-salon.png` et `site-mon-espace.png`.*
 
 ## Documentation
 - [Architecture technique + sécurité](docs/01-architecture.md)
@@ -48,7 +55,7 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 - [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
-- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-002 : front-end web (révisé)](docs/adr/ADR-002-front-end.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md)
+- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-002 : front-end web (révisé)](docs/adr/ADR-002-front-end.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md) · [ADR-004 : service communautaire](docs/adr/ADR-004-service-communaute.md) · [ADR-005 : discussions par relevé périodique](docs/adr/ADR-005-discussions-releve-periodique.md)
 - [Contrat OpenAPI](docs/api/openapi.yaml) · [Collection Bruno](docs/api/bruno/) · [Script de démonstration](docs/demo/script-demo.md)
 - [Protocoles d'expérimentation](docs/experimentations/) · [Synthèse adoption / rejet](docs/experimentations/synthese.md)
 
@@ -56,8 +63,8 @@ Fonctionnalité métier implémentée : **commander un produit dérivé (figurin
 ```bash
 infra/init-env.sh                              # génère infra/.env (mots de passe aléatoires, jamais versionné)
 cd infra && docker compose --profile app up -d --build
-# Site http://localhost:5173 (alice ou carol : client ; admin-pme : stock) — l'API y est relayée sur la même origine
-# API : catalogue http://localhost:8081, commandes :8082, stock :8083 (ports liés à 127.0.0.1)
+# Site http://localhost:5173 (alice ou carol : client et membre ; admin-pme : stock et modération) — API relayée sur la même origine
+# API : catalogue http://localhost:8081, commandes :8082, stock :8083, communauté :8084 (ports liés à 127.0.0.1)
 # Keycloak http://localhost:8080 (admin / KEYCLOAK_ADMIN_PASSWORD) · RabbitMQ http://localhost:15672
 # Prometheus http://localhost:9090 · Grafana http://localhost:3000 (tableau de bord « PME — RED des microservices »)
 ```
@@ -73,12 +80,14 @@ cd infra && docker compose --profile app up -d --build --force-recreate
 # Ouvrir https://<codespace>-5173.app.github.dev (onglet « Ports », port 5173)
 ```
 
+Après une mise à jour du dépôt qui ajoute un service, relancer `bash infra/init-env.sh` : il complète `infra/.env` (nouveaux mots de passe) sans changer les valeurs existantes.
+
 **En cas de problème** (connexion qui n'aboutit pas, commande refusée, page en erreur) : `bash infra/diagnostic.sh` vérifie la configuration, l'état des conteneurs, la cohérence des adresses Keycloak (site, royaume, services) et la santé des microservices, et affiche la commande corrective de chaque point en échec. Une fois connecté, l'en-tête du site affiche le compte et son profil (Client, Administrateur, Sans profil client) : seuls les comptes clients peuvent commander.
 
 ## Organisation du dépôt
 ```
 docs/            documentation, schémas (Mermaid), ADR, expérimentations
-services/        microservices (catalog, order, stock)
+services/        microservices (catalog, order, stock, community)
 frontend/        site web (SPA React + TypeScript, nginx, tests Vitest et Playwright)
 infra/           docker-compose + monitoring (dev local)
 k8s/             manifestes Kubernetes (Kustomize)

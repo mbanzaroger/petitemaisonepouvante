@@ -2,8 +2,17 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [1.3.0] - 2026-11-18
 ### Ajouté
+- **Espace communautaire** (US8 à US12, ADR-004) : nouveau service `community-service` (Spring Boot 4.1, PostgreSQL `community`, port 8084) et pages du site :
+  - troc et dons entre particuliers : annonces publiques filtrables, publication, retrait, proposition d'échange ou demande de don, acceptation, refus, annulation ;
+  - conversation privée entre les deux membres d'une proposition, salons de discussion thématiques (relevé périodique par curseur, ADR-005), anti-flood (5 messages / 10 s) ;
+  - « Mon espace » : notifications (pastille dans l'en-tête), préférences de notification, objets recherchés avec alerte à la publication d'une annonce correspondante, mes annonces ;
+  - signalement par les membres et page « Modération » (ADMIN) : masquer un contenu (auteur prévenu) ou rejeter le signalement ;
+  - conservation RGPD (notifications lues 90 jours, messages de salon 365 jours).
+- Plateforme : routes Gateway (lecture publique des annonces, membres CUSTOMER/ADMIN, modération ADMIN, limitation par IP), NetworkPolicies dédiées, base de staging, secrets générés, ServiceMonitor ; métriques `pme_community_*`, alerte `ModerationEnAttente`, panneaux Grafana.
+- Qualité : 41 tests du service (25 d'intégration Testcontainers), scénarios Cucumber US8 à US12, contrôles de fumée, parcours Playwright + axe (troc complet, salon, modération), page « Troc et dons » auditée par Lighthouse.
+- `infra/init-env.sh` complète un `infra/.env` existant avec les variables manquantes (ex. `COMMUNITY_DB_PASSWORD`) sans changer les autres valeurs.
 - Script de diagnostic de l'environnement local (`infra/diagnostic.sh`) : configuration, conteneurs, adresses Keycloak, émetteur attendu par les services, santé, jetons refusés.
 - Mode GitHub Codespaces (`infra/codespaces.sh`) : le site est servi sur l'adresse publique du Codespace et Keycloak est relayé sur la même origine ; adresses paramétrées par `PME_SITE_URL` et `KEYCLOAK_PUBLIC_URL` (valeurs locales inchangées par défaut).
 
