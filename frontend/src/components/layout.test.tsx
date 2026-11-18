@@ -26,9 +26,29 @@ describe('Gabarit', () => {
     const { utilisateur } = rendreApp('/', auth);
     const navigation = screen.getByRole('navigation', { name: 'Navigation principale' });
     expect(within(navigation).getByRole('link', { name: 'Mes commandes' })).toBeInTheDocument();
-    expect(screen.getByText('Bonjour alice')).toBeInTheDocument();
+    const entete = screen.getByRole('banner');
+    expect(within(entete).getByText('alice')).toBeInTheDocument();
+    expect(within(entete).getByText('Client')).toBeInTheDocument();
     await utilisateur.click(screen.getByRole('button', { name: 'Se déconnecter' }));
     expect(auth.deconnecter).toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ connecte: true, utilisateur: 'admin-pme', roles: ['ADMIN'] }, 'Administrateur'],
+    [{ connecte: true, utilisateur: 'bob', roles: [] }, 'Sans profil client'],
+  ])('indique le profil du compte connecté (%o)', (etat, profil) => {
+    api();
+    rendreApp('/', fausseAuth(etat));
+    const entete = screen.getByRole('banner');
+    expect(within(entete).getByText(etat.utilisateur)).toBeInTheDocument();
+    expect(within(entete).getByText(profil)).toBeInTheDocument();
+  });
+
+  it('prévient quand la connexion ne peut pas être établie', () => {
+    api();
+    rendreApp('/', fausseAuth({ echecConnexion: true }));
+    expect(screen.getByRole('alert')).toHaveTextContent("La connexion n'a pas pu être établie");
+    expect(screen.getByRole('button', { name: 'Se connecter' })).toBeInTheDocument();
   });
 
   it('ne montre ni connexion ni déconnexion pendant la vérification de session', () => {

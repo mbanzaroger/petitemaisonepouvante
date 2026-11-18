@@ -47,11 +47,27 @@ describe('Panier', () => {
     expect(screen.getByRole('rowheader', { name: 'Produit 04' })).toBeInTheDocument();
   });
 
-  it('refuse la commande à un compte sans rôle client', () => {
+  it('refuse la commande à un compte sans rôle client et propose de changer de compte', async () => {
     simulerApi({});
-    rendreApp('/panier', fausseAuth({ connecte: true, utilisateur: 'bob', roles: [] }));
-    expect(screen.getByRole('alert')).toHaveTextContent("n'a pas le profil client");
+    const auth = fausseAuth({ connecte: true, utilisateur: 'admin-pme', roles: ['ADMIN'] });
+    const { utilisateur } = rendreApp('/panier', auth);
+    const alerte = screen.getByRole('alert');
+    expect(alerte).toHaveTextContent('« admin-pme » (administrateur)');
+    expect(alerte).toHaveTextContent("n'a pas le profil client");
     expect(screen.queryByRole('button', { name: 'Valider la commande' })).not.toBeInTheDocument();
+    await utilisateur.click(within(alerte).getByRole('button', { name: 'Changer de compte' }));
+    expect(auth.deconnecter).toHaveBeenCalled();
+  });
+
+  it('propose de se reconnecter quand la session a expiré', async () => {
+    simulerApi({ 'POST /api/v1/orders': () => json({ status: 401 }, 401) });
+    const auth = fausseAuth(CLIENT);
+    const { utilisateur } = rendreApp('/panier', auth);
+    await utilisateur.click(screen.getByRole('button', { name: 'Valider la commande' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Votre session a expiré');
+    await utilisateur.click(screen.getByRole('button', { name: 'Se reconnecter' }));
+    expect(auth.connecter).toHaveBeenCalled();
+    expect(screen.getByRole('rowheader', { name: 'Produit 04' })).toBeInTheDocument();
   });
 
   it('passe la commande, vide le panier et ouvre le suivi', async () => {

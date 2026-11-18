@@ -73,6 +73,8 @@ cd infra && docker compose --profile app up -d --build --force-recreate
 # Ouvrir https://<codespace>-5173.app.github.dev (onglet « Ports », port 5173)
 ```
 
+**En cas de problème** (connexion qui n'aboutit pas, commande refusée, page en erreur) : `bash infra/diagnostic.sh` vérifie la configuration, l'état des conteneurs, la cohérence des adresses Keycloak (site, royaume, services) et la santé des microservices, et affiche la commande corrective de chaque point en échec. Une fois connecté, l'en-tête du site affiche le compte et son profil (Client, Administrateur, Sans profil client) : seuls les comptes clients peuvent commander.
+
 ## Organisation du dépôt
 ```
 docs/            documentation, schémas (Mermaid), ADR, expérimentations

@@ -26,7 +26,7 @@ export async function seConnecter(page: Page, utilisateur: Utilisateur, bouton =
   await page.locator('#username').fill(utilisateur);
   await page.locator('#password').fill(motDePasse(utilisateur));
   await page.locator('#kc-login').click();
-  await expect(page.getByText(`Bonjour ${utilisateur}`)).toBeVisible();
+  await expect(page.getByRole('banner').getByText(utilisateur, { exact: true })).toBeVisible();
 }
 
 const NORMES = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];

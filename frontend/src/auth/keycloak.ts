@@ -7,8 +7,10 @@ const MARGE_VALIDITE_S = 30;
 
 type JetonPme = KeycloakTokenParsed & { preferred_username?: string };
 
-export function etatDepuisKeycloak(pret: boolean, authentifie: boolean, jeton?: JetonPme): EtatAuth {
-  if (!authentifie || !jeton) return { pret, connecte: false, roles: [] };
+export function etatDepuisKeycloak(pret: boolean, authentifie: boolean, jeton?: JetonPme, echec = false): EtatAuth {
+  if (!authentifie || !jeton) {
+    return echec ? { pret, connecte: false, roles: [], echecConnexion: true } : { pret, connecte: false, roles: [] };
+  }
   return {
     pret,
     connecte: true,
@@ -25,10 +27,11 @@ export function creerSourceKeycloak(config: AppConfig): SourceAuth & { demarrer(
   const keycloak = new Keycloak({ url: config.keycloakUrl, realm: config.realm, clientId: config.clientId });
   const abonnes = new Set<() => void>();
   let pret = false;
+  let echec = false;
   let etat: EtatAuth = etatDepuisKeycloak(false, false);
 
   const notifier = () => {
-    etat = etatDepuisKeycloak(pret, keycloak.authenticated === true, keycloak.tokenParsed as JetonPme | undefined);
+    etat = etatDepuisKeycloak(pret, keycloak.authenticated === true, keycloak.tokenParsed as JetonPme | undefined, echec);
     abonnes.forEach((rappel) => rappel());
   };
   keycloak.onAuthSuccess = notifier;
@@ -49,6 +52,8 @@ export function creerSourceKeycloak(config: AppConfig): SourceAuth & { demarrer(
           silentCheckSsoFallback: false,
         });
       } catch (erreur) {
+        // Le site reste utilisable sans connexion ; l'utilisateur est prévenu (bandeau) au lieu d'un échec silencieux.
+        echec = true;
         console.warn('Keycloak injoignable : navigation sans connexion', erreur);
       } finally {
         pret = true;

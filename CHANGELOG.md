@@ -4,10 +4,12 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 ### Ajouté
+- Script de diagnostic de l'environnement local (`infra/diagnostic.sh`) : configuration, conteneurs, adresses Keycloak, émetteur attendu par les services, santé, jetons refusés.
 - Mode GitHub Codespaces (`infra/codespaces.sh`) : le site est servi sur l'adresse publique du Codespace et Keycloak est relayé sur la même origine ; adresses paramétrées par `PME_SITE_URL` et `KEYCLOAK_PUBLIC_URL` (valeurs locales inchangées par défaut).
 
 ### Corrigé
 - En local, le site démarre même si un service n'est pas encore joignable (résolution DNS à la demande, #105).
+- Site : le compte connecté et son profil sont affichés clairement dans l'en-tête ; un échec de connexion est signalé par un bandeau au lieu d'un retour silencieux en mode déconnecté ; le panier explique pourquoi un compte non client ne peut pas commander (avec « Changer de compte ») et propose de se reconnecter quand la session a expiré.
 
 ## [1.2.0] - 2026-11-17
 ### Ajouté

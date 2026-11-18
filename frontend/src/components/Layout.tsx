@@ -1,6 +1,6 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { estAdmin, estClient, useAuth } from '../auth/auth';
+import { estAdmin, estClient, libelleProfil, useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { NOM_SITE } from '../hooks/useTitre';
 import { ErreurInattendue } from './ErreurInattendue';
@@ -16,9 +16,19 @@ function CompteUtilisateur() {
       </button>
     );
   }
+  const nom = auth.utilisateur ?? 'utilisateur';
   return (
     <>
-      <span className="utilisateur">Bonjour {auth.utilisateur}</span>
+      <p className="identite">
+        <span className="avatar" aria-hidden="true">
+          {nom.charAt(0).toUpperCase()}
+        </span>
+        <span>
+          Connecté :{' '}
+          <strong className="identite-nom">{nom}</strong>{' '}
+          <span className="identite-profil">{libelleProfil(auth)}</span>
+        </span>
+      </p>
       <button type="button" className="bouton bouton-secondaire" onClick={auth.deconnecter}>
         Se déconnecter
       </button>
@@ -106,6 +116,14 @@ export function Layout() {
         </div>
       </header>
       <main id="contenu" tabIndex={-1}>
+        {auth.echecConnexion && !auth.connecte && (
+          <div role="alert" className="alerte alerte-erreur">
+            <p>
+              La connexion n'a pas pu être établie : le service d'authentification ne répond pas. Vous pouvez continuer
+              à parcourir le catalogue et réessayer de vous connecter dans un instant.
+            </p>
+          </div>
+        )}
         <ErreurInattendue key={pathname}>
           <Suspense fallback={<Chargement texte="Chargement de la page…" />}>
             <Outlet />
