@@ -50,6 +50,15 @@ export function DonneesPersonnellesPage() {
             </tr>
             <tr>
               <th scope="row">
+                Personnalisation (si vous l'activez) : produits consultés, catégories recherchées, achats ; catégories
+                d'annonces consultées pour les notifications selon la navigation
+              </th>
+              <td>Recommandations de produits, notifications des annonces qui peuvent vous intéresser</td>
+              <td>Consentement, retirable à tout moment dans « Mon espace » (l'historique est alors effacé)</td>
+              <td>Recommandations : 90 jours ; centres d'intérêt de navigation : 180 jours sans consultation</td>
+            </tr>
+            <tr>
+              <th scope="row">
                 Journaux techniques : date, adresse demandée, statut, identifiant de corrélation ; adresse IP et
                 navigateur au point d'entrée ; identifiant interne du client pour les commandes
               </th>

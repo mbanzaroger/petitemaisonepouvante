@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router';
 import { lireProduits } from '../api/catalogue';
 import { versApiError, type ApiError } from '../api/client';
 import { passerCommande } from '../api/commandes';
+import { lirePersonnalisation, signalerSansAttendre } from '../api/recommandations';
 import { estClient, libelleProfil, useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { QUANTITE_MAX, lignesIndisponibles } from '../cart/panier';
@@ -53,6 +54,17 @@ function Commander({ bloque }: { bloque: boolean }) {
       const commande = await passerCommande(
         panier.lignes.map((ligne) => ({ productId: ligne.productId, quantity: ligne.quantite })),
         auth.jeton,
+      );
+      // Achats : signaux d'intérêt pour les recommandations, seulement si le membre l'a accepté (sans bloquer).
+      lirePersonnalisation(auth.jeton).then(
+        ({ personalized }) => {
+          if (personalized) {
+            commande.lines.forEach((ligne) =>
+              signalerSansAttendre({ kind: 'PURCHASE', productId: ligne.productId }, auth.jeton),
+            );
+          }
+        },
+        () => undefined,
       );
       panier.vider();
       void naviguer(`/commandes/${commande.id}`, { state: { nouvelle: true } });

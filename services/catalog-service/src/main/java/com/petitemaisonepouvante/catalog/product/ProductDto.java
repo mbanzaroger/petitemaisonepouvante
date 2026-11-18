@@ -10,7 +10,8 @@ public record ProductDto(
         String description,
         Price price,
         String category,
-        boolean available) {
+        boolean available,
+        boolean exclusive) {
 
     public record Price(int amountCents, String currency) {
     }
@@ -23,6 +24,7 @@ public record ProductDto(
                 product.description(),
                 new Price(product.priceCents(), product.currency()),
                 product.category(),
-                product.active());
+                product.active(),
+                product.exclusive());
     }
 }

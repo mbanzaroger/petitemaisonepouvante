@@ -16,6 +16,7 @@ export type TypeNotification =
   | 'OFFER_CANCELLED'
   | 'NEW_MESSAGE'
   | 'WISH_MATCH'
+  | 'INTEREST_MATCH'
   | 'CONTENT_HIDDEN';
 export type StatutSignalement = 'OPEN' | 'ACTIONED' | 'DISMISSED';
 
@@ -118,6 +119,8 @@ export interface Preferences {
   offers: boolean;
   messages: boolean;
   wishes: boolean;
+  /** Notifications selon la navigation : suppose d'enregistrer les catégories consultées (désactivé par défaut). */
+  browsing: boolean;
 }
 
 export interface Recherche {

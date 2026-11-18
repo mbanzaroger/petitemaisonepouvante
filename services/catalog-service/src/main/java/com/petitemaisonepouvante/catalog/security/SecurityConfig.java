@@ -9,7 +9,8 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * Le catalogue est en lecture publique ; toute autre opération exige un jeton Keycloak valide
+ * Le catalogue et les recommandations sont en lecture publique ; la personnalisation (signaux d'intérêt, consentement)
+ * est réservée aux membres (CUSTOMER ou ADMIN) ; toute autre opération exige un jeton Keycloak valide
  * (signature JWKS, émetteur, audience {@code pme-api}). API sans état : pas de session ni de cookie,
  * l'authentification passe uniquement par l'en-tête Authorization.
  */
@@ -26,8 +27,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**"))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/*", "/api/v1/categories")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/products", "/api/v1/products/*", "/api/v1/categories",
+                                "/api/v1/recommendations")
                         .permitAll()
+                        .requestMatchers("/api/v1/interests", "/api/v1/interests/**").hasAnyRole("CUSTOMER", "ADMIN")
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())

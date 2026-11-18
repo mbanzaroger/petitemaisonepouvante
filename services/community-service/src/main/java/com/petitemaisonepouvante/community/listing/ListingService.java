@@ -38,7 +38,7 @@ public class ListingService {
         String wanted = request.type() == ListingType.EXCHANGE ? clean(request.wanted()) : null;
         Listing listing = listings.insert(author.id(), author.name(), request.type(), request.title().strip(),
                 request.description().strip(), request.category(), request.condition(), wanted);
-        notifications.notifyWishMatches(listing);
+        notifications.notifyInterestMatches(listing, notifications.notifyWishMatches(listing));
         metrics.listingPublished(listing.type().name());
         return listing;
     }

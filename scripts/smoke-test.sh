@@ -50,6 +50,12 @@ check "US4 — historique d'alice" 2 "$(api -H "Authorization: Bearer $alice" "$
 check "US4 — commande d'alice vue par carol" 404 "$(code -H "Authorization: Bearer $carol" "$BASE_URL/api/v1/orders/$order_ok")"
 check "Stock décrémenté (ADMIN)" 24 "$(api -H "Authorization: Bearer $admin" "$BASE_URL/api/v1/stock/$FIGURINE" | jq -r .available)"
 check "Stock refusé à un client (Gateway)" 403 "$(code -H "Authorization: Bearer $alice" "$BASE_URL/api/v1/stock/$FIGURINE")"
+# Recommandations (US13) : sélection commune pour un visiteur, personnalisation avec consentement seulement.
+check "US13 — recommandations d'un visiteur (exclusivité Evil Ed en tête)" true "$(api "$BASE_URL/api/v1/recommendations" | jq -r '.items[0].product.exclusive // empty')"
+check "US13 — signal d'intérêt sans jeton (Gateway)" 401 "$(code -X POST -H 'Content-Type: application/json' -d '{}' "$BASE_URL/api/v1/interests")"
+api -X PUT -H "Authorization: Bearer $carol" -H 'Content-Type: application/json' -d '{"personalized":true}' "$BASE_URL/api/v1/interests/preferences" > /dev/null
+api -X POST -H "Authorization: Bearer $carol" -H 'Content-Type: application/json' -d '{"kind":"SEARCH","category":"Blu-ray"}' "$BASE_URL/api/v1/interests" > /dev/null
+check "US13 — recommandation personnalisée de carol (Blu-ray)" Blu-ray "$(api -H "Authorization: Bearer $carol" "$BASE_URL/api/v1/recommendations" | jq -r '.items[0].product.category // empty')"
 # Espace communautaire : annonces publiques, publication et proposition entre membres, salons, modération.
 C="$BASE_URL/api/v1/community"
 annonces=$(api "$C/listings" | jq -r '.totalElements // 0')

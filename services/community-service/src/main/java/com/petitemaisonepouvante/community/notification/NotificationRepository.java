@@ -69,26 +69,69 @@ public class NotificationRepository {
     // --- Préférences ---
 
     public Preferences findPreferences(String memberId) {
-        return jdbc.sql("select offers, messages, wishes from notification_preferences where member_id = :member")
+        return jdbc.sql("select offers, messages, wishes, browsing from notification_preferences "
+                        + "where member_id = :member")
                 .param("member", memberId)
                 .query((rs, row) -> new Preferences(rs.getBoolean("offers"), rs.getBoolean("messages"),
-                        rs.getBoolean("wishes")))
+                        rs.getBoolean("wishes"), rs.getBoolean("browsing")))
                 .optional()
                 .orElse(Preferences.DEFAULT);
     }
 
     public void savePreferences(String memberId, Preferences preferences) {
         jdbc.sql("""
-                insert into notification_preferences (member_id, offers, messages, wishes)
-                values (:member, :offers, :messages, :wishes)
+                insert into notification_preferences (member_id, offers, messages, wishes, browsing)
+                values (:member, :offers, :messages, :wishes, :browsing)
                 on conflict (member_id) do update
                 set offers = excluded.offers, messages = excluded.messages, wishes = excluded.wishes,
-                    updated_at = now()
+                    browsing = excluded.browsing, updated_at = now()
                 """)
                 .param("member", memberId)
                 .param("offers", preferences.offers())
                 .param("messages", preferences.messages())
                 .param("wishes", preferences.wishes())
+                .param("browsing", preferences.browsing())
+                .update();
+    }
+
+    // --- Centres d'intérêt issus de la navigation ---
+
+    public void addInterest(String memberId, String category, int points) {
+        jdbc.sql("""
+                insert into member_interest (member_id, category, score) values (:member, :category, :points)
+                on conflict (member_id, category) do update
+                set score = member_interest.score + excluded.score, updated_at = now()
+                """)
+                .param("member", memberId)
+                .param("category", category)
+                .param("points", points)
+                .update();
+    }
+
+    /** Membres ayant accepté les notifications de navigation et souvent consulté cette catégorie récemment. */
+    public List<String> findInterestedMembers(String category, String excludedMemberId, int minScore, int days) {
+        return jdbc.sql("""
+                select i.member_id from member_interest i
+                join notification_preferences p on p.member_id = i.member_id and p.browsing
+                where i.category = :category and i.score >= :minScore and i.member_id <> :excluded
+                  and i.updated_at > now() - make_interval(days => :days)
+                order by i.member_id
+                """)
+                .param("category", category)
+                .param("minScore", minScore)
+                .param("excluded", excludedMemberId)
+                .param("days", days)
+                .query(String.class)
+                .list();
+    }
+
+    public int deleteInterests(String memberId) {
+        return jdbc.sql("delete from member_interest where member_id = :member").param("member", memberId).update();
+    }
+
+    public int deleteStaleInterests(int days) {
+        return jdbc.sql("delete from member_interest where updated_at < now() - make_interval(days => :days)")
+                .param("days", days)
                 .update();
     }
 

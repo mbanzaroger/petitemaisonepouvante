@@ -2,6 +2,12 @@
 
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
+## [Non publié]
+### Ajouté
+- **Recommandations** (US13) : sélection « Recommandé pour vous » sur le catalogue et « Vous aimerez aussi » sur les fiches, selon les recherches, consultations et achats du membre, avec la raison affichée ; consentement dans « Mon espace » (désactivé par défaut), effacement de l'historique, conservation 90 jours ; sélection commune pour les visiteurs.
+- **Gamme exclusive Evil Ed** : produits signalés « Exclusivité Evil Ed », filtre du catalogue, mise en avant dans les recommandations.
+- **Notifications selon la navigation** (US14) : un membre qui l'accepte est prévenu des nouvelles annonces de troc dans les catégories qu'il consulte souvent ; centres d'intérêt effacés au retrait de l'accord, conservés 180 jours.
+
 ## [1.3.0] - 2026-11-18
 ### Ajouté
 - **Espace communautaire** (US8 à US12, ADR-004) : nouveau service `community-service` (Spring Boot 4.1, PostgreSQL `community`, port 8084) et pages du site :

@@ -18,7 +18,7 @@ class PageDtoTest {
 
     @Test
     void exposeLePrixEnCentimesEtLaDisponibilite() {
-        Product product = new Product(UUID.randomUUID(), "SKU-1", "Mug", "desc", 1290, "EUR", "Goodies", false);
+        Product product = new Product(UUID.randomUUID(), "SKU-1", "Mug", "desc", 1290, "EUR", "Goodies", false, false);
 
         ProductDto dto = ProductDto.from(product);
 

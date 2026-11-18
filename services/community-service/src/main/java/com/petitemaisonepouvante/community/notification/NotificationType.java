@@ -8,10 +8,11 @@ public enum NotificationType {
     OFFER_CANCELLED(Category.OFFERS),
     NEW_MESSAGE(Category.MESSAGES),
     WISH_MATCH(Category.WISHES),
+    INTEREST_MATCH(Category.BROWSING),
     CONTENT_HIDDEN(Category.MODERATION);
 
     /** Catégorie de préférences de notification. */
-    public enum Category { OFFERS, MESSAGES, WISHES, MODERATION }
+    public enum Category { OFFERS, MESSAGES, WISHES, BROWSING, MODERATION }
 
     private final Category category;
 

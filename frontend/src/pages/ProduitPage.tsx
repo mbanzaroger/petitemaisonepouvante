@@ -1,10 +1,14 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { lireProduit } from '../api/catalogue';
+import { signalerSansAttendre } from '../api/recommandations';
+import { useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { QUANTITE_MAX } from '../cart/panier';
 import { Chargement, MessageErreur } from '../components/Etats';
+import { Recommandations } from '../components/Recommandations';
 import { formaterPrix } from '../format';
+import { useRecommandations } from '../hooks/useRecommandations';
 import { useRessource } from '../hooks/useRessource';
 import { useTitre } from '../hooks/useTitre';
 
@@ -19,6 +23,15 @@ export function ProduitPage() {
   const [annonce, setAnnonce] = useState('');
   const introuvable = erreur?.status === 404;
   useTitre(produit ? produit.name : introuvable ? 'Produit introuvable' : 'Fiche produit');
+  const auth = useAuth();
+  const recommandations = useRecommandations(id);
+  const personnalise = recommandations.donnees?.personalized === true;
+  const produitCharge = produit?.id;
+
+  // Consultation d'une fiche : signal d'intérêt, envoyé seulement si le membre a activé la personnalisation.
+  useEffect(() => {
+    if (personnalise && produitCharge) signalerSansAttendre({ kind: 'VIEW', productId: produitCharge }, auth.jeton);
+  }, [personnalise, produitCharge, auth.jeton]);
 
   function ajouterAuPanier(evenement: FormEvent<HTMLFormElement>) {
     evenement.preventDefault();
@@ -41,6 +54,7 @@ export function ProduitPage() {
           <h2 id="titre-fiche" className="visuellement-masque">
             Détails du produit
           </h2>
+          {produit.exclusive && <p className="etiquette etiquette-exclusif">Exclusivité Evil Ed, uniquement sur le site</p>}
           <p className="description">{produit.description}</p>
           <dl className="caracteristiques">
             <dt>Catégorie</dt>
@@ -77,6 +91,7 @@ export function ProduitPage() {
           )}
         </article>
       )}
+      {produit && <Recommandations donnees={recommandations.donnees} titre="Vous aimerez aussi" />}
     </>
   );
 }
