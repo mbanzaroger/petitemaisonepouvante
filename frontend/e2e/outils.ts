@@ -5,7 +5,7 @@ export const MUG = { id: '0f6c1a10-0008-4000-8000-000000000008', nom: 'Mug « Le
 /** Stock initial de 2 : une commande de 10 est annulée par la saga (scénario d'échec). */
 export const BUSTE = { id: '0f6c1a10-0002-4000-8000-000000000002', nom: "Buste de L'Orc peint à la main" };
 
-export type Utilisateur = 'alice' | 'bob' | 'admin-pme';
+export type Utilisateur = 'alice' | 'bob' | 'carol' | 'admin-pme';
 
 export function motDePasse(utilisateur: Utilisateur): string {
   const variable = `PME_${utilisateur.toUpperCase().replace('-', '_')}_PASSWORD`;

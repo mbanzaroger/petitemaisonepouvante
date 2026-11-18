@@ -4,6 +4,8 @@ import type { TokenProvider } from '../api/types';
 export const ROLE_CLIENT = 'CUSTOMER';
 export const ROLE_ADMIN = 'ADMIN';
 export type Role = typeof ROLE_CLIENT | typeof ROLE_ADMIN;
+/** Accès « membre » de l'espace communautaire : rôle client ou administrateur. */
+export const ACCES_MEMBRE = 'MEMBRE';
 
 export interface EtatAuth {
   /** L'initialisation (vérification silencieuse de la session) est terminée. */
@@ -51,6 +53,11 @@ export function estClient(auth: EtatAuth): boolean {
 
 export function estAdmin(auth: EtatAuth): boolean {
   return aLeRole(auth, ROLE_ADMIN);
+}
+
+/** Membre de l'espace communautaire : compte client ou administrateur (le service applique la même règle). */
+export function estMembre(auth: EtatAuth): boolean {
+  return estClient(auth) || estAdmin(auth);
 }
 
 /** Profil affiché à côté du nom de l'utilisateur connecté (en-tête, panier). */

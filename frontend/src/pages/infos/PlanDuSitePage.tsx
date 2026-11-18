@@ -32,10 +32,32 @@ export function PlanDuSitePage() {
           <li>
             <Link to="/commandes">Mes commandes</Link> (connexion requise)
           </li>
+          <li>
+            <Link to="/communaute">Troc et dons</Link>
+            <ul>
+              <li>
+                <Link to="/communaute/publier">Publier une annonce</Link> (connexion requise)
+              </li>
+              <li>
+                <Link to="/communaute/propositions">Mes propositions</Link> (connexion requise)
+              </li>
+              <li>
+                <Link to="/communaute/salons">Salons de discussion</Link> (connexion requise)
+              </li>
+            </ul>
+          </li>
+          <li>
+            <Link to="/mon-espace">Mon espace</Link> (connexion requise)
+          </li>
           {estAdmin(auth) && (
-            <li>
-              <Link to="/admin/stock">Stock</Link> (administrateurs)
-            </li>
+            <>
+              <li>
+                <Link to="/admin/stock">Stock</Link> (administrateurs)
+              </li>
+              <li>
+                <Link to="/admin/moderation">Modération</Link> (administrateurs)
+              </li>
+            </>
           )}
           <li>
             Informations

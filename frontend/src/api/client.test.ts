@@ -28,7 +28,7 @@ describe('appelApi', () => {
 
   it('remplace un 422 sans détail exploitable par un message générique', async () => {
     simulerApi({ 'POST /api/v1/orders': () => new Response('oups', { status: 422 }) });
-    await expect(passerCommande([], async () => 't')).rejects.toThrow('La commande a été refusée.');
+    await expect(passerCommande([], async () => 't')).rejects.toThrow('La demande a été refusée.');
   });
 
   it("n'affiche jamais le détail technique des autres erreurs", async () => {
