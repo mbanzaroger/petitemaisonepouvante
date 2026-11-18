@@ -24,7 +24,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Client HTTP de l'environnement testé. Configuration par variables d'environnement :
- * BASE_URL (Gateway de staging, ex. https://api.pme.local:8443) ou CATALOG_URL / ORDERS_URL / STOCK_URL (docker compose),
+ * BASE_URL (Gateway de staging, ex. https://api.pme.local:8443) ou CATALOG_URL / ORDERS_URL / STOCK_URL / COMMUNITY_URL
+ * (docker compose),
  * KEYCLOAK_URL, PME_CA_CERT (autorité de certification à approuver), PME_&lt;UTILISATEUR&gt;_PASSWORD.
  */
 final class PmeApi {
@@ -35,6 +36,7 @@ final class PmeApi {
     private final String catalogUrl;
     private final String ordersUrl;
     private final String stockUrl;
+    private final String communityUrl;
     private final String keycloakUrl;
     private final Map<String, String> tokens = new HashMap<>();
 
@@ -43,6 +45,7 @@ final class PmeApi {
         this.catalogUrl = env("CATALOG_URL", base);
         this.ordersUrl = env("ORDERS_URL", base);
         this.stockUrl = env("STOCK_URL", base);
+        this.communityUrl = env("COMMUNITY_URL", base);
         this.keycloakUrl = env("KEYCLOAK_URL", "http://localhost:8080");
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).sslContext(sslContext()).build();
     }
@@ -65,6 +68,7 @@ final class PmeApi {
             case "catalogue" -> catalogUrl;
             case "commandes" -> ordersUrl;
             case "stock" -> stockUrl;
+            case "communaute" -> communityUrl;
             default -> throw new IllegalArgumentException(service);
         };
         return URI.create(base + path);

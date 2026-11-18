@@ -57,6 +57,10 @@ public class ReportRepository {
         return jdbc.sql(SELECT + " where r.id = :id").param("id", id).query(ReportRepository::map).optional();
     }
 
+    public long countOpen() {
+        return jdbc.sql("select count(*) from report where status = 'OPEN'").query(Long.class).single();
+    }
+
     /** Clôt tous les signalements ouverts sur un même contenu. */
     public int closeOpen(TargetType type, String targetId, ReportStatus status, String handledBy) {
         return jdbc.sql("""

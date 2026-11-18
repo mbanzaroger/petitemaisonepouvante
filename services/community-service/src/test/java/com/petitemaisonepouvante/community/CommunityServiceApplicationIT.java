@@ -46,7 +46,8 @@ class CommunityServiceApplicationIT extends AbstractIntegrationTest {
                 .andExpect(content().string(containsString("pme_community_listings_total")))
                 .andExpect(content().string(containsString("pme_community_offers_total")))
                 .andExpect(content().string(containsString("pme_community_messages_total")))
-                .andExpect(content().string(containsString("pme_community_reports_total")));
+                .andExpect(content().string(containsString("pme_community_reports_total")))
+                .andExpect(content().string(containsString("pme_community_reports_open")));
     }
 
     @Test

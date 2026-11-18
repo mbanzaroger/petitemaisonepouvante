@@ -4,7 +4,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.petitemaisonepouvante.community.moderation.ReportRepository;
+
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
 /**
@@ -13,7 +16,8 @@ import io.micrometer.core.instrument.MeterRegistry;
  *   <li>{@code pme_community_listings_total{type}} : annonces publiées (échange ou don) ;</li>
  *   <li>{@code pme_community_offers_total{event}} : propositions faites, acceptées, refusées, annulées ;</li>
  *   <li>{@code pme_community_messages_total{channel}} : messages envoyés dans un salon ou une proposition ;</li>
- *   <li>{@code pme_community_reports_total{event}} : signalements déposés, contenus masqués, signalements rejetés.</li>
+ *   <li>{@code pme_community_reports_total{event}} : signalements déposés, contenus masqués, signalements rejetés ;</li>
+ *   <li>{@code pme_community_reports_open} : signalements en attente de modération (alerte si la file s'allonge).</li>
  * </ul>
  * Les compteurs ne bougent qu'après validation de la transaction.
  */
@@ -22,8 +26,11 @@ public class CommunityMetrics {
 
     private final MeterRegistry registry;
 
-    public CommunityMetrics(MeterRegistry registry) {
+    public CommunityMetrics(MeterRegistry registry, ReportRepository reports) {
         this.registry = registry;
+        Gauge.builder("pme.community.reports.open", reports, ReportRepository::countOpen)
+                .description("Signalements en attente de modération")
+                .register(registry);
         // Séries créées dès le démarrage : les tableaux de bord et alertes ont une valeur 0 plutôt qu'aucune donnée.
         for (String type : new String[] {"EXCHANGE", "GIFT"}) {
             counter("pme.community.listings", "type", type);
