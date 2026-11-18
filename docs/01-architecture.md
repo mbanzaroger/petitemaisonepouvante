@@ -14,12 +14,14 @@ flowchart TB
             CAT["catalog-service<br/>Spring Boot"]
             ORD["order-service<br/>Spring Boot"]
             STK["stock-service<br/>Spring Boot"]
+            COM["community-service<br/>troc, dons, salons, modération — ADR-004"]
             KC["Keycloak<br/>OIDC / JWT"]
         end
         subgraph DATA["Zone données (non exposée)"]
             DBC[("PostgreSQL catalog")]
             DBO[("PostgreSQL orders")]
             DBS[("PostgreSQL stock")]
+            DBM[("PostgreSQL community")]
             MQ{{"RabbitMQ"}}
         end
         subgraph OBS["Observabilité"]
@@ -32,6 +34,7 @@ flowchart TB
     ING -->|"app.pme.local : site"| FE
     ING -->|"REST /api/v1/products"| CAT
     ING -->|"REST /api/v1/orders + JWT vérifié"| ORD
+    ING -->|"REST /api/v1/community : annonces publiques,<br/>reste membres (JWT), modération ADMIN"| COM
     ORD -->|"REST : prix et disponibilité"| CAT
     ORD -->|"événement OrderPlaced"| MQ
     MQ -->|"OrderPlaced"| STK
@@ -40,16 +43,19 @@ flowchart TB
     CAT --- DBC
     ORD --- DBO
     STK --- DBS
+    COM --- DBM
     U -.->|"OIDC code + PKCE S256<br/>(redirection, jetons en mémoire)"| KC
     CAT -.->|"validation JWT (JWKS)"| KC
     ORD -.->|"validation JWT (JWKS)"| KC
     STK -.->|"validation JWT (JWKS)"| KC
+    COM -.->|"validation JWT (JWKS)"| KC
     CAT -.->|"/actuator/prometheus"| PROM
     ORD -.-> PROM
     STK -.-> PROM
+    COM -.-> PROM
     MQ -.->|"profondeur des files, DLQ"| PROM
     PROM --> GRAF
-    PROM -->|"6 règles d'alerte"| ALERT
+    PROM -->|"7 règles d'alerte"| ALERT
 ```
 
 ## Principes
@@ -57,12 +63,14 @@ flowchart TB
 - Le site (`web-frontend`) n'est qu'un ensemble de fichiers statiques : le navigateur appelle l'API **sur la même origine** (`app.pme.local`), le Gateway route `/api/v1/*` vers les services et tout le reste vers nginx. Le site n'a aucun flux sortant (NetworkPolicy).
 - Synchrone (REST, contrats OpenAPI) pour la lecture, asynchrone (RabbitMQ) pour la saga de commande.
 - Chaque service est *resource server* OAuth2 : validation de la signature, de l'expiration et de l'audience du JWT.
+- L'espace communautaire (troc, dons, salons, notifications, modération) est un service à part entière, `community-service`, avec sa base : son modèle (annonces, propositions, messages) et sa charge (relevés fréquents des discussions) sont indépendants de la vente, et il ne dépend d'aucun autre service (ADR-004). Les discussions sont relevées périodiquement par le navigateur, sans connexion persistante (ADR-005).
+- Hébergement en Europe : cluster et bases dans une région de l'Union européenne (exigence de l'entreprise, RGPD) ; aucune ressource tierce chargée par le site.
 
 ## Mesures de sécurité par zone
 | Zone | Mesures |
 |---|---|
 | Edge | Gateway API (Envoy Gateway, ADR-003) : TLS 1.2+ (cert-manager), validation du JWT et du rôle dès l'entrée (`SecurityPolicy`), rate limiting (`BackendTrafficPolicy`), HSTS et CORP ajoutés aux réponses |
 | Site (navigateur) | CSP stricte posée par nginx (aucun script ni style en ligne, `frame-ancestors 'none'`), jetons en mémoire, même origine que l'API (ni CORS ni cookie), aucune ressource tierce ; conteneur nginx non root en lecture seule |
-| Applicative | JWT validé par service, rôles `CUSTOMER` / `MODERATOR` / `ADMIN`, images non root, limites CPU/mémoire |
-| Données | Non exposée hors cluster, NetworkPolicies, secrets Kubernetes, migrations Flyway |
+| Applicative | JWT validé par service, rôles `CUSTOMER` / `ADMIN` (la modération de l'espace communautaire est confiée à `ADMIN`), images non root, limites CPU/mémoire ; espace communautaire : anti-flood par membre, propositions visibles de leurs seuls participants, identifiants des membres jamais exposés |
+| Données | Non exposée hors cluster, NetworkPolicies (chaque base n'accepte que son service ; `community-db` a sa propre règle), secrets Kubernetes, migrations Flyway ; durées de conservation appliquées par `community-service` (notifications lues 90 jours, messages de salon 365 jours) |
 | Chaîne de livraison | gitleaks, SAST, SCA, scan d'images, DAST (voir `02-cicd-pipeline.md`) |

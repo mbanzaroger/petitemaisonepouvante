@@ -38,6 +38,18 @@ export function DonneesPersonnellesPage() {
             </tr>
             <tr>
               <th scope="row">
+                Espace communautaire : annonces de troc et de dons, propositions et conversations privées, messages des
+                salons, objets recherchés, préférences de notification, signalements (nom affiché du compte uniquement)
+              </th>
+              <td>Troc et dons entre membres, discussions, notifications, modération</td>
+              <td>Exécution du service ; intérêt légitime pour la modération</td>
+              <td>
+                Messages des salons : 1 an ; notifications lues : 90 jours ; annonces et conversations : durée de vie de
+                l'annonce et du compte
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">
                 Journaux techniques : date, adresse demandée, statut, identifiant de corrélation ; adresse IP et
                 navigateur au point d'entrée ; identifiant interne du client pour les commandes
               </th>

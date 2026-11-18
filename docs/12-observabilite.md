@@ -74,6 +74,11 @@ Les threads diffèrent (requête HTTP, publication planifiée, consommateur Rabb
 | `jvm_memory_used_bytes` | jauge | `area` | Mémoire JVM |
 | `nginx_http_requests_total` | compteur | `service` = `web-frontend` | Requêtes servies par le site (pages, fichiers, configuration) |
 | `nginx_connections_active` | jauge | `service` | Connexions ouvertes sur nginx |
+| `pme_community_listings_total` | compteur | `type` = `EXCHANGE`, `GIFT` | Annonces de troc et de dons publiées |
+| `pme_community_offers_total` | compteur | `event` = `made`, `accepted`, `declined`, `cancelled` | Propositions et leur issue (taux de conclusion des échanges) |
+| `pme_community_messages_total` | compteur | `channel` = `room`, `offer` | Messages des salons et des conversations privées |
+| `pme_community_reports_total` | compteur | `event` = `filed`, `hidden`, `dismissed` | Signalements déposés et décisions de modération |
+| `pme_community_reports_open` | jauge | — | Signalements en attente de modération |
 
 Les compteurs métier ne bougent **qu'après validation de la transaction** (`TransactionSynchronization.afterCommit`) : une commande annulée par un rollback n'est jamais comptée.
 
@@ -85,19 +90,21 @@ Les compteurs métier ne bougent **qu'après validation de la transaction** (`Tr
 | Saga de commande | Commandes par étape, durée de saga p95, réservations par issue, boîte d'envoi en attente, messages en file de rebut |
 | Capacité | Instances actives par service (mise à l'échelle horizontale, test de charge) |
 | Site web (nginx) | Requêtes servies par seconde, connexions actives |
+| Espace communautaire | Annonces et propositions (par heure), messages par canal (par minute), signalements en attente |
 
 ## 5. Alertes
 
 | Alerte | Condition | Gravité | Première action |
 |---|---|---|---|
-| `ServiceIndisponible` | cible `up == 0` pendant 1 min (3 services et site) | critique | `kubectl -n pme get pods`, événements et logs du pod |
+| `ServiceIndisponible` | cible `up == 0` pendant 1 min (4 services et site) | critique | `kubectl -n pme get pods`, événements et logs du pod |
 | `TauxErreurEleve` | > 1 % de 5xx (hors `/actuator`) pendant 2 min | critique | Filtrer les logs `ERROR` du service ; vérifier ses dépendances (base, catalogue, broker) |
 | `LatenceP95Elevee` | p95 > 300 ms pendant 5 min | avertissement | Panneau latence par service ; saturation CPU ou mémoire, requêtes SQL lentes |
 | `BoiteEnvoiBloquee` | `pme_outbox_pending > 0` pendant 2 min | critique | RabbitMQ joignable ? Les commandes restent PENDING mais aucun événement n'est perdu : ils partiront au retour du broker |
 | `MessagesEnRebut` | au moins un message dans une file `*.dlq` pendant 1 min | avertissement | Lire le message (console RabbitMQ), corriger la cause, puis le rejouer ou le purger |
 | `TauxAnnulationEleve` | > 20 % de commandes annulées sur 15 min pendant 5 min | avertissement | Ruptures de stock : prévenir l'équipe catalogue et l'administrateur des stocks |
+| `ModerationEnAttente` | plus de 5 signalements en attente pendant 30 min | avertissement | Ouvrir « Modération » sur le site et traiter la file ; renforcer l'équipe de modération si l'alerte se répète |
 
-Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas nominal sans alerte, panne de service, broker injoignable, 5 % d'erreurs (en vérifiant que les appels `/actuator` ne diluent pas le taux), message en rebut et vague d'annulations. La CI (job « Lint ») exécute `promtool check config` et `promtool test rules` à chaque pull request : une règle mal écrite ne peut pas être fusionnée.
+Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas nominal sans alerte, panne de service (dont l'espace communautaire), broker injoignable, 5 % d'erreurs (en vérifiant que les appels `/actuator` ne diluent pas le taux), message en rebut, vague d'annulations et file de modération qui s'allonge. La CI (job « Lint ») exécute `promtool check config` et `promtool test rules` à chaque pull request : une règle mal écrite ne peut pas être fusionnée.
 
 ## 6. Vérification
 
