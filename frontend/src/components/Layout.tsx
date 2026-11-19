@@ -150,6 +150,16 @@ export function Layout() {
                 Troc et dons
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/fanzine" end>
+                Fanzine
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/actualites" end>
+                Actualités
+              </NavLink>
+            </li>
             {estMembre(auth) && (
               <li>
                 <NavLink to="/communaute/salons">Salons</NavLink>
@@ -167,6 +177,9 @@ export function Layout() {
                 </li>
                 <li>
                   <NavLink to="/admin/moderation">Modération</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/redaction">Rédaction</NavLink>
                 </li>
               </>
             )}

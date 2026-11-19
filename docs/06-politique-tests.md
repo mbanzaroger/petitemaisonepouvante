@@ -9,7 +9,7 @@ Garantir l'adéquation fonctionnelle, la fiabilité et la non-régression, et re
 | Unitaires | Règles métier (calcul du total, transitions de statut, réservation de stock) | JUnit 5, Mockito | À chaque commit | ~70 % | Couverture du code métier ≥ 80 % (JaCoCo) |
 | Intégration | Service + PostgreSQL + RabbitMQ réels, migrations Flyway, sécurité JWT | Testcontainers, Spring Boot Test | À chaque PR | ~20 % | 100 % verts |
 | Contrat / API | Conformité des endpoints au contrat OpenAPI, codes d'erreur | RestAssured | À chaque PR | inclus | 100 % verts |
-| Acceptation | Scénarios Gherkin du backlog (US1 à US4) | Cucumber | À chaque PR | ~10 % | 100 % verts |
+| Acceptation | Scénarios Gherkin du backlog (US1 à US4, US8 à US12, US15 à US17) | Cucumber | À chaque PR | ~10 % | 100 % verts |
 | Sécurité | Tests négatifs 401/403, SAST, SCA, scan d'image, DAST | CodeQL, SonarQube Cloud, Trivy, ZAP | Pipeline | – | 0 vulnérabilité critique/haute |
 | Charge | Tenue en charge du catalogue et de la commande | JMeter (ou Siege) | Avant release, démonstration en soutenance | – | p95 < 300 ms, erreurs < 1 % |
 | Front-end : unitaires et composants | Règles du panier (dont revalidation des prix), appels API, corrélation et erreurs problem+json, authentification, pages rendues avec une API simulée (rôles client et administrateur, focus, annonces, filet d'erreur) | Vitest, Testing Library | À chaque PR | 87 tests | Couverture des lignes ≥ 80 % |

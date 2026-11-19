@@ -68,6 +68,7 @@ Sévérité *outil* : celle du scanner ou de la règle. Sévérité *retenue* : 
 | V-26 | Accessibilité contrôlée automatiquement seulement (axe, `jsx-a11y`) : pas d'audit RGAA manuel ni de déclaration d'accessibilité | Revue (RGAA 4.1) | — | — → **Moyenne** | Sans objet (conformité légale, exclusion d'utilisateurs) | À traiter (R-13, #94) |
 | V-27 | Image `nginx-unprivileged:1.30-alpine` : 1 critique (brotli) et 12 hautes (curl, expat, libxslt, musl, zlib) corrigées par Alpine mais pas encore dans l'image amont | Trivy image (bloquant, CI de la PR #93) | A06 | **Critique** | Faible : nginx ne décompresse pas de brotli ni n'exécute curl ; conteneur non root en lecture seule | **Corrigé** : `apk upgrade` à la construction, scan vert |
 | V-28 | Image du site : nginx 1.30.6, 5 hautes (HTTP/2, HTTP/3, resolver, mail) corrigées par nginx 1.30.7 du 18/11/2026, pas encore empaqueté pour Alpine 3.24 | Trivy image (bloquant, CI de la PR #112) | A06 | Haute → **Basse** | Très faible : nginx écoute en HTTP/1.1 derrière le Gateway, sans module mail ni stream ni resolver ; conteneur non root en lecture seule | Exception datée jusqu'au 26/11/2026 (`.trivyignore.yaml`, délai d'une haute) ; le Dockerfile installe 1.30.7 depuis nginx.org dès sa publication |
+| V-29 | Traversée de répertoire signalée sur `POST /api/v1/community/listings` (201) par le scan actif de l'API | ZAP [6] (bloquant, CD du 19/11/2026) | A01 | Haute → **Faux positif** | Nulle : le service enregistre du texte et le renvoie, sans aucun accès au système de fichiers (revue du code : ni `java.io.File` ni `java.nio.file`) | Qualifié : hors périmètre pour cette seule URL (`.zap/rules.tsv`), la règle reste bloquante ailleurs ; preuves des alertes moyennes et hautes désormais publiées dans le résumé du CD |
 
 ## 4. Résultats sans constat
 
@@ -154,3 +155,21 @@ Le troc, les dons et les discussions ouvrent une surface nouvelle : du **contenu
 | Opacité de la recommandation | Raison affichée pour chaque produit recommandé (catégorie d'intérêt, exclusivité, sélection) ; aucune décision automatisée produisant un effet juridique | Tests du site |
 | Abus (volume) | 500 signaux par membre et par 24 h au plus ; limitation par IP au Gateway sur `/api/v1/interests` ; route réservée aux membres (JWT) | `RecommendationService`, routes Gateway |
 | Fuite entre membres | Les signaux sont rattachés au `subject` du jeton ; aucune API ne renvoie les centres d'intérêt d'un autre membre ; aucune donnée transmise à des tiers | Revue de code, OpenAPI |
+
+## 10. Éditions : actualités, fanzine numérique et abonnements (`editorial-service`, US15 à US17)
+
+Le service ouvre deux surfaces nouvelles : des **contenus payants** à protéger et une **donnée personnelle sensible pour l'entreprise**, l'adresse de livraison du fanzine papier. Analyse ciblée (ADR-006) :
+
+| Menace | Scénario | Mesures | Preuve |
+|---|---|---|---|
+| Lecture sans droit | Demander directement la page 3 d'un numéro sans l'avoir acheté, ou rejouer l'URL d'un abonné | Droit vérifié **à chaque page** par le service (achat ou abonnement en cours, à la date du jour) : 401 sans jeton, 403 sans droit ; aucun fichier ni URL de document à partager ; l'extrait (page 1) est le seul contenu public | `FanzineApiIT`, contrôles de fumée « suite réservée à un visiteur : 401 », parcours Playwright |
+| Abonnement échu encore utilisé | Continuer à lire après l'échéance | L'échéance est comparée à l'horloge métier (Europe/Paris) à chaque lecture ; un abonnement échu redonne l'extrait seul | `SubscriptionApiIT` (« abonnement échu ») |
+| Altération de droits | S'attribuer un numéro, prolonger un abonnement hors fenêtre, doubler un achat | Achat unique par membre et par numéro (contrainte d'unicité, 409), renouvellement limité aux 60 derniers jours (409) et sans chevauchement, formule et montant fixés côté serveur | `FanzineApiIT`, `SubscriptionApiIT`, `SubscriptionTest` |
+| Élévation de privilèges | Publier un article ou lire la liste d'expédition sans être administrateur | Routes `/admin/*` : rôle `ADMIN` exigé au Gateway (`SecurityPolicy`) **et** par le service ; compte sans rôle refusé partout | `ArticleApiIT`, `SubscriptionApiIT` (403), contrôles de fumée |
+| XSS stockée | Article publié avec du HTML ou du JavaScript | Texte brut, affiché comme texte par React ; CSP `script-src 'self'` ; longueurs bornées (titre 160, résumé 300, corps 20 000) | `ArticleApiIT` (validation), tests du site |
+| Divulgation de l'adresse de livraison | Un membre lit l'adresse d'un autre | L'adresse n'est renvoyée qu'à son titulaire et à la liste d'expédition `ADMIN` ; aucune API ne prend d'identifiant de membre en paramètre (le membre est toujours le `subject` du jeton) | `SubscriptionApiIT` (403 sur la liste pour un client) |
+| Injection SQL, énumération | Slug ou numéro forgé | Requêtes paramétrées uniquement ; slug contrôlé par expression régulière, numéros et pages bornés (400) | Tests de validation |
+| Abus (volume) | Aspiration de toutes les pages par un abonné ou un robot | Limitation par IP au Gateway sur les routes membres ; métrique `pme_editorial_pages_read_total` par type d'accès (un pic de lectures sur un compte se voit) | Routes Gateway, tableau de bord « Éditions » |
+
+**RGPD** : base légale « exécution du contrat » (achats, abonnement, livraison) ; minimisation (adresse demandée pour la formule papier seulement, aucun moyen de paiement stocké : paiement simulé dans le POC, prestataire UE en production) ; conservation : adresse de livraison effacée 90 jours après l'échéance (tâche nocturne testée, `SubscriptionApiIT`), historique des souscriptions conservé pour la comptabilité, page atteinte conservée tant que le numéro reste dans la bibliothèque ; hébergement dans l'UE (ADR-006, décision 2). **Reste à faire avant ouverture publique** : paiement réel et factures, effacement des données d'un membre à la suppression de son compte, filigrane nominatif discret des pages (dissuasion de la copie).
+

@@ -27,7 +27,7 @@ metadata:
   name: allow-gateway-to-apps
 spec:
   podSelector:
-    matchExpressions: [{ key: app, operator: In, values: [web-frontend, catalog-service, order-service, stock-service, community-service, keycloak] }]
+    matchExpressions: [{ key: app, operator: In, values: [web-frontend, catalog-service, order-service, stock-service, community-service, editorial-service, keycloak] }]
   policyTypes: [Ingress]
   ingress:
     - from:
@@ -40,7 +40,7 @@ metadata:
   name: allow-prometheus-scrape
 spec:
   podSelector:
-    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service, web-frontend] }]
+    matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service, editorial-service, web-frontend] }]
   policyTypes: [Ingress]
   ingress:
     - from:
@@ -117,6 +117,19 @@ spec:
     - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
       ports: [{ port: 8080 }]
 ---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: editorial-egress
+spec:
+  podSelector: { matchLabels: { app: editorial-service } }
+  policyTypes: [Egress]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: editorial-db } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app: keycloak } } }]
+      ports: [{ port: 8080 }]
+---
 # Zone données : chaque base n'accepte que son service ; le broker n'accepte que order et stock (et son opérateur).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -169,7 +182,7 @@ spec:
   ingress:
     - from:
         - podSelector:
-            matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service] }]
+            matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service, editorial-service] }]
       ports: [{ port: 8080 }]
 ---
 # Base de l'espace communautaire : accessible uniquement par community-service (aucun autre service, pas le broker).
@@ -182,4 +195,16 @@ spec:
   policyTypes: [Ingress]
   ingress:
     - from: [{ podSelector: { matchLabels: { app: community-service } } }]
+      ports: [{ port: 5432 }]
+---
+# Base des éditions : accessible uniquement par editorial-service (adresses des abonnés papier).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: editorial-db-ingress
+spec:
+  podSelector: { matchLabels: { app: editorial-db } }
+  policyTypes: [Ingress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: editorial-service } } }]
       ports: [{ port: 5432 }]

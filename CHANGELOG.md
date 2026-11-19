@@ -7,6 +7,17 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - **Recommandations** (US13) : sélection « Recommandé pour vous » sur le catalogue et « Vous aimerez aussi » sur les fiches, selon les recherches, consultations et achats du membre, avec la raison affichée ; consentement dans « Mon espace » (désactivé par défaut), effacement de l'historique, conservation 90 jours ; sélection commune pour les visiteurs.
 - **Gamme exclusive Evil Ed** : produits signalés « Exclusivité Evil Ed », filtre du catalogue, mise en avant dans les recommandations.
 - **Notifications selon la navigation** (US14) : un membre qui l'accepte est prévenu des nouvelles annonces de troc dans les catégories qu'il consulte souvent ; centres d'intérêt effacés au retrait de l'accord, conservés 180 jours.
+- **Actualités et articles de fond** (US15, ADR-006) : pages « Actualités » ouvertes à tous (filtre actualités / articles de fond, article complet) ; page « Rédaction » (ADMIN) pour publier ou retirer un texte.
+- **Fanzine numérique** (US16) : numéros parus avec extrait gratuit, achat à l'unité, liseuse intégrée (une page à la fois, sommaire, flèches du clavier, page atteinte mémorisée), « Ma bibliothèque » dans « Mon espace ».
+- **Abonnement au fanzine** (US17) : formules numérique ou papier et numérique (adresse de livraison), renouvellement dans les 60 jours précédant l'échéance, liste d'expédition des abonnés papier (ADMIN) ; adresse effacée 90 jours après l'échéance (RGPD).
+- Nouveau service `editorial-service` (Spring Boot 4.1, PostgreSQL `editorial`, port 8085) : routes Gateway (lecture publique, membres JWT, rédaction ADMIN, limitation par IP), NetworkPolicies, base de staging, secrets générés, ServiceMonitor ; métriques `pme_editorial_*`, panneaux Grafana « Éditions ».
+- Qualité : 27 tests du service (13 d'intégration Testcontainers), 4 scénarios Cucumber à travers le Gateway, 10 contrôles de fumée, parcours Playwright + axe (actualités, extrait, achat et liseuse, abonnement, rédaction), contrat OpenAPI des 15 routes éditoriales.
+- ADR-006 : service éditorial, hébergement en Europe (fournisseur, bases, sauvegardes, registre, CI sans données réelles) et feuille de route (enchères et diffusion Evil Ed en v2, projections du festival en v3).
+
+### Corrigé
+- Staging : `community-service` et `editorial-service` autorisés à lire les clés JWKS de Keycloak (NetworkPolicy) ; les routes authentifiées de la communauté répondaient 504.
+- Image du site : 5 CVE hautes de nginx 1.30.6 (publiées le 18/11/2026, code non atteint par notre configuration) en exception datée jusqu'au 26/11/2026 (V-28) ; le Dockerfile installe nginx 1.30.7 depuis le dépôt officiel nginx.org (clé vérifiée) dès sa publication pour Alpine.
+- Supervision : `verify.sh` calcule les cibles, alertes et panneaux attendus depuis le dépôt (les valeurs figées dataient d'avant l'espace communautaire).
 
 ## [1.3.0] - 2026-11-18
 ### Ajouté

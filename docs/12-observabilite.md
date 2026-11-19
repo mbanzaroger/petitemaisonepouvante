@@ -79,6 +79,10 @@ Les threads diffèrent (requête HTTP, publication planifiée, consommateur Rabb
 | `pme_community_messages_total` | compteur | `channel` = `room`, `offer` | Messages des salons et des conversations privées |
 | `pme_community_reports_total` | compteur | `event` = `filed`, `hidden`, `dismissed` | Signalements déposés et décisions de modération |
 | `pme_community_reports_open` | jauge | — | Signalements en attente de modération |
+| `pme_editorial_issue_purchases_total` | compteur | — | Numéros du fanzine achetés à l'unité |
+| `pme_editorial_subscriptions_total` | compteur | `event` = `new`, `renewal` ; `plan` = `DIGITAL`, `PAPER_DIGITAL` | Souscriptions et renouvellements par formule (taux de renouvellement) |
+| `pme_editorial_pages_read_total` | compteur | `access` = `preview`, `purchase`, `subscription` | Pages lues dans la liseuse selon le droit d'accès (conversion de l'extrait en achat) |
+| `pme_editorial_articles_published_total` | compteur | — | Actualités et articles publiés (régularité éditoriale) |
 
 Les compteurs métier ne bougent **qu'après validation de la transaction** (`TransactionSynchronization.afterCommit`) : une commande annulée par un rollback n'est jamais comptée.
 
@@ -91,12 +95,13 @@ Les compteurs métier ne bougent **qu'après validation de la transaction** (`Tr
 | Capacité | Instances actives par service (mise à l'échelle horizontale, test de charge) |
 | Site web (nginx) | Requêtes servies par seconde, connexions actives |
 | Espace communautaire | Annonces et propositions (par heure), messages par canal (par minute), signalements en attente |
+| Éditions | Ventes de numéros et d'abonnements (par jour), pages lues par type d'accès (par heure), articles publiés sur 7 jours |
 
 ## 5. Alertes
 
 | Alerte | Condition | Gravité | Première action |
 |---|---|---|---|
-| `ServiceIndisponible` | cible `up == 0` pendant 1 min (4 services et site) | critique | `kubectl -n pme get pods`, événements et logs du pod |
+| `ServiceIndisponible` | cible `up == 0` pendant 1 min (5 services et site) | critique | `kubectl -n pme get pods`, événements et logs du pod |
 | `TauxErreurEleve` | > 1 % de 5xx (hors `/actuator`) pendant 2 min | critique | Filtrer les logs `ERROR` du service ; vérifier ses dépendances (base, catalogue, broker) |
 | `LatenceP95Elevee` | p95 > 300 ms pendant 5 min | avertissement | Panneau latence par service ; saturation CPU ou mémoire, requêtes SQL lentes |
 | `BoiteEnvoiBloquee` | `pme_outbox_pending > 0` pendant 2 min | critique | RabbitMQ joignable ? Les commandes restent PENDING mais aucun événement n'est perdu : ils partiront au retour du broker |
@@ -112,12 +117,12 @@ Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas n
 
 | Contrôle | Attendu |
 |---|---|
-| Cibles collectées et actives | une par microservice, RabbitMQ et site (6 ; valeur calculée depuis le dépôt) |
+| Cibles collectées et actives | une par microservice, RabbitMQ et site (7 ; valeur calculée depuis le dépôt) |
 | Métriques RED et métier (commandes créées, confirmées, annulées, réservations, durées) | présentes et non nulles |
 | Boîte d'envoi | vide |
 | Files de rebut supervisées | 2 |
 | Règles d'alerte chargées dans Prometheus | toutes celles de `alerts.yml` (7) |
-| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | tous les panneaux du JSON versionné (18), valeur non nulle |
+| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | tous les panneaux du JSON versionné (22), valeur non nulle |
 | Logs reliés par `smoke-saga-1` | ≥ 3 lignes dans order-service, ≥ 2 dans stock-service |
 | Site : requêtes mesurées par l'exporteur nginx, journaux d'accès JSON | présents |
 | Site : appels du navigateur (`web-…`, tests Playwright) retrouvés dans les logs d'order-service | présents |
@@ -129,7 +134,7 @@ Le résultat (tableau et lignes de logs corrélées) est publié dans le résum�
 ```bash
 cd infra && ./init-env.sh && docker compose --profile app up -d --build
 # Grafana : http://localhost:3000 (admin / GRAFANA_ADMIN_PASSWORD de infra/.env) → « PME — RED et saga des microservices »
-# Prometheus : http://localhost:9090/alerts → 7 règles chargées ; http://localhost:9090/targets → 6 cibles, dont web-frontend
+# Prometheus : http://localhost:9090/alerts → 7 règles chargées ; http://localhost:9090/targets → 7 cibles, dont web-frontend
 docker compose logs web-frontend | tail -5                   # journaux d'accès JSON du site
 docker compose logs order-service stock-service | grep <correlationId>
 ```

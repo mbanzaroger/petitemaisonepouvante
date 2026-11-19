@@ -5,6 +5,7 @@ resources:
   - order-service.yaml
   - stock-service.yaml
   - community-service.yaml
+  - editorial-service.yaml
   - web-frontend.yaml
   - routes.yaml
   - networkpolicies.yaml
@@ -20,6 +21,9 @@ images:
     newTag: develop
   - name: community-service
     newName: ghcr.io/mbanzaroger/petitemaisonepouvante/community-service
+    newTag: develop
+  - name: editorial-service
+    newName: ghcr.io/mbanzaroger/petitemaisonepouvante/editorial-service
     newTag: develop
   - name: web-frontend
     newName: ghcr.io/mbanzaroger/petitemaisonepouvante/web-frontend

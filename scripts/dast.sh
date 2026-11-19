@@ -61,6 +61,12 @@ table() { # table <rapport JSON> <libellé>
   jq -r --arg scan "$2" '[.site[]?.alerts[]?] | sort_by(.riskcode | tonumber) | reverse | .[]
     | "| \($scan) | \(.alert) [\(.pluginid)] | \(.riskdesc | split(" ")[0]) | \(.count) |"' "$1"
 }
+details() { # details <rapport JSON> <libellé> : 3 premières occurrences de chaque alerte de risque >= moyen
+  [ -f "$1" ] || return
+  jq -r --arg scan "$2" '[.site[]?.alerts[]? | select((.riskcode | tonumber) >= 2)] | .[] | . as $a
+    | .instances[:3][] | [$scan, "\($a.alert) [\($a.pluginid)]", "\(.method) \(.uri)", .param, .attack, .evidence]
+    | map(tostring | gsub("[|\n\r]"; " ") | .[0:120]) | "| " + join(" | ") + " |"' "$1"
+}
 {
   echo "## DAST OWASP ZAP"
   echo
@@ -71,5 +77,12 @@ table() { # table <rapport JSON> <libellé>
   table "$OUT/zap-baseline.json" baseline
   table "$OUT/zap-api.json" API
   table "$OUT/zap-site.json" site
+  echo
+  echo "Détail des alertes de risque moyen ou élevé (preuve pour la qualification, docs/13 §3) :"
+  echo
+  echo "| Scan | Alerte | Méthode et URL | Paramètre | Attaque | Preuve |"
+  echo "|---|---|---|---|---|---|"
+  details "$OUT/zap-api.json" API
+  details "$OUT/zap-site.json" site
 } | tee -a "$SUMMARY"
 [ "$baseline" -eq 0 ] && [ "$api" -eq 0 ] && [ "$site" -eq 0 ]

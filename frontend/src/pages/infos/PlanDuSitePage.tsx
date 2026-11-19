@@ -33,6 +33,17 @@ export function PlanDuSitePage() {
             <Link to="/commandes">Mes commandes</Link> (connexion requise)
           </li>
           <li>
+            <Link to="/actualites">Actualités et articles</Link>
+          </li>
+          <li>
+            <Link to="/fanzine">Le fanzine</Link>
+            <ul>
+              <li>
+                <Link to="/fanzine/abonnement">Abonnement</Link> (connexion requise)
+              </li>
+            </ul>
+          </li>
+          <li>
             <Link to="/communaute">Troc et dons</Link>
             <ul>
               <li>
@@ -56,6 +67,9 @@ export function PlanDuSitePage() {
               </li>
               <li>
                 <Link to="/admin/moderation">Modération</Link> (administrateurs)
+              </li>
+              <li>
+                <Link to="/admin/redaction">Rédaction</Link> (administrateurs)
               </li>
             </>
           )}

@@ -26,6 +26,16 @@ const PropositionPage = lazy(() =>
 );
 const SalonsPage = lazy(() => import('./pages/communaute/SalonsPage').then((m) => ({ default: m.SalonsPage })));
 const SalonPage = lazy(() => import('./pages/communaute/SalonsPage').then((m) => ({ default: m.SalonPage })));
+const ActualitesPage = lazy(() =>
+  import('./pages/editions/ActualitesPage').then((m) => ({ default: m.ActualitesPage })),
+);
+const ArticlePage = lazy(() => import('./pages/editions/ArticlePage').then((m) => ({ default: m.ArticlePage })));
+const FanzinePage = lazy(() => import('./pages/editions/FanzinePage').then((m) => ({ default: m.FanzinePage })));
+const LiseusePage = lazy(() => import('./pages/editions/LiseusePage').then((m) => ({ default: m.LiseusePage })));
+const AbonnementPage = lazy(() =>
+  import('./pages/editions/AbonnementPage').then((m) => ({ default: m.AbonnementPage })),
+);
+const RedactionPage = lazy(() => import('./pages/admin/RedactionPage').then((m) => ({ default: m.RedactionPage })));
 const MonEspacePage = lazy(() => import('./pages/MonEspacePage').then((m) => ({ default: m.MonEspacePage })));
 const PlanDuSitePage = lazy(() => import('./pages/infos/PlanDuSitePage').then((m) => ({ default: m.PlanDuSitePage })));
 const AccessibilitePage = lazy(() =>
@@ -74,6 +84,26 @@ export function App() {
           element={
             <ConnexionRequise role={ROLE_ADMIN}>
               <ModerationPage />
+            </ConnexionRequise>
+          }
+        />
+        <Route
+          path="admin/redaction"
+          element={
+            <ConnexionRequise role={ROLE_ADMIN}>
+              <RedactionPage />
+            </ConnexionRequise>
+          }
+        />
+        <Route path="actualites" element={<ActualitesPage />} />
+        <Route path="actualites/:slug" element={<ArticlePage />} />
+        <Route path="fanzine" element={<FanzinePage />} />
+        <Route path="fanzine/:numero/lecture" element={<LiseusePage />} />
+        <Route
+          path="fanzine/abonnement"
+          element={
+            <ConnexionRequise role={ACCES_MEMBRE}>
+              <AbonnementPage />
             </ConnexionRequise>
           }
         />
