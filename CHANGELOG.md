@@ -16,7 +16,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ### Corrigé
 - Staging : `community-service` et `editorial-service` autorisés à lire les clés JWKS de Keycloak (NetworkPolicy) ; les routes authentifiées de la communauté répondaient 504.
-- Image du site : nginx 1.30.7 installé depuis le dépôt officiel nginx.org (10 CVE publiées le 18/11/2026), clé de signature vérifiée.
+- Image du site : 5 CVE hautes de nginx 1.30.6 (publiées le 18/11/2026, code non atteint par notre configuration) en exception datée jusqu'au 26/11/2026 (V-28) ; le Dockerfile installe nginx 1.30.7 depuis le dépôt officiel nginx.org (clé vérifiée) dès sa publication pour Alpine.
 - Supervision : `verify.sh` calcule les cibles, alertes et panneaux attendus depuis le dépôt (les valeurs figées dataient d'avant l'espace communautaire).
 
 ## [1.3.0] - 2026-11-18
