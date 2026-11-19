@@ -117,12 +117,12 @@ Chaque règle a un test unitaire dans `infra/monitoring/alerts.test.yml` : cas n
 
 | Contrôle | Attendu |
 |---|---|
-| Cibles collectées et actives | une par microservice, RabbitMQ et site (6 ; valeur calculée depuis le dépôt) |
+| Cibles collectées et actives | une par microservice, RabbitMQ et site (7 ; valeur calculée depuis le dépôt) |
 | Métriques RED et métier (commandes créées, confirmées, annulées, réservations, durées) | présentes et non nulles |
 | Boîte d'envoi | vide |
 | Files de rebut supervisées | 2 |
 | Règles d'alerte chargées dans Prometheus | toutes celles de `alerts.yml` (7) |
-| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | tous les panneaux du JSON versionné (18), valeur non nulle |
+| Tableau de bord `pme-red` dans Grafana, données lisibles par la source « prometheus » | tous les panneaux du JSON versionné (22), valeur non nulle |
 | Logs reliés par `smoke-saga-1` | ≥ 3 lignes dans order-service, ≥ 2 dans stock-service |
 | Site : requêtes mesurées par l'exporteur nginx, journaux d'accès JSON | présents |
 | Site : appels du navigateur (`web-…`, tests Playwright) retrouvés dans les logs d'order-service | présents |
@@ -134,7 +134,7 @@ Le résultat (tableau et lignes de logs corrélées) est publié dans le résum�
 ```bash
 cd infra && ./init-env.sh && docker compose --profile app up -d --build
 # Grafana : http://localhost:3000 (admin / GRAFANA_ADMIN_PASSWORD de infra/.env) → « PME — RED et saga des microservices »
-# Prometheus : http://localhost:9090/alerts → 7 règles chargées ; http://localhost:9090/targets → 6 cibles, dont web-frontend
+# Prometheus : http://localhost:9090/alerts → 7 règles chargées ; http://localhost:9090/targets → 7 cibles, dont web-frontend
 docker compose logs web-frontend | tail -5                   # journaux d'accès JSON du site
 docker compose logs order-service stock-service | grep <correlationId>
 ```
