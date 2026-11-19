@@ -112,7 +112,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Tests d'acceptation Cucumber (US1 à US4, US8 à US12)
+      - name: Tests d'acceptation Cucumber (US1 à US4, US8 à US12, US15 à US17)
         if: steps.ready.outputs.ok == 'true' && env.BASE_URL != '' && hashFiles('acceptance-tests/pom.xml') != ''
         working-directory: acceptance-tests
         run: ./mvnw -B -ntp test

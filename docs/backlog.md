@@ -39,4 +39,4 @@
 
 Les critères d'US8 à US12 sont vérifiés à trois niveaux : tests d'intégration du service (Testcontainers, 25 cas), scénarios Cucumber à travers le Gateway (`acceptance-tests/src/test/resources/features/us8-us12-communaute.feature`) et parcours Playwright + axe dans le navigateur (`frontend/e2e/communaute.spec.ts`).
 
-Les critères d'US15 à US17 sont vérifiés par les tests d'intégration du service (Testcontainers), le test de fumée du CD (`scripts/smoke-test.sh`) et le parcours Playwright + axe (`frontend/e2e/editions.spec.ts`).
+Les critères d'US15 à US17 sont vérifiés par les tests d'intégration du service (Testcontainers, 13 cas), les scénarios Cucumber à travers le Gateway (`acceptance-tests/src/test/resources/features/us15-us17-editions.feature`), le test de fumée du CD et le parcours Playwright + axe (`frontend/e2e/editions.spec.ts`).

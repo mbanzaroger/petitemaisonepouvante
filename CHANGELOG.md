@@ -11,7 +11,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - **Fanzine numérique** (US16) : numéros parus avec extrait gratuit, achat à l'unité, liseuse intégrée (une page à la fois, sommaire, flèches du clavier, page atteinte mémorisée), « Ma bibliothèque » dans « Mon espace ».
 - **Abonnement au fanzine** (US17) : formules numérique ou papier et numérique (adresse de livraison), renouvellement dans les 60 jours précédant l'échéance, liste d'expédition des abonnés papier (ADMIN) ; adresse effacée 90 jours après l'échéance (RGPD).
 - Nouveau service `editorial-service` (Spring Boot 4.1, PostgreSQL `editorial`, port 8085) : routes Gateway (lecture publique, membres JWT, rédaction ADMIN, limitation par IP), NetworkPolicies, base de staging, secrets générés, ServiceMonitor ; métriques `pme_editorial_*`, panneaux Grafana « Éditions ».
-- Qualité : 27 tests du service (13 d'intégration Testcontainers), 10 contrôles de fumée, parcours Playwright + axe (actualités, extrait, achat et liseuse, abonnement, rédaction), contrat OpenAPI des 15 routes éditoriales.
+- Qualité : 27 tests du service (13 d'intégration Testcontainers), 4 scénarios Cucumber à travers le Gateway, 10 contrôles de fumée, parcours Playwright + axe (actualités, extrait, achat et liseuse, abonnement, rédaction), contrat OpenAPI des 15 routes éditoriales.
 - ADR-006 : service éditorial, hébergement en Europe (fournisseur, bases, sauvegardes, registre, CI sans données réelles) et feuille de route (enchères et diffusion Evil Ed en v2, projections du festival en v3).
 
 ### Corrigé
