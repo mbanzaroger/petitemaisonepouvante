@@ -5,10 +5,10 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 ## 1. Identité et contrôle d'accès
 | Rôle | Droits |
 |---|---|
-| Visiteur (anonyme) | Lecture du catalogue |
-| `CUSTOMER` | Passer des commandes, consulter **ses** commandes |
+| Visiteur (anonyme) | Lecture du catalogue, des annonces de troc, des actualités et des extraits du fanzine |
+| `CUSTOMER` | Passer des commandes, consulter **ses** commandes ; espace communautaire ; acheter et lire le fanzine, s'abonner |
 | `MODERATOR` | Modérer l'espace communautaire (roadmap) |
-| `ADMIN` | Gestion du catalogue et du stock |
+| `ADMIN` | Gestion du catalogue et du stock ; modération ; rédaction (actualités, articles) et liste d'expédition du fanzine papier |
 
 - Authentification : OIDC (flux code + PKCE) via Keycloak ; pas d'authentification maison.
 - Chaque service valide le JWT (signature par JWKS, expiration, audience) et applique les rôles **côté serveur**.
@@ -59,7 +59,8 @@ Le **registre des vulnérabilités** est tenu dans `docs/13-analyse-securite.md`
 
 ## 8. Données personnelles (RGPD)
 - Minimisation des données collectées ; finalité et durée de conservation documentées ; registre des traitements.
-- Hébergement dans l'Union européenne ; droits des personnes (accès, rectification, effacement) prévus dans la roadmap.
+- Hébergement dans l'Union européenne (production, bases, sauvegardes, registre d'images et supervision : ADR-006, décision 2) ; la CI et le staging ne manipulent que des données fictives ; droits des personnes (accès, rectification, effacement) prévus dans la roadmap.
+- Durées de conservation appliquées par des tâches nocturnes testées : notifications lues (90 jours), messages de salon (365 jours), signaux d'intérêt (90 jours) et centres d'intérêt (180 jours), adresses de livraison du fanzine (90 jours après l'échéance de l'abonnement).
 
 ## 9. Réponse aux incidents (processus minimal)
 1. Détecter (alerte ou signalement) → 2. Qualifier la gravité → 3. Contenir (révocation de jeton, retrait d'un déploiement) → 4. Corriger → 5. Documenter et tirer les leçons (retour dans le backlog).

@@ -14,12 +14,52 @@ import {
   toutMarquerLu,
   type Preferences,
 } from '../api/communaute';
+import { lireAbonnement, lireBibliotheque } from '../api/editions';
 import { effacerHistorique, enregistrerPersonnalisation, lirePersonnalisation } from '../api/recommandations';
 import { estClient, libelleProfil, useAuth } from '../auth/auth';
 import { Chargement, MessageErreur } from '../components/Etats';
-import { formaterDate } from '../format';
+import { formaterDate, formaterJour } from '../format';
 import { useRessource } from '../hooks/useRessource';
 import { useTitre } from '../hooks/useTitre';
+
+function Bibliotheque() {
+  const auth = useAuth();
+  const bibliotheque = useRessource('bibliotheque', (signal) => lireBibliotheque(auth.jeton, signal));
+  const abonnement = useRessource('abonnement', (signal) => lireAbonnement(auth.jeton, signal));
+  const a = abonnement.donnees;
+  return (
+    <section aria-labelledby="titre-bibliotheque">
+      <h2 id="titre-bibliotheque">Ma bibliothèque (fanzine numérique)</h2>
+      {a && (
+        <p>
+          {a.active && a.endsOn
+            ? `Abonnement ${a.planLabel?.toLowerCase() ?? ''} en cours jusqu'au ${formaterJour(a.endsOn)}. `
+            : 'Pas d’abonnement en cours. '}
+          <Link to="/fanzine/abonnement">{a.active ? 'Gérer mon abonnement' : "S'abonner"}</Link>
+        </p>
+      )}
+      {bibliotheque.erreur && <MessageErreur erreur={bibliotheque.erreur} onReessayer={bibliotheque.recharger} />}
+      {bibliotheque.donnees && bibliotheque.donnees.length === 0 && (
+        <p>
+          Aucun numéro pour le moment. <Link to="/fanzine">Découvrir le fanzine</Link>
+        </p>
+      )}
+      {bibliotheque.donnees && bibliotheque.donnees.length > 0 && (
+        <ul>
+          {bibliotheque.donnees.map(({ issue, lastPage }) => (
+            <li key={issue.number}>
+              {issue.title} :{' '}
+              <Link to={`/fanzine/${issue.number}/lecture?page=${lastPage}`}>
+                {lastPage > 1 ? `reprendre la lecture (page ${lastPage})` : 'lire'}{' '}
+                <span className="visuellement-masque">le numéro {issue.number}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 function Notifications() {
   const auth = useAuth();
@@ -314,8 +354,12 @@ export function MonEspacePage() {
         <li>
           <Link to="/communaute/salons">Salons de discussion</Link>
         </li>
+        <li>
+          <Link to="/fanzine/abonnement">Abonnement au fanzine</Link>
+        </li>
       </ul>
       <Notifications />
+      <Bibliotheque />
       <PreferencesNotification />
       <Personnalisation />
       <Recherches />

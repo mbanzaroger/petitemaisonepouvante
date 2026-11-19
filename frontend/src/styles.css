@@ -793,3 +793,58 @@ textarea {
   margin: 0;
   font-size: 1.1rem;
 }
+
+/* --- Éditions : actualités, fanzine, liseuse (US15 à US17) --- */
+
+.liste-articles {
+  display: grid;
+  gap: 1.25rem;
+  margin: 1.5rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.carte-article {
+  padding: 1.25rem;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+
+.carte-article h2 {
+  margin: 0.4rem 0;
+  font-size: 1.3rem;
+}
+
+.carte-article p {
+  margin: 0.3rem 0;
+}
+
+.article,
+.page-liseuse {
+  max-width: 44rem;
+}
+
+.chapo {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.page-liseuse {
+  margin: 1.5rem 0;
+  padding: 1.5rem clamp(1rem, 4vw, 2.5rem);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.page-liseuse h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+
+.liens-rapides a[aria-current='page'] {
+  font-weight: 700;
+}

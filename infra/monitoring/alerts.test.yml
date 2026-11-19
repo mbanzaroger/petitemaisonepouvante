@@ -119,6 +119,19 @@ tests:
             exp_annotations:
               summary: "community-service ne répond plus à la collecte depuis 1 minute"
 
+  - name: Service éditorial arrêté
+    interval: 30s
+    input_series:
+      - series: 'up{service="editorial-service"}'
+        values: '1 1 0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ServiceIndisponible
+        exp_alerts:
+          - exp_labels: { severity: critical, service: editorial-service }
+            exp_annotations:
+              summary: "editorial-service ne répond plus à la collecte depuis 1 minute"
+
   - name: Signalements en attente de modération
     interval: 1m
     input_series:

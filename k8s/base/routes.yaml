@@ -134,6 +134,63 @@ spec:
               - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: community-service, port: 8084 }]
 ---
+# Éditions (US15 à US17) : actualités, sommaire du fanzine, pages de lecture et formules en lecture publique (le
+# service vérifie lui-même le droit de lire au-delà de l'extrait) ; achats, bibliothèque, abonnement réservés aux
+# membres ; rédaction et liste d'expédition réservées à ADMIN.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: editorial-public
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches:
+        - { path: { type: PathPrefix, value: /api/v1/editorial/articles }, method: GET }
+        - { path: { type: PathPrefix, value: /api/v1/editorial/issues }, method: GET }
+        - { path: { type: PathPrefix, value: /api/v1/editorial/plans }, method: GET }
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: editorial-service, port: 8085 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: editorial
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/editorial } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: editorial-service, port: 8085 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: editorial-admin
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/editorial/admin } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: editorial-service, port: 8085 }]
+---
 # Site web : tout le reste de app.pme.local est servi par web-frontend (nginx), qui pose ses propres en-têtes
 # (CSP, anti-clickjacking) ; le Gateway ajoute HSTS puisque le TLS se termine ici.
 apiVersion: gateway.networking.k8s.io/v1
@@ -238,11 +295,12 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: community-jwt
+  name: members-jwt
 spec:
   targetRefs:
     - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community }
     - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: catalog-interests }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial }
   jwt:
     providers:
       - name: keycloak
@@ -265,9 +323,11 @@ spec:
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:
-  name: community-moderation-jwt
+  name: admin-routes-jwt
 spec:
-  targetRefs: [{ group: gateway.networking.k8s.io, kind: HTTPRoute, name: community-moderation }]
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community-moderation }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial-admin }
   jwt:
     providers:
       - name: keycloak
@@ -302,16 +362,17 @@ spec:
             - sourceCIDR: { value: 0.0.0.0/0, type: Distinct }
           limit: { requests: 50, unit: Second }
 ---
-# Espace communautaire : limitation par adresse IP (spam de messages, d'annonces ou de signalements), en plus de
-# l'anti-flood applicatif par membre (5 messages / 10 s).
+# Routes des membres (communauté, personnalisation, éditions) : limitation par adresse IP (spam de messages,
+# d'annonces, de signalements ou d'achats), en plus de l'anti-flood applicatif par membre (5 messages / 10 s).
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
 metadata:
-  name: community-rate-limit
+  name: members-rate-limit
 spec:
   targetRefs:
     - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community }
     - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: catalog-interests }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial }
   rateLimit:
     type: Local
     local:

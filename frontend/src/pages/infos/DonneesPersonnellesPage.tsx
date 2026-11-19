@@ -59,6 +59,18 @@ export function DonneesPersonnellesPage() {
             </tr>
             <tr>
               <th scope="row">
+                Fanzine et abonnement : numéros achetés, page atteinte dans la liseuse, formule et dates de
+                l'abonnement ; adresse de livraison pour la formule papier
+              </th>
+              <td>Accès aux numéros, reprise de la lecture, envoi du fanzine papier</td>
+              <td>Exécution du contrat ; obligations comptables pour les achats</td>
+              <td>
+                Achats et souscriptions : 10 ans (pièces comptables) ; adresse de livraison : effacée 90 jours après
+                la fin de l'abonnement
+              </td>
+            </tr>
+            <tr>
+              <th scope="row">
                 Journaux techniques : date, adresse demandée, statut, identifiant de corrélation ; adresse IP et
                 navigateur au point d'entrée ; identifiant interne du client pour les commandes
               </th>
@@ -79,8 +91,9 @@ export function DonneesPersonnellesPage() {
       <h2>Destinataires</h2>
       <p>
         Les données ne sont accessibles qu'aux personnes habilitées de la boutique et à ses sous-traitants
-        techniques (hébergement), dans la limite de leurs missions. Elles ne sont ni vendues ni transmises à des
-        fins publicitaires.
+        techniques (hébergement), dans la limite de leurs missions ; l'adresse de livraison du fanzine papier n'est
+        visible que de vous et de l'équipe chargée des envois. Elles ne sont ni vendues ni transmises à des fins
+        publicitaires, et sont hébergées dans l'Union européenne.
       </p>
 
       <h2>Cookies et stockage dans le navigateur</h2>

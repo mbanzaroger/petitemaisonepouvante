@@ -10,15 +10,20 @@
 ## Périmètre du POC
 Fonctionnalités métier implémentées, de bout en bout dans le navigateur :
 - **commander un produit dérivé (figurines, goodies, Blu-ray) avec réservation de stock** (US1 à US7) ;
-- **espace communautaire** : troc et dons entre particuliers, conversation privée et salons de discussion entre passionnés, objets recherchés et notifications, modération (US8 à US12, v1.3.0).
+- **espace communautaire** : troc et dons entre particuliers, conversation privée et salons de discussion entre passionnés, objets recherchés et notifications, modération (US8 à US12, v1.3.0) ;
+- **personnalisation** : recommandations de produits selon les recherches, consultations et achats, gamme exclusive Evil Ed, notifications selon la navigation, avec consentement (US13, US14) ;
+- **éditions** : actualités et articles de fond ouverts à tous, fanzine numérique (extrait, achat, liseuse et bibliothèque dans « Mon espace »), abonnement numérique ou papier et renouvellement (US15 à US17, ADR-006).
+
+Hébergement cible en Europe et feuille de route (enchères et diffusion des productions Evil Ed en v2, projections du festival en v3) : [ADR-006](docs/adr/ADR-006-service-editorial-hebergement-feuille-de-route.md).
 
 | Composant | Rôle | Statut |
 |---|---|---|
-| `web-frontend` | Site : catalogue, panier, connexion, commande, suivi, historique, espace communautaire et « Mon espace », administration (stock, modération), pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété en v1.2.0 et v1.3.0) |
+| `web-frontend` | Site : catalogue et recommandations, panier, connexion, commande, suivi, historique, espace communautaire, actualités, fanzine et liseuse, « Mon espace », administration (stock, modération, rédaction), pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété jusqu'à v1.4.0) |
 | `catalog-service` | Produits, catégories, prix | Livré (v0.5.0) |
 | `order-service` | Commandes, statuts, historique, saga (boîte d'envoi) | Livré (v0.5.0) |
 | `stock-service` | Stock, réservations idempotentes | Livré (v0.5.0) |
 | `community-service` | Annonces de troc et de dons, propositions, salons, notifications, signalements et modération (ADR-004) | Livré (v1.3.0) |
+| `editorial-service` | Actualités et articles, fanzine numérique (pages servies selon le droit d'accès, bibliothèque), abonnements et liste d'expédition (ADR-006) | Livré (v1.4.0) |
 | Keycloak | Identité OIDC / rôles (client `pme-web` : code + PKCE) | `infra/`, `k8s/platform/` |
 | RabbitMQ | Saga de commande asynchrone | `infra/`, `k8s/overlays/staging/` |
 
@@ -55,7 +60,7 @@ Fonctionnalités métier implémentées, de bout en bout dans le navigateur :
 - [Audit du projet (14/11/2026)](docs/audit/audit-2026-11-14.md)
 - [Suivi d'avancement](docs/suivi-avancement.md)
 - [Contribuer : branches, commits, versions](CONTRIBUTING.md) · [Sécurité](SECURITY.md) · [Journal des modifications](CHANGELOG.md)
-- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-002 : front-end web (révisé)](docs/adr/ADR-002-front-end.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md) · [ADR-004 : service communautaire](docs/adr/ADR-004-service-communaute.md) · [ADR-005 : discussions par relevé périodique](docs/adr/ADR-005-discussions-releve-periodique.md)
+- [ADR-001 : choix microservices](docs/adr/ADR-001-microservices.md) · [ADR-002 : front-end web (révisé)](docs/adr/ADR-002-front-end.md) · [ADR-003 : Gateway API](docs/adr/ADR-003-gateway-api.md) · [ADR-004 : service communautaire](docs/adr/ADR-004-service-communaute.md) · [ADR-005 : discussions par relevé périodique](docs/adr/ADR-005-discussions-releve-periodique.md) · [ADR-006 : service éditorial, hébergement UE, feuille de route](docs/adr/ADR-006-service-editorial-hebergement-feuille-de-route.md)
 - [Contrat OpenAPI](docs/api/openapi.yaml) · [Collection Bruno](docs/api/bruno/) · [Script de démonstration](docs/demo/script-demo.md)
 - [Protocoles d'expérimentation](docs/experimentations/) · [Synthèse adoption / rejet](docs/experimentations/synthese.md)
 
@@ -64,7 +69,7 @@ Fonctionnalités métier implémentées, de bout en bout dans le navigateur :
 infra/init-env.sh                              # génère infra/.env (mots de passe aléatoires, jamais versionné)
 cd infra && docker compose --profile app up -d --build
 # Site http://localhost:5173 (alice ou carol : client et membre ; admin-pme : stock et modération) — API relayée sur la même origine
-# API : catalogue http://localhost:8081, commandes :8082, stock :8083, communauté :8084 (ports liés à 127.0.0.1)
+# API : catalogue http://localhost:8081, commandes :8082, stock :8083, communauté :8084, éditions :8085 (ports liés à 127.0.0.1)
 # Keycloak http://localhost:8080 (admin / KEYCLOAK_ADMIN_PASSWORD) · RabbitMQ http://localhost:15672
 # Prometheus http://localhost:9090 · Grafana http://localhost:3000 (tableau de bord « PME — RED des microservices »)
 ```
@@ -87,7 +92,7 @@ Après une mise à jour du dépôt qui ajoute un service, relancer `bash infra/i
 ## Organisation du dépôt
 ```
 docs/            documentation, schémas (Mermaid), ADR, expérimentations
-services/        microservices (catalog, order, stock, community)
+services/        microservices (catalog, order, stock, community, editorial)
 frontend/        site web (SPA React + TypeScript, nginx, tests Vitest et Playwright)
 infra/           docker-compose + monitoring (dev local)
 k8s/             manifestes Kubernetes (Kustomize)
@@ -117,5 +122,8 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Support de soutenance, trame et script de démonstration (v1.0.0)
 - [x] Site web : SPA React sécurisée et accessible, e2e et axe en staging (v1.1.0, ADR-002 révisé)
 - [x] Site web v2 : espace administrateur, conformité RGAA/RGPD, thème de connexion, Lighthouse, observabilité (v1.2.0)
+- [x] Espace communautaire : troc, dons, salons, notifications, modération (v1.3.0, ADR-004, ADR-005)
+- [x] Recommandations, gamme Evil Ed, actualités, fanzine numérique et abonnements (v1.4.0, ADR-006)
+- [ ] v2 : enchères, diffusion des productions Evil Ed ; v3 : projections en ligne du festival (ADR-006)
 - [ ] Répétitions chronométrées et vidéo de secours (#41)
 - [ ] SonarQube Cloud, indicateur 2 (#32)

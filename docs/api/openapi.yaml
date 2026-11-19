@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: |
     API exposée par le Gateway (Envoy Gateway, Gateway API) devant les microservices catalog-service,
-    order-service, stock-service et community-service. Le TLS est terminé au Gateway ; les jetons Keycloak (OIDC) sont vérifiés
+    order-service, stock-service, community-service et editorial-service. Le TLS est terminé au Gateway ; les jetons Keycloak (OIDC) sont vérifiés
     au Gateway **et** par chaque service (signature JWKS, émetteur, audience `pme-api`, rôles du royaume).
     Les erreurs suivent le format `application/problem+json` (RFC 9457).
 servers:
@@ -29,6 +29,12 @@ tags:
     description: US11 — notifications, préférences, objets recherchés (CUSTOMER ou ADMIN)
   - name: Modération
     description: US12 — signalement (membres) et modération (ADMIN)
+  - name: Actualités
+    description: US15 — actualités et articles de fond (lecture publique), publication (ADMIN)
+  - name: Fanzine
+    description: US16 — numéros numérisés, extrait gratuit, achat à l'unité, liseuse et bibliothèque (CUSTOMER ou ADMIN)
+  - name: Abonnement
+    description: US17 — abonnement numérique ou papier et numérique, renouvellement, liste d'expédition (ADMIN)
 security: []
 paths:
   /api/v1/products:
@@ -493,6 +499,218 @@ paths:
         "204": { description: Décision appliquée }
         "404": { $ref: "#/components/responses/Problem" }
         "409": { description: Signalement déjà traité }
+  /api/v1/editorial/articles:
+    get:
+      tags: [Actualités]
+      summary: Actualités et articles publiés, du plus récent au plus ancien
+      parameters:
+        - { name: kind, in: query, schema: { type: string, enum: [NEWS, FEATURE] }, description: "Sans filtre : les deux types" }
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 10 } }
+      responses:
+        "200": { description: Page de résumés (sans le corps), content: { application/json: { schema: { $ref: "#/components/schemas/ArticlePage" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/articles/{slug}:
+    get:
+      tags: [Actualités]
+      summary: Article publié
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string, pattern: "^[a-z0-9-]{1,90}$" } }
+      responses:
+        "200": { description: Article, content: { application/json: { schema: { $ref: "#/components/schemas/Article" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/admin/articles:
+    post:
+      tags: [Actualités]
+      summary: Publier une actualité ou un article (ADMIN)
+      description: Texte brut, paragraphes séparés par une ligne vide (aucun HTML interprété). Le slug est dérivé du titre.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, title, summary, body]
+              properties:
+                kind: { type: string, enum: [NEWS, FEATURE] }
+                title: { type: string, minLength: 5, maxLength: 160 }
+                summary: { type: string, minLength: 10, maxLength: 300 }
+                body: { type: string, minLength: 20, maxLength: 20000 }
+      responses:
+        "201":
+          description: Article publié (en-tête Location vers l'article)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Article" } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "403": { description: Rôle ADMIN manquant }
+  /api/v1/editorial/admin/articles/{id}/unpublish:
+    post:
+      tags: [Actualités]
+      summary: Retirer un article publié (ADMIN)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Article retiré }
+        "403": { description: Rôle ADMIN manquant }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/issues:
+    get:
+      tags: [Fanzine]
+      summary: Numéros parus, du plus récent au plus ancien
+      description: Lecture publique ; avec un jeton, `access` indique ce que le membre peut lire.
+      security: [{}, { keycloak: [] }]
+      responses:
+        "200": { description: Numéros, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Issue" } } } } }
+  /api/v1/editorial/issues/{number}:
+    get:
+      tags: [Fanzine]
+      summary: Numéro et sommaire (titres des pages)
+      security: [{}, { keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Numéro et sommaire
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue: { $ref: "#/components/schemas/Issue" }
+                  contents: { type: array, items: { type: string }, description: "Titre de chaque page, dans l'ordre" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/issues/{number}/pages/{page}:
+    get:
+      tags: [Fanzine]
+      summary: Page d'un numéro (liseuse)
+      description: |
+        La page 1 (extrait) est lisible par tous. Les suivantes exigent un achat du numéro ou un abonnement en cours :
+        401 sans jeton, 403 pour un membre sans droit. Chaque lecture est comptée (pme_editorial_pages_read_total).
+      security: [{}, { keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+        - { name: page, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 500 } }
+      responses:
+        "200": { description: Page, content: { application/json: { schema: { $ref: "#/components/schemas/IssuePage" } } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/issues/{number}/purchase:
+    post:
+      tags: [Fanzine]
+      summary: Acheter un numéro à l'unité (ajouté à la bibliothèque)
+      description: Paiement simulé dans le POC (comme la commande) ; un seul achat par numéro et par membre.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "201": { description: Numéro acheté, content: { application/json: { schema: { $ref: "#/components/schemas/Issue" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Déjà acheté ou inclus dans l'abonnement en cours }
+  /api/v1/editorial/library:
+    get:
+      tags: [Fanzine]
+      summary: Bibliothèque du membre (numéros achetés ou inclus dans l'abonnement) et page atteinte
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Bibliothèque
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    issue: { $ref: "#/components/schemas/Issue" }
+                    purchasedAt: { type: [string, "null"], format: date-time, description: "null si inclus dans l'abonnement" }
+                    lastPage: { type: integer, minimum: 1 }
+  /api/v1/editorial/library/{number}/progress:
+    put:
+      tags: [Fanzine]
+      summary: Mémoriser la page atteinte (« Reprendre la lecture »)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [page], properties: { page: { type: integer, minimum: 1, maximum: 500 } } } } }
+      responses:
+        "204": { description: Page mémorisée }
+        "403": { description: Numéro absent de la bibliothèque }
+        "422": { description: Page hors du numéro }
+  /api/v1/editorial/plans:
+    get:
+      tags: [Abonnement]
+      summary: Formules d'abonnement (un an)
+      responses:
+        "200":
+          description: Formules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code: { type: string, enum: [DIGITAL, PAPER_DIGITAL] }
+                    label: { type: string }
+                    priceCents: { type: integer }
+                    paper: { type: boolean, description: Adresse de livraison requise }
+  /api/v1/editorial/subscription:
+    get:
+      tags: [Abonnement]
+      summary: Abonnement du membre (active=false s'il n'en a pas)
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Abonnement, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+    post:
+      tags: [Abonnement]
+      summary: S'abonner pour un an
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionRequest" } } }
+      responses:
+        "201": { description: Abonnement souscrit, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "409": { description: Abonnement déjà en cours }
+        "422": { description: Adresse manquante pour la formule papier }
+  /api/v1/editorial/subscription/renewal:
+    post:
+      tags: [Abonnement]
+      summary: Renouveler pour un an (à partir de 60 jours avant l'échéance, ou après)
+      description: La nouvelle période commence le lendemain de l'échéance si elle n'est pas passée ; la formule peut changer.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionRequest" } } }
+      responses:
+        "200": { description: Abonnement renouvelé, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Hors de la fenêtre de renouvellement }
+        "422": { description: Adresse manquante pour la formule papier }
+  /api/v1/editorial/admin/paper-subscribers:
+    get:
+      tags: [Abonnement]
+      summary: Liste d'expédition du fanzine papier (ADMIN)
+      description: Seules données personnelles de livraison du système ; accès réservé à l'ADMIN (minimisation, docs/13 §10).
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Abonnés papier en cours
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    memberName: { type: string }
+                    address: { $ref: "#/components/schemas/Address" }
+                    endsOn: { type: string, format: date }
+        "403": { description: Rôle ADMIN manquant }
 components:
   securitySchemes:
     keycloak:
@@ -672,6 +890,73 @@ components:
         createdAt: { type: string, format: date-time }
         handledBy: { type: [string, "null"] }
         handledAt: { type: [string, "null"], format: date-time }
+    ArticleSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        kind: { type: string, enum: [NEWS, FEATURE] }
+        title: { type: string }
+        summary: { type: string }
+        author: { type: string }
+        publishedAt: { type: string, format: date-time }
+    Article:
+      allOf:
+        - $ref: "#/components/schemas/ArticleSummary"
+        - type: object
+          properties:
+            body: { type: string, description: "Texte brut, paragraphes séparés par une ligne vide" }
+    ArticlePage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/ArticleSummary" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+    Issue:
+      type: object
+      properties:
+        number: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        publishedOn: { type: string, format: date }
+        priceCents: { type: integer }
+        pageCount: { type: integer }
+        access: { type: string, enum: [PREVIEW, PURCHASE, SUBSCRIPTION], description: "PREVIEW : extrait seul (visiteur ou membre sans droit)" }
+    IssuePage:
+      type: object
+      properties:
+        issueNumber: { type: integer }
+        pageNo: { type: integer }
+        pageCount: { type: integer }
+        title: { type: string }
+        content: { type: string, description: "Texte brut, paragraphes séparés par une ligne vide" }
+        access: { type: string, enum: [PREVIEW, PURCHASE, SUBSCRIPTION] }
+    Address:
+      type: object
+      required: [recipient, street, postalCode, city]
+      properties:
+        recipient: { type: string, maxLength: 100 }
+        street: { type: string, maxLength: 200 }
+        postalCode: { type: string, pattern: "^[0-9]{5}$" }
+        city: { type: string, maxLength: 100 }
+    SubscriptionRequest:
+      type: object
+      required: [plan]
+      properties:
+        plan: { type: string, enum: [DIGITAL, PAPER_DIGITAL] }
+        address: { $ref: "#/components/schemas/Address", description: "Obligatoire pour PAPER_DIGITAL, ignorée sinon" }
+    Subscription:
+      type: object
+      properties:
+        active: { type: boolean }
+        plan: { type: [string, "null"], enum: [DIGITAL, PAPER_DIGITAL, null] }
+        planLabel: { type: [string, "null"] }
+        startsOn: { type: [string, "null"], format: date }
+        endsOn: { type: [string, "null"], format: date }
+        renewable: { type: boolean, description: "Vrai à partir de 60 jours avant l'échéance" }
+        address: { oneOf: [{ $ref: "#/components/schemas/Address" }, { type: "null" }] }
     Problem:
       type: object
       properties:

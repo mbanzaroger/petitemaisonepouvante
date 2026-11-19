@@ -33,6 +33,9 @@ function api(surcharge: Record<string, Parameters<typeof simulerApi>[0][string]>
     [`DELETE ${API}/wishes/w1`]: () => new Response(null, { status: 204 }),
     [`GET ${API}/listings/mine`]: () => json([annonce(1, { mine: true, status: 'CONCLUDED' })]),
     'GET /api/v1/interests/preferences': () => json({ personalized: false }),
+    'GET /api/v1/editorial/library': () => json([]),
+    'GET /api/v1/editorial/subscription': () =>
+      json({ active: false, plan: null, planLabel: null, startsOn: null, endsOn: null, renewable: false, address: null }),
     ...surcharge,
   });
 }
