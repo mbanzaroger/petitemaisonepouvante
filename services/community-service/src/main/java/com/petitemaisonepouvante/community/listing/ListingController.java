@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.petitemaisonepouvante.community.notification.NotificationService;
 import com.petitemaisonepouvante.community.security.Member;
 import com.petitemaisonepouvante.community.web.PageDto;
 
@@ -29,10 +30,12 @@ public class ListingController {
 
     private final ListingService service;
     private final ListingRepository listings;
+    private final NotificationService notifications;
 
-    public ListingController(ListingService service, ListingRepository listings) {
+    public ListingController(ListingService service, ListingRepository listings, NotificationService notifications) {
         this.service = service;
         this.listings = listings;
+        this.notifications = notifications;
     }
 
     @GetMapping
@@ -43,6 +46,9 @@ public class ListingController {
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "12") @Min(1) @Max(50) int size) {
         Member viewer = Member.of(authentication);
+        if (category != null) {
+            notifications.recordBrowsing(viewer, category, 2);
+        }
         List<ListingDto> content = listings.findActive(type, category, q, page, size).stream()
                 .map(listing -> ListingDto.from(listing, viewer)).toList();
         return PageDto.of(content, page, size, listings.countActive(type, category, q));
@@ -57,7 +63,11 @@ public class ListingController {
     @GetMapping("/{id}")
     public ListingDto one(JwtAuthenticationToken authentication, @PathVariable UUID id) {
         Member viewer = Member.of(authentication);
-        return ListingDto.from(service.visible(id, viewer), viewer);
+        Listing listing = service.visible(id, viewer);
+        if (!listing.ownedBy(viewer)) {
+            notifications.recordBrowsing(viewer, listing.category(), 1);
+        }
+        return ListingDto.from(listing, viewer);
     }
 
     @PostMapping

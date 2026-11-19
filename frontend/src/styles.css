@@ -772,3 +772,24 @@ textarea {
 .notification-non-lue a {
   font-weight: 700;
 }
+
+/* --- Recommandations et exclusivités (US13) --- */
+
+.etiquette-exclusif {
+  border-color: var(--rouge);
+  background: var(--rouge);
+  color: #fff;
+}
+
+.carte-produit .etiquette {
+  align-self: flex-start;
+}
+
+.recommandations {
+  margin-top: 3rem;
+}
+
+.recommandations h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}

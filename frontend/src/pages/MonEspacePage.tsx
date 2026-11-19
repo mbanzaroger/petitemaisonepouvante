@@ -14,6 +14,7 @@ import {
   toutMarquerLu,
   type Preferences,
 } from '../api/communaute';
+import { effacerHistorique, enregistrerPersonnalisation, lirePersonnalisation } from '../api/recommandations';
 import { estClient, libelleProfil, useAuth } from '../auth/auth';
 import { Chargement, MessageErreur } from '../components/Etats';
 import { formaterDate } from '../format';
@@ -72,6 +73,7 @@ const LIBELLES_PREFERENCES: Record<keyof Preferences, string> = {
   offers: 'Propositions reçues et réponses à mes propositions',
   messages: 'Nouveaux messages dans mes conversations',
   wishes: 'Nouvelles annonces correspondant à mes recherches',
+  browsing: 'Nouvelles annonces dans les catégories que je consulte souvent (mes consultations sont alors enregistrées)',
 };
 
 function FormulairePreferences({ initiales }: { initiales: Preferences }) {
@@ -86,7 +88,12 @@ function FormulairePreferences({ initiales }: { initiales: Preferences }) {
     setErreur(undefined);
     try {
       await enregistrerPreferences(
-        { offers: donnees.has('offers'), messages: donnees.has('messages'), wishes: donnees.has('wishes') },
+        {
+          offers: donnees.has('offers'),
+          messages: donnees.has('messages'),
+          wishes: donnees.has('wishes'),
+          browsing: donnees.has('browsing'),
+        },
         auth.jeton,
       );
       setAnnonce('Préférences enregistrées.');
@@ -106,7 +113,10 @@ function FormulairePreferences({ initiales }: { initiales: Preferences }) {
           </label>
         ))}
       </fieldset>
-      <p className="note">Les décisions de la modération vous sont toujours notifiées.</p>
+      <p className="note">
+        Les décisions de la modération vous sont toujours notifiées. Les catégories consultées ne sont enregistrées
+        qu'avec votre accord, conservées 180 jours et effacées si vous décochez la dernière case.
+      </p>
       <div className="actions">
         <button type="submit" className="bouton">
           Enregistrer les préférences
@@ -126,6 +136,66 @@ function PreferencesNotification() {
       {preferences.chargement && <Chargement texte="Chargement des préférences…" />}
       {preferences.erreur && <MessageErreur erreur={preferences.erreur} onReessayer={preferences.recharger} />}
       {preferences.donnees && <FormulairePreferences initiales={preferences.donnees} />}
+    </section>
+  );
+}
+
+function Personnalisation() {
+  const auth = useAuth();
+  const preference = useRessource('personnalisation', (signal) => lirePersonnalisation(auth.jeton, signal));
+  const [annonce, setAnnonce] = useState('');
+  const [erreur, setErreur] = useState<ApiError>();
+
+  async function executer(action: () => Promise<unknown>, message: string) {
+    setAnnonce('');
+    setErreur(undefined);
+    try {
+      await action();
+      setAnnonce(message);
+    } catch (e) {
+      setErreur(versApiError(e));
+    }
+  }
+
+  function enregistrer(evenement: FormEvent<HTMLFormElement>) {
+    evenement.preventDefault();
+    const active = new FormData(evenement.currentTarget).has('personnalisation');
+    void executer(
+      () => enregistrerPersonnalisation(active, auth.jeton),
+      active ? 'Recommandations personnalisées activées.' : 'Recommandations personnalisées désactivées ; historique effacé.',
+    );
+  }
+
+  return (
+    <section aria-labelledby="titre-personnalisation">
+      <h2 id="titre-personnalisation">Recommandations</h2>
+      <p>
+        Avec votre accord, les produits consultés, les catégories recherchées et vos achats servent à vous recommander
+        des produits. Désactivé par défaut ; historique conservé 90 jours, jamais transmis à des tiers.
+      </p>
+      {erreur && <MessageErreur erreur={erreur} />}
+      {preference.erreur && <MessageErreur erreur={preference.erreur} onReessayer={preference.recharger} />}
+      {preference.donnees && (
+        <form className="formulaire" onSubmit={enregistrer}>
+          <label className="case">
+            <input type="checkbox" name="personnalisation" defaultChecked={preference.donnees.personalized} />
+            Personnaliser les recommandations selon ma navigation et mes achats
+          </label>
+          <div className="actions">
+            <button type="submit" className="bouton">
+              Enregistrer mon choix
+            </button>
+            <button
+              type="button"
+              className="bouton bouton-secondaire"
+              onClick={() => void executer(() => effacerHistorique(auth.jeton), 'Historique de navigation effacé.')}
+            >
+              Effacer mon historique
+            </button>
+          </div>
+        </form>
+      )}
+      <p role="status">{annonce}</p>
     </section>
   );
 }
@@ -247,6 +317,7 @@ export function MonEspacePage() {
       </ul>
       <Notifications />
       <PreferencesNotification />
+      <Personnalisation />
       <Recherches />
       <MesAnnonces />
     </>

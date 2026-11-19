@@ -33,9 +33,11 @@ public class ProductController {
     public PageDto<ProductDto> list(
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-            @RequestParam(required = false) @Size(max = 100) String category) {
-        List<ProductDto> content = products.findActive(category, page, size).stream().map(ProductDto::from).toList();
-        return PageDto.of(content, page, size, products.countActive(category));
+            @RequestParam(required = false) @Size(max = 100) String category,
+            @RequestParam(defaultValue = "false") boolean exclusive) {
+        List<ProductDto> content = products.findActive(category, exclusive, page, size).stream()
+                .map(ProductDto::from).toList();
+        return PageDto.of(content, page, size, products.countActive(category, exclusive));
     }
 
     /** Lecture groupée utilisée par order-service pour relire les prix côté serveur. */

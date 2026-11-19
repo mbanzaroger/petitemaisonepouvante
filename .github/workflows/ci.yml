@@ -100,6 +100,7 @@ jobs:
           scanners: vuln
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: "1"
       - name: Mauvaises configurations IaC (Dockerfile, Kubernetes) — rapport
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -246,6 +247,7 @@ jobs:
           image-ref: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: "1"
       - name: SBOM (SPDX)
         if: steps.has.outputs.dockerfile == 'true'
@@ -367,6 +369,7 @@ jobs:
           image-ref: ${{ steps.img.outputs.name }}:sha-${{ github.sha }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: "1"
       - name: SBOM (SPDX)
         uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3

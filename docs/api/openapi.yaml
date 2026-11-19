@@ -19,6 +19,8 @@ tags:
     description: US2 à US4 — rôle CUSTOMER
   - name: Stock
     description: Supervision — rôle ADMIN
+  - name: Recommandations
+    description: US13 — recommandations (ouvertes à tous, personnalisées avec consentement) et personnalisation (CUSTOMER ou ADMIN)
   - name: Troc
     description: US8, US9 — annonces (lecture publique), propositions et conversation privée (CUSTOMER ou ADMIN)
   - name: Discussions
@@ -36,6 +38,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
         - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: exclusive, in: query, description: Seulement la gamme exclusive Evil Ed, schema: { type: boolean, default: false } }
         - { name: category, in: query, schema: { type: string, maxLength: 100 } }
         - name: ids
           in: query
@@ -130,6 +133,72 @@ paths:
         "401": { description: Jeton absent ou invalide }
         "403": { description: Rôle ADMIN manquant }
         "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/recommendations:
+    get:
+      tags: [Recommandations]
+      summary: Quatre produits recommandés, avec la raison de chaque recommandation
+      description: Visiteur ou membre sans consentement — exclusivités Evil Ed puis sélection de la boutique. Membre consentant — catégories les plus consultées, recherchées ou achetées (90 jours), sans les produits déjà achetés.
+      parameters:
+        - { name: exclude, in: query, description: Produit à exclure (fiche affichée), schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Recommandations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  personalized: { type: boolean, description: Le membre a activé la personnalisation }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        product: { $ref: "#/components/schemas/Product" }
+                        reason: { type: string }
+  /api/v1/interests:
+    post:
+      tags: [Recommandations]
+      summary: Signal d'intérêt (produit consulté ou acheté, catégorie recherchée)
+      description: Ignoré (et non conservé) si le membre n'a pas activé la personnalisation.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: { type: string, enum: [VIEW, SEARCH, PURCHASE] }
+                productId: { type: string, format: uuid }
+                category: { type: string, maxLength: 100 }
+      responses:
+        "202": { description: Signal accepté (enregistré seulement avec consentement) }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { description: Jeton absent ou invalide }
+    delete:
+      tags: [Recommandations]
+      summary: Effacer son historique de navigation et d'achat (droit à l'effacement)
+      security: [{ keycloak: [] }]
+      responses:
+        "204": { description: Historique effacé }
+  /api/v1/interests/preferences:
+    get:
+      tags: [Recommandations]
+      summary: Consentement à la personnalisation (désactivé par défaut)
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Préférence, content: { application/json: { schema: { type: object, properties: { personalized: { type: boolean } } } } } }
+    put:
+      tags: [Recommandations]
+      summary: Activer ou retirer son consentement (le retrait efface l'historique)
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [personalized], properties: { personalized: { type: boolean } } } } }
+      responses:
+        "200": { description: Préférence enregistrée }
   /api/v1/community/listings:
     get:
       tags: [Troc]
@@ -316,7 +385,7 @@ paths:
                   type: object
                   properties:
                     id: { type: integer }
-                    type: { type: string, enum: [NEW_OFFER, OFFER_ACCEPTED, OFFER_DECLINED, OFFER_CANCELLED, NEW_MESSAGE, WISH_MATCH, CONTENT_HIDDEN] }
+                    type: { type: string, enum: [NEW_OFFER, OFFER_ACCEPTED, OFFER_DECLINED, OFFER_CANCELLED, NEW_MESSAGE, WISH_MATCH, INTEREST_MATCH, CONTENT_HIDDEN] }
                     text: { type: string }
                     link: { type: string }
                     read: { type: boolean }
@@ -457,6 +526,7 @@ components:
         price: { $ref: "#/components/schemas/Price" }
         category: { type: string }
         available: { type: boolean }
+        exclusive: { type: boolean, description: Vendu en exclusivité sur le site (gamme Evil Ed) }
     ProductPage:
       type: object
       properties:
@@ -576,11 +646,12 @@ components:
         mine: { type: boolean }
     Preferences:
       type: object
-      required: [offers, messages, wishes]
+      required: [offers, messages, wishes, browsing]
       properties:
         offers: { type: boolean }
         messages: { type: boolean }
         wishes: { type: boolean }
+        browsing: { type: boolean, description: "US14 : notifications selon les catégories consultées (consentement, désactivé par défaut)" }
     Wish:
       type: object
       properties:

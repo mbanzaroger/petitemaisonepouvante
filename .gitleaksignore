@@ -7,3 +7,7 @@
 # de la CI). Les identifiants de développement par défaut de ce fichier ont été remplacés par des secrets générés
 # (infra/init-env.sh, PR #61) ; le constat est suivi au registre des vulnérabilités (docs/07, jalon 4).
 6346d1276d4d173f2ebcdd36a8af5bf9740f9e16:infra/docker-compose.yml:generic-api-key:26
+# 19/11/2026 — règle generic-api-key déclenchée par l'empreinte SHA-512 publique de la clé de signature de nginx.org
+# (variable ARG du Dockerfile du site, PR #112) : c'est un condensat public, pas un secret. Ligne réécrite depuis
+# (empreinte dans frontend/nginx/nginx_signing.rsa.pub.sha512) ; l'empreinte reste dans l'historique de la PR #112.
+1fdaba60d71cf41498706c9b81ef5f06e95630f0:frontend/Dockerfile:generic-api-key:22

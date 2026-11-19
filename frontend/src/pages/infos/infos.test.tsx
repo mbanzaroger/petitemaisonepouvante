@@ -50,7 +50,7 @@ describe('Pages d’information', () => {
     api();
     rendreApp('/donnees-personnelles');
     const tableau = await screen.findByRole('table', { name: 'Traitements de données personnelles' });
-    expect(within(tableau).getAllByRole('row')).toHaveLength(5);
+    expect(within(tableau).getAllByRole('row')).toHaveLength(6);
     expect(within(tableau).getByRole('rowheader', { name: /Espace communautaire/ })).toBeInTheDocument();
     expect(screen.getByText(/Aucun cookie de mesure d'audience/)).toBeInTheDocument();
   });

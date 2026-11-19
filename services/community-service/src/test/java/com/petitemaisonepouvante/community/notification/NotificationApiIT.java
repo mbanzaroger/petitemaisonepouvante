@@ -47,9 +47,10 @@ class NotificationApiIT extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.offers", is(true)))
                 .andExpect(jsonPath("$.messages", is(true)))
-                .andExpect(jsonPath("$.wishes", is(true)));
+                .andExpect(jsonPath("$.wishes", is(true)))
+                .andExpect(jsonPath("$.browsing", is(false)));
         mvc.perform(put(API + "/preferences").with(alice).contentType(MediaType.APPLICATION_JSON)
-                        .content(body(Map.of("offers", false, "messages", true, "wishes", true))))
+                        .content(body(Map.of("offers", false, "messages", true, "wishes", true, "browsing", false))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.offers", is(false)));
         mvc.perform(get(API + "/preferences").with(alice)).andExpect(jsonPath("$.offers", is(false)));
@@ -90,6 +91,49 @@ class NotificationApiIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @DisplayName("US14 — avec son accord, un membre est prévenu des annonces des catégories qu'il consulte souvent")
+    void notificationsSelonLaNavigation() throws Exception {
+        String caroleName = unique("carol");
+        RequestPostProcessor carol = member(caroleName);
+        RequestPostProcessor dave = member(unique("dave"));
+        RequestPostProcessor alice = member(unique("alice"));
+        mvc.perform(put(API + "/preferences").with(carol).contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("offers", true, "messages", true, "wishes", true, "browsing", true))))
+                .andExpect(jsonPath("$.browsing", is(true)));
+        // Consultations : 1 point par annonce affichée, 2 points par recherche filtrée sur la catégorie.
+        String affiche = "5c0a0001-0000-4000-8000-000000000001";
+        mvc.perform(get(API + "/listings/{id}", affiche).with(carol)).andExpect(status().isOk());
+        mvc.perform(get(API + "/listings").with(carol).param("category", "POSTERS")).andExpect(status().isOk());
+        // Sans accord, les consultations de dave ne sont pas enregistrées.
+        for (int i = 0; i < 3; i++) {
+            mvc.perform(get(API + "/listings/{id}", affiche).with(dave)).andExpect(status().isOk());
+        }
+        assertThat(jdbc.queryForObject("select count(*) from member_interest where member_id = ?", Integer.class,
+                "sub-" + caroleName)).isEqualTo(1);
+
+        String id = read(mvc.perform(post(API + "/listings").with(alice).contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("type", "GIFT", "title", "Affiche de festival à donner",
+                                "description", "Affiche roulée, très bon état.", "category", "POSTERS",
+                                "condition", "GOOD"))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8)).get("id").asString();
+        mvc.perform(get(API + "/notifications").with(carol))
+                .andExpect(jsonPath("$[0].type", is("INTEREST_MATCH")))
+                .andExpect(jsonPath("$[0].text",
+                        is("Nouvelle annonce dans une catégorie que vous consultez souvent (« Affiches ») : "
+                                + "Affiche de festival à donner")))
+                .andExpect(jsonPath("$[0].link", is("/communaute/annonces/" + id)));
+        assertThat(unread(dave)).isZero();
+
+        // Retirer son accord efface les centres d'intérêt enregistrés.
+        mvc.perform(put(API + "/preferences").with(carol).contentType(MediaType.APPLICATION_JSON)
+                        .content(body(Map.of("offers", true, "messages", true, "wishes", true, "browsing", false))))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select count(*) from member_interest where member_id = ?", Integer.class,
+                "sub-" + caroleName)).isZero();
+    }
+
+    @Test
     @DisplayName("Au plus 10 objets recherchés par membre (422)")
     void limiteDesRecherches() throws Exception {
         RequestPostProcessor alice = member(unique("alice"));
@@ -120,12 +164,16 @@ class NotificationApiIT extends AbstractIntegrationTest {
                 + "values ('purge-test', 'NEW_OFFER', 'non lue', '/', false, now() - interval '100 days')");
         jdbc.update("insert into message (room_code, author_id, author_name, content, sent_at) "
                 + "values ('general', 'purge-test', 'purge', 'très ancien', now() - interval '400 days')");
+        jdbc.update("insert into member_interest (member_id, category, score, updated_at) "
+                + "values ('purge-test', 'GOODIES', 5, now() - interval '200 days')");
 
         retention.purge();
 
         assertThat(jdbc.queryForObject("select count(*) from notification where member_id = 'purge-test'",
                 Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select count(*) from message where author_id = 'purge-test'",
+                Integer.class)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from member_interest where member_id = 'purge-test'",
                 Integer.class)).isZero();
     }
 }

@@ -8,16 +8,18 @@ class PreferencesTest {
 
     @Test
     void filtreLesNotificationsParCategorie() {
-        Preferences preferences = new Preferences(false, true, false);
+        Preferences preferences = new Preferences(false, true, false, true);
         assertThat(preferences.accepts(NotificationType.NEW_OFFER)).isFalse();
         assertThat(preferences.accepts(NotificationType.OFFER_ACCEPTED)).isFalse();
         assertThat(preferences.accepts(NotificationType.NEW_MESSAGE)).isTrue();
         assertThat(preferences.accepts(NotificationType.WISH_MATCH)).isFalse();
+        assertThat(preferences.accepts(NotificationType.INTEREST_MATCH)).isTrue();
+        assertThat(Preferences.DEFAULT.accepts(NotificationType.INTEREST_MATCH)).isFalse();
     }
 
     @Test
     void laModerationEstToujoursNotifiee() {
-        assertThat(new Preferences(false, false, false).accepts(NotificationType.CONTENT_HIDDEN)).isTrue();
+        assertThat(new Preferences(false, false, false, false).accepts(NotificationType.CONTENT_HIDDEN)).isTrue();
     }
 
     @Test

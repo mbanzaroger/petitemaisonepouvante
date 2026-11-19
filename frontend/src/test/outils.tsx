@@ -65,6 +65,7 @@ export function produit(numero: number, surcharge: Partial<Product> = {}): Produ
     price: { amountCents: 1000 + numero, currency: 'EUR' },
     category: 'Goodies',
     available: true,
+    exclusive: false,
     ...surcharge,
   };
 }

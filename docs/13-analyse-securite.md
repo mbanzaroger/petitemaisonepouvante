@@ -67,6 +67,7 @@ Sévérité *outil* : celle du scanner ou de la règle. Sévérité *retenue* : 
 | V-25 | Site sans `Cross-Origin-Embedder-Policy` : isolation contre les attaques de type Spectre incomplète | ZAP 90004 (site) | A05 | Basse | Très faible : aucune ressource tierce chargée, COOP et CORP `same-origin` posés ; COEP bloquerait l'iframe de vérification de session Keycloak | Risque accepté (WARN qualifié dans `.zap/rules-site.tsv`) |
 | V-26 | Accessibilité contrôlée automatiquement seulement (axe, `jsx-a11y`) : pas d'audit RGAA manuel ni de déclaration d'accessibilité | Revue (RGAA 4.1) | — | — → **Moyenne** | Sans objet (conformité légale, exclusion d'utilisateurs) | À traiter (R-13, #94) |
 | V-27 | Image `nginx-unprivileged:1.30-alpine` : 1 critique (brotli) et 12 hautes (curl, expat, libxslt, musl, zlib) corrigées par Alpine mais pas encore dans l'image amont | Trivy image (bloquant, CI de la PR #93) | A06 | **Critique** | Faible : nginx ne décompresse pas de brotli ni n'exécute curl ; conteneur non root en lecture seule | **Corrigé** : `apk upgrade` à la construction, scan vert |
+| V-28 | Image du site : nginx 1.30.6, 5 hautes (HTTP/2, HTTP/3, resolver, mail) corrigées par nginx 1.30.7 du 18/11/2026, pas encore empaqueté pour Alpine 3.24 | Trivy image (bloquant, CI de la PR #112) | A06 | Haute → **Basse** | Très faible : nginx écoute en HTTP/1.1 derrière le Gateway, sans module mail ni stream ni resolver ; conteneur non root en lecture seule | Exception datée jusqu'au 26/11/2026 (`.trivyignore.yaml`, délai d'une haute) ; le Dockerfile installe 1.30.7 depuis nginx.org dès sa publication |
 
 ## 4. Résultats sans constat
 
@@ -143,3 +144,13 @@ Le troc, les dons et les discussions ouvrent une surface nouvelle : du **contenu
 | Élévation de privilèges | Un compte sans rôle publie ou modère | `SecurityPolicy` par route (membres : `CUSTOMER` ou `ADMIN` ; modération : `ADMIN`), mêmes règles dans le service | Contrôles de fumée 401/403, Cucumber `bob` |
 
 **RGPD** : base légale « exécution du service » pour les annonces et messages ; minimisation (aucun courriel ni adresse stockés, nom affiché seulement) ; conservation : notifications lues supprimées après 90 jours, messages des salons après 365 jours (tâche nocturne testée), conversations liées au cycle de vie de l'annonce ; données hébergées dans l'UE avec le reste de la plateforme. **Reste à faire avant ouverture publique** : effacement des contenus d'un membre à la suppression de son compte (événement Keycloak à consommer), modération a priori des mots interdits, test de charge des relevés de discussion (ADR-005).
+
+## 9. Personnalisation (recommandations et centres d'intérêt, US13 et US14)
+
+| Risque | Mesures | Preuve |
+|---|---|---|
+| Profilage sans base légale (RGPD art. 6 et 22, ePrivacy) | Personnalisation et notifications de navigation **désactivées par défaut** ; consentement explicite dans « Mon espace » ; sans consentement, les signaux envoyés sont ignorés et rien n'est conservé ; le site n'envoie de signal que si le consentement est actif | `RecommendationApiIT` (« sans consentement »), `NotificationApiIT` (US14) |
+| Conservation excessive | Signaux d'intérêt purgés après 90 jours, centres d'intérêt de navigation après 180 jours sans consultation (tâches nocturnes testées) ; retrait du consentement = effacement immédiat ; bouton « Effacer mon historique » | Tests de conservation et d'effacement |
+| Opacité de la recommandation | Raison affichée pour chaque produit recommandé (catégorie d'intérêt, exclusivité, sélection) ; aucune décision automatisée produisant un effet juridique | Tests du site |
+| Abus (volume) | 500 signaux par membre et par 24 h au plus ; limitation par IP au Gateway sur `/api/v1/interests` ; route réservée aux membres (JWT) | `RecommendationService`, routes Gateway |
+| Fuite entre membres | Les signaux sont rattachés au `subject` du jeton ; aucune API ne renvoie les centres d'intérêt d'un autre membre ; aucune donnée transmise à des tiers | Revue de code, OpenAPI |

@@ -26,12 +26,13 @@ function api(surcharge: Record<string, Parameters<typeof simulerApi>[0][string]>
       lues = true;
       return new Response(null, { status: 204 });
     },
-    [`GET ${API}/preferences`]: () => json({ offers: true, messages: true, wishes: false }),
+    [`GET ${API}/preferences`]: () => json({ offers: true, messages: true, wishes: false, browsing: false }),
     [`PUT ${API}/preferences`]: (_url, init) => json(JSON.parse(String(init.body))),
     [`GET ${API}/wishes`]: () => json([{ id: 'w1', keywords: 'Evil Ed', createdAt: '2026-11-16T10:00:00Z' }]),
     [`POST ${API}/wishes`]: () => json({ id: 'w2', keywords: 'Suspiria', createdAt: '2026-11-16T10:00:00Z' }, 201),
     [`DELETE ${API}/wishes/w1`]: () => new Response(null, { status: 204 }),
     [`GET ${API}/listings/mine`]: () => json([annonce(1, { mine: true, status: 'CONCLUDED' })]),
+    'GET /api/v1/interests/preferences': () => json({ personalized: false }),
     ...surcharge,
   });
 }
@@ -63,7 +64,16 @@ describe('Mon espace', () => {
     await utilisateur.click(recherches);
     await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer les préférences' }));
     expect(await screen.findByText('Préférences enregistrées.')).toBeInTheDocument();
-    expect(corpsEnvoye(fetch, 'PUT', `${API}/preferences`)).toEqual({ offers: true, messages: false, wishes: true });
+    await utilisateur.click(screen.getByLabelText(/catégories que je consulte souvent/));
+    await utilisateur.click(screen.getByRole('button', { name: 'Enregistrer les préférences' }));
+    await vi.waitFor(() =>
+      expect(corpsEnvoye(fetch, 'PUT', `${API}/preferences`)).toEqual({
+        offers: true,
+        messages: false,
+        wishes: true,
+        browsing: true,
+      }),
+    );
   });
 
   it('ajoute et supprime des objets recherchés, et affiche les refus du service', async () => {

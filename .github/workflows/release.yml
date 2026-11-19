@@ -116,6 +116,7 @@ jobs:
           image-ref: ${{ steps.meta.outputs.ref }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
           exit-code: "1"
       # SBOM écrit dans un fichier puis joint par ce job seulement : l'option « upload-release-assets » de
       # sbom-action relit les artefacts de tout le run et échouait (404) quand les jobs parallèles écrivaient
