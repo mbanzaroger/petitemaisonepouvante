@@ -169,7 +169,7 @@ spec:
   ingress:
     - from:
         - podSelector:
-            matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service] }]
+            matchExpressions: [{ key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service] }]
       ports: [{ port: 8080 }]
 ---
 # Base de l'espace communautaire : accessible uniquement par community-service (aucun autre service, pas le broker).
