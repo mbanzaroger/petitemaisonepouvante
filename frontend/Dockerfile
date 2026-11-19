@@ -19,13 +19,15 @@ USER root
 # Correctifs publiés après l'image de base : paquets Alpine (brotli, curl, expat, musl, zlib… : Trivy, 16/11/2026)
 # et nginx lui-même depuis le dépôt officiel nginx.org (1.30.7 du 18/11/2026 : 10 CVE). La clé de signature du dépôt
 # est vérifiée par son empreinte SHA-512 (fichier versionné, même valeur que l'image officielle) avant d'être utilisée,
-# puis retirée. Sans effet dès que l'image de base embarque les versions corrigées.
+# puis retirée. nginx et ses modules sont réinstallés sans version (l'image de base les fige dans /etc/apk/world, ce
+# qui empêche « apk upgrade » de les mettre à jour). Sans effet dès que l'image de base embarque les versions corrigées.
 COPY nginx/nginx_signing.rsa.pub.sha512 /tmp/
 RUN apk upgrade --no-cache \
     && wget -q -O /tmp/nginx_signing.rsa.pub https://nginx.org/keys/nginx_signing.rsa.pub \
     && (cd /tmp && sha512sum -c nginx_signing.rsa.pub.sha512) \
     && mv /tmp/nginx_signing.rsa.pub /etc/apk/keys/ \
-    && apk upgrade --no-cache -X "https://nginx.org/packages/alpine/v$(grep -Eo '^[0-9]+\.[0-9]+' /etc/alpine-release)/main" \
+    && apk add --no-cache -X "https://nginx.org/packages/alpine/v$(grep -Eo '^[0-9]+\.[0-9]+' /etc/alpine-release)/main" \
+        $(apk info | grep '^nginx') \
     && rm -f /etc/apk/keys/nginx_signing.rsa.pub /tmp/nginx_signing.rsa.pub.sha512 \
     && rm -f /etc/nginx/conf.d/default.conf /usr/share/nginx/html/* \
     && nginx -v
