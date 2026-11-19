@@ -13,7 +13,7 @@ Demandes de la recette du 19/11/2026.
 - **Commandes clients** (US19) : page d'administration des commandes de tous les clients (client, articles, total, statut), filtre par statut, synthèse (nombre par statut, chiffre d'affaires confirmé). API `GET /api/v1/orders/admin` et `/summary` ; le nom affiché du client est enregistré avec chaque nouvelle commande (migration V3).
 - **Inscription des clients** (US20) : « Créer un compte » dans l'en-tête, au panier et sur les pages réservées ; formulaire Keycloak en français (« Créer votre compte client »), rôle `CUSTOMER` attribué d'office, politique de mot de passe (12 caractères au moins), e-mail unique.
 - Gateway : routes `catalog-admin` et `orders-admin` (rôle `ADMIN`) ; relais local nginx.
-- Qualité : tests d'intégration des trois services, 2 scénarios Cucumber, 9 contrôles de fumée, parcours Playwright + axe (création de produit, réapprovisionnement, commande par un client et suivi par l'administrateur ; inscription réelle d'un client).
+- Qualité : tests d'intégration des trois services, 2 scénarios Cucumber, 8 contrôles de fumée, parcours Playwright + axe (création de produit, réapprovisionnement, commande par un client et suivi par l'administrateur ; inscription réelle d'un client).
 
 ### Modifié
 - Budget de poids du site : total relevé à 155 Ko (pages d'administration chargées à la demande) ; premier affichage inchangé (≤ 110 Ko).
