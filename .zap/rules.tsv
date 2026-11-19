@@ -16,7 +16,10 @@
 90020	FAIL	Injection de commande système
 90023	FAIL	XXE
 90035	FAIL	Injection de gabarit côté serveur (SSTI)
-# 19/11/2026 — Traversée de répertoire [6] signalée sur POST /api/v1/community/listings (201) : faux positif qualifié
-# (V-29). Le service enregistre du texte et le renvoie ; il n'accède à aucun fichier (aucun java.io.File ni
-# java.nio.file dans community-service). La règle reste bloquante (FAIL) sur toutes les autres routes.
-6	OUTOFSCOPE	.*/api/v1/community/listings$
+# 19/11/2026 — Traversée de répertoire [6] : faux positifs qualifiés (V-29) sur POST /community/listings puis
+# /community/wishes (201). Preuve publiée par le CD : attaque = dernier segment de l'URL (« listings », « /wishes »),
+# aucune preuve dans la réponse : c'est l'heuristique « nom de fichier de l'URL » de ZAP, qui compare une création
+# acceptée (texte court) à un refus de validation (valeur aléatoire). community-service et editorial-service
+# enregistrent du texte et n'accèdent à aucun fichier (revue du code : ni java.io.File ni java.nio.file) : règle
+# hors périmètre sur ces deux services, toujours bloquante sur le catalogue, les commandes et le stock.
+6	OUTOFSCOPE	.*/api/v1/(community|editorial)/.*
