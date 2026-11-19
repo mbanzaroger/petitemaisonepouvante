@@ -4,6 +4,9 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+### Corrigé
+- CI : la construction d'une image Java est retentée automatiquement une fois, deux minutes plus tard, quand Maven Central refuse le runner (429, ou artefact déclaré absent) ; il n'est plus nécessaire de relancer le job à la main.
+
 ## [1.5.0] - 2026-11-19
 
 Demandes de la recette du 19/11/2026.
