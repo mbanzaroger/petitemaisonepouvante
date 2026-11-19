@@ -18,13 +18,15 @@ import io.micrometer.core.instrument.MeterRegistry;
  * <ul>
  *   <li>{@code pme_stock_reservations_total{outcome}} : réservations acceptées, refusées ou doublons ignorés
  *       (un doublon prouve en production l'idempotence validée par l'expérimentation E3) ;</li>
- *   <li>{@code pme_outbox_pending} : événements en attente de publication.</li>
+ *   <li>{@code pme_outbox_pending} : événements en attente de publication ;</li>
+ *   <li>{@code pme_stock_restocked_units_total} : unités ajoutées par réapprovisionnement (US18).</li>
  * </ul>
  */
 @Component
 public class ReservationMetrics {
 
     private final Map<Outcome, Counter> reservations = new EnumMap<>(Outcome.class);
+    private final Counter restocked;
 
     public ReservationMetrics(MeterRegistry registry, OutboxRepository outbox) {
         for (Outcome outcome : Outcome.values()) {
@@ -33,9 +35,17 @@ public class ReservationMetrics {
                     .tag("outcome", outcome.name().toLowerCase(Locale.ROOT))
                     .register(registry));
         }
+        restocked = Counter.builder("pme.stock.restocked.units")
+                .description("Unités ajoutées au stock par réapprovisionnement (administration)")
+                .register(registry);
         Gauge.builder("pme.outbox.pending", outbox, OutboxRepository::countPending)
                 .description("Événements de la boîte d'envoi pas encore publiés")
                 .register(registry);
+    }
+
+    /** US18 — unités ajoutées par un réapprovisionnement validé. */
+    public void restocked(int units) {
+        restocked.increment(units);
     }
 
     /** Appelé après le retour de la méthode transactionnelle, donc après validation de la transaction. */

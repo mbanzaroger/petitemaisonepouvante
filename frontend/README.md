@@ -12,7 +12,7 @@ sécurité : [analyse de sécurité §4](../docs/13-analyse-securite.md).
 | `npm run lint` / `npm run typecheck` | ESLint (dont `jsx-a11y` strict) et TypeScript strict |
 | `npm test` / `npm run test:coverage` | tests unitaires et de composants (Vitest, Testing Library), seuil 80 % des lignes |
 | `npm run build` | bundle de production dans `dist/` (aucun script ni style en ligne : CSP stricte) |
-| `npm run budget` | poids gzip du premier affichage (≤ 110 Ko) et de l'ensemble (≤ 140 Ko), après `build` |
+| `npm run budget` | poids gzip du premier affichage (≤ 110 Ko) et de l'ensemble (≤ 155 Ko), après `build` |
 | `npm run e2e` | tests de bout en bout Playwright + axe sur un site déployé (`SITE_URL`, `PME_ALICE_PASSWORD`, `PME_BOB_PASSWORD`, `PME_ADMIN_PME_PASSWORD` ; `PW_CHROMIUM_PATH` pour un Chromium déjà installé) |
 | `node scripts/lighthouse-seuils.mjs <dossier>` | contrôle des rapports Lighthouse JSON produits par le CD (seuils par catégorie) |
 

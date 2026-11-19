@@ -60,6 +60,12 @@ final class PmeApi {
         return send(HttpRequest.newBuilder(uri(service, path)).GET(), user);
     }
 
+    Response put(String service, String path, String user, String json) {
+        return send(HttpRequest.newBuilder(uri(service, path))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(json)), user);
+    }
+
     Response post(String service, String path, String user, String json) {
         return send(HttpRequest.newBuilder(uri(service, path))
                 .header("Content-Type", "application/json")

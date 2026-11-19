@@ -56,7 +56,7 @@ describe('Panier', () => {
     expect(alerte).toHaveTextContent("n'a pas le profil client");
     expect(screen.queryByRole('button', { name: 'Valider la commande' })).not.toBeInTheDocument();
     await utilisateur.click(within(alerte).getByRole('button', { name: 'Changer de compte' }));
-    expect(auth.deconnecter).toHaveBeenCalled();
+    expect(auth.changerDeCompte).toHaveBeenCalled();
   });
 
   it('propose de se reconnecter quand la session a expiré', async () => {

@@ -1,5 +1,7 @@
 package com.petitemaisonepouvante.stock.reservation;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -56,6 +58,41 @@ public class StockRepository {
                 .param("product", productId)
                 .param("quantity", quantity)
                 .update();
+    }
+
+    /**
+     * US18 — réapprovisionnement : ajoute la quantité au stock disponible, en créant la ligne d'un produit qui n'a
+     * pas encore de stock. Une réservation en cours sur la même ligne est attendue (verrou de ligne).
+     */
+    public StockLevel restock(UUID productId, int quantity) {
+        return jdbc.sql("""
+                insert into stock_item (product_id, available) values (:product, :quantity)
+                on conflict (product_id) do update
+                set available = stock_item.available + excluded.available, version = stock_item.version + 1
+                returning product_id, available, reserved
+                """)
+                .param("product", productId)
+                .param("quantity", quantity)
+                .query(StockRepository::mapLevel)
+                .single();
+    }
+
+    /** US18 — correction d'inventaire : fixe la quantité disponible ; les quantités réservées ne changent pas. */
+    public StockLevel setAvailable(UUID productId, int available) {
+        return jdbc.sql("""
+                insert into stock_item (product_id, available) values (:product, :available)
+                on conflict (product_id) do update
+                set available = excluded.available, version = stock_item.version + 1
+                returning product_id, available, reserved
+                """)
+                .param("product", productId)
+                .param("available", available)
+                .query(StockRepository::mapLevel)
+                .single();
+    }
+
+    private static StockLevel mapLevel(ResultSet rs, int row) throws SQLException {
+        return new StockLevel(rs.getObject("product_id", UUID.class), rs.getInt("available"), rs.getInt("reserved"));
     }
 
     public Optional<StockLevel> find(UUID productId) {

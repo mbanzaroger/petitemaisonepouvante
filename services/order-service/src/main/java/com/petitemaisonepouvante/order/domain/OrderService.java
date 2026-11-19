@@ -56,7 +56,7 @@ public class OrderService {
      * Le prix de chaque ligne est relu dans le catalogue : un prix fourni par le client serait ignoré (STRIDE : Tampering).
      */
     @Transactional
-    public Order placeOrder(String customerId, PlaceOrderRequest request) {
+    public Order placeOrder(String customerId, String customerName, PlaceOrderRequest request) {
         Set<UUID> distinct = new HashSet<>();
         for (PlaceOrderRequest.Line line : request.lines()) {
             if (!distinct.add(line.productId())) {
@@ -82,7 +82,8 @@ public class OrderService {
                     product.price().amountCents()));
         }
 
-        Order order = new Order(UUID.randomUUID(), customerId, OrderStatus.PENDING, Order.total(lines), currency,
+        Order order = new Order(UUID.randomUUID(), customerId, displayName(customerName), OrderStatus.PENDING,
+                Order.total(lines), currency,
                 null, null, List.copyOf(lines));
         orders.insert(order);
 
@@ -125,5 +126,29 @@ public class OrderService {
             }
         });
         return createdAt.isPresent();
+    }
+
+    /** Nom affiché du client (preferred_username), borné à la taille de la colonne ; absent si le jeton n'en a pas. */
+    static String displayName(String name) {
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        String trimmed = name.strip();
+        return trimmed.length() <= 100 ? trimmed : trimmed.substring(0, 100);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Order> listAll(OrderStatus status, int page, int size) {
+        return orders.findAll(status, page, size);
+    }
+
+    @Transactional(readOnly = true)
+    public long countAll(OrderStatus status) {
+        return orders.countAll(status);
+    }
+
+    @Transactional(readOnly = true)
+    public OrderRepository.Summary summary() {
+        return orders.summary();
     }
 }

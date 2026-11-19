@@ -108,6 +108,9 @@ function Actions({ annonce, recharger }: { annonce: Annonce; recharger: () => vo
     return (
       <div role="alert" className="alerte">
         <p>Votre compte n'a pas le profil client : il ne peut pas faire de proposition.</p>
+        <button type="button" className="bouton bouton-secondaire" onClick={auth.changerDeCompte}>
+          Changer de compte
+        </button>
       </div>
     );
   }

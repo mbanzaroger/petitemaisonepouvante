@@ -5,6 +5,18 @@ import type { EtatAuth, SourceAuth } from './auth';
 /** Marge de validité exigée avant chaque appel : le jeton est renouvelé s'il expire dans moins de 30 s. */
 const MARGE_VALIDITE_S = 30;
 
+/**
+ * Paramètre posé sur l'adresse de retour de la déconnexion par « Changer de compte » : au retour, le formulaire de
+ * connexion s'ouvre directement. Sans déconnexion préalable, Keycloak reconnecterait la session en cours (SSO).
+ */
+const PARAM_CONNEXION = 'connexion';
+
+function adresseSans(parametre: string): string {
+  const url = new URL(window.location.href);
+  url.searchParams.delete(parametre);
+  return url.toString();
+}
+
 type JetonPme = KeycloakTokenParsed & { preferred_username?: string };
 
 export function etatDepuisKeycloak(pret: boolean, authentifie: boolean, jeton?: JetonPme, echec = false): EtatAuth {
@@ -59,6 +71,11 @@ export function creerSourceKeycloak(config: AppConfig): SourceAuth & { demarrer(
         pret = true;
         notifier();
       }
+      if (new URL(window.location.href).searchParams.has(PARAM_CONNEXION)) {
+        const retour = adresseSans(PARAM_CONNEXION);
+        window.history.replaceState(window.history.state, '', retour);
+        if (!keycloak.authenticated && !echec) void keycloak.login({ redirectUri: retour });
+      }
     },
     etat: () => etat,
     abonner(rappel) {
@@ -70,6 +87,14 @@ export function creerSourceKeycloak(config: AppConfig): SourceAuth & { demarrer(
     },
     deconnecter() {
       void keycloak.logout({ redirectUri: `${window.location.origin}/` });
+    },
+    inscrire() {
+      void keycloak.register({ redirectUri: window.location.href });
+    },
+    changerDeCompte() {
+      const retour = new URL(window.location.href);
+      retour.searchParams.set(PARAM_CONNEXION, '1');
+      void keycloak.logout({ redirectUri: retour.toString() });
     },
     async jeton() {
       if (!keycloak.authenticated) return undefined;

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { auditerAccessibilite, seConnecter } from './outils';
+import { auditerAccessibilite, motDePasse, seConnecter } from './outils';
 
 test.describe('Sécurité du site', () => {
   test('en-têtes de sécurité et CSP stricte sur la page servie', async ({ request }) => {
@@ -34,6 +34,21 @@ test.describe('Sécurité du site', () => {
     // Une page tierce ne peut donc pas déclencher de commande au nom de l'utilisateur (CSRF).
     const statut = await page.evaluate(async () => (await fetch('/api/v1/orders', { credentials: 'include' })).status);
     expect(statut).toBe(401);
+  });
+
+  test('un compte refusé change de compte sans rester bloqué par sa session', async ({ page }) => {
+    await page.goto('/commandes');
+    await seConnecter(page, 'bob');
+    await expect(page.getByText(/Vous êtes connecté avec le compte « bob »/)).toBeVisible();
+    // La session bob est fermée puis le formulaire s'ouvre directement : sans cela, Keycloak reconnecterait bob.
+    await page.getByRole('main').getByRole('button', { name: 'Changer de compte' }).click();
+    await page.waitForURL(/\/realms\/pme\/(protocol\/openid-connect\/auth|login-actions)/);
+    await page.locator('#username').fill('alice');
+    await page.locator('#password').fill(motDePasse('alice'));
+    await page.locator('#kc-login').click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Mes commandes' })).toBeVisible();
+    await expect(page.getByRole('banner').getByText('alice', { exact: true })).toBeVisible();
+    await expect(page).not.toHaveURL(/connexion=/);
   });
 });
 

@@ -4,11 +4,22 @@
   "sslRequired": "external",
   "accessTokenLifespan": 300,
   "bruteForceProtected": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "editUsernameAllowed": false,
+  "verifyEmail": false,
+  "resetPasswordAllowed": false,
+  "passwordPolicy": "length(12) and maxLength(64) and notUsername and notEmail",
+  "defaultRoles": [
+    "CUSTOMER"
+  ],
   "roles": {
     "realm": [
       {
         "name": "CUSTOMER",
-        "description": "Client : passer et consulter ses commandes"
+        "description": "Client : passer et consulter ses commandes ; attribué à chaque compte créé par inscription"
       },
       {
         "name": "MODERATOR",
@@ -16,7 +27,7 @@
       },
       {
         "name": "ADMIN",
-        "description": "Gestion du catalogue et du stock"
+        "description": "Administration de la boutique : produits, stock, commandes des clients, modération, rédaction"
       }
     ]
   },

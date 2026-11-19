@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 class OrderTest {
@@ -25,5 +26,14 @@ class OrderTest {
         assertThatThrownBy(() -> line(10, Integer.MAX_VALUE).subtotalCents()).isInstanceOf(ArithmeticException.class);
         assertThatThrownBy(() -> Order.total(List.of(line(1, Integer.MAX_VALUE), line(1, 1))))
                 .isInstanceOf(ArithmeticException.class);
+    }
+
+    @Test
+    @DisplayName("US19 — Le nom affiché du client est nettoyé et borné à 100 caractères")
+    void nomAffiche() {
+        assertThat(OrderService.displayName(null)).isNull();
+        assertThat(OrderService.displayName("   ")).isNull();
+        assertThat(OrderService.displayName(" alice ")).isEqualTo("alice");
+        assertThat(OrderService.displayName("x".repeat(150))).hasSize(100);
     }
 }

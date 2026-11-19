@@ -25,13 +25,19 @@ export function DonneesPersonnellesPage() {
           </thead>
           <tbody>
             <tr>
-              <th scope="row">Compte : identifiant, nom, adresse électronique, mot de passe (stocké haché)</th>
+              <th scope="row">
+                Compte, créé par vous à l'inscription : identifiant, prénom, nom, adresse électronique, mot de passe
+                (stocké haché)
+              </th>
               <td>Connexion et gestion du compte</td>
               <td>Exécution du contrat</td>
               <td>Durée de vie du compte, puis 3 ans sans activité</td>
             </tr>
             <tr>
-              <th scope="row">Commandes : produits, quantités, montants, dates, statut</th>
+              <th scope="row">
+                Commandes : produits, quantités, montants, dates, statut ; identifiant du compte, visible de l'équipe
+                qui traite les commandes
+              </th>
               <td>Traitement et suivi des commandes, historique</td>
               <td>Exécution du contrat ; obligations comptables</td>
               <td>10 ans pour les pièces comptables</td>

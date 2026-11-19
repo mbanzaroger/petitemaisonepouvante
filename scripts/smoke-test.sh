@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests de bout en bout sur l'environnement de staging, à travers le Gateway (TLS + JWT) :
 # US1 à US4, saga complète order → stock → order, espace communautaire (US8 à US12), recommandations (US13),
-# éditions (US15 à US17), contrôle d'accès,
+# éditions (US15 à US17), administration de la boutique et inscription (US18 à US20), contrôle d'accès,
 # corrélation, limitation de débit.
 # Usage : scripts/smoke-test.sh https://api.pme.local:8443
 # Variables : PME_CA_CERT, KEYCLOAK_URL, PME_ALICE_PASSWORD, PME_BOB_PASSWORD, PME_CAROL_PASSWORD, PME_ADMIN_PME_PASSWORD
@@ -70,6 +70,24 @@ check "US17 — abonnement numérique d'alice" 201 "$(code -X POST -H "Authoriza
 check "US17 — numéro inclus dans l'abonnement" SUBSCRIPTION "$(api -H "Authorization: Bearer $alice" "$E/issues/35/pages/3" | jq -r '.access // empty')"
 check "US15 — rédaction refusée à un client (Gateway)" 403 "$(code -H "Authorization: Bearer $alice" "$E/admin/paper-subscribers")"
 check "US17 — liste d'expédition ouverte à ADMIN" 200 "$(code -H "Authorization: Bearer $admin" "$E/admin/paper-subscribers")"
+
+# Administration de la boutique (US18, US19) et inscription (US20). Le produit créé est retiré de la vente à la fin :
+# le catalogue garde ses 11 produits pour les tests d'acceptation qui suivent.
+A="$BASE_URL/api/v1/catalog/admin/products"
+creation=$(jq -nc --arg sku "SMOKE-$(date +%s)" '{sku: $sku, name: "Produit des tests de fumée", description: "",
+  priceCents: 1990, category: "Goodies", exclusive: false}')
+produit=$(api -X POST -H "Authorization: Bearer $admin" -H 'Content-Type: application/json' -d "$creation" "$A" | jq -r '.id // empty')
+check "US18 — produit créé par ADMIN" oui "$([ -n "$produit" ] && echo oui || echo non)"
+check "US18 — création de produit refusée à un client (Gateway)" 403 "$(code -X POST -H "Authorization: Bearer $alice" -H 'Content-Type: application/json' -d "$creation" "$A")"
+check "US18 — réapprovisionnement du nouveau produit" 4 "$(api -X POST -H "Authorization: Bearer $admin" -H 'Content-Type: application/json' -d '{"quantity":4}' "$BASE_URL/api/v1/stock/$produit/restock" | jq -r '.available // empty')"
+order_new=$(api -X POST -H "Authorization: Bearer $carol" -H 'Content-Type: application/json' \
+  -d "{\"lines\":[{\"productId\":\"$produit\",\"quantity\":1}]}" "$BASE_URL/api/v1/orders" | jq -r '.id // empty')
+check "US18 — nouveau produit commandé puis confirmé" CONFIRMED "$(await_status "$carol" "$order_new" CONFIRMED)"
+check "US19 — commande de carol suivie par ADMIN" carol "$(api -H "Authorization: Bearer $admin" "$BASE_URL/api/v1/orders/admin?status=CONFIRMED&size=100" | jq -r --arg id "$order_new" '.content[] | select(.id == $id) | .customerName')"
+check "US19 — suivi des commandes refusé à un client (Gateway)" 403 "$(code -H "Authorization: Bearer $alice" "$BASE_URL/api/v1/orders/admin")"
+retrait=$(jq -nc '{name: "Produit des tests de fumée", description: "", priceCents: 1990, category: "Goodies", exclusive: false, active: false}')
+check "US18 — produit retiré de la vente" false "$(api -X PUT -H "Authorization: Bearer $admin" -H 'Content-Type: application/json' -d "$retrait" "$A/$produit" | jq -r '.available')"
+check "US20 — formulaire d'inscription des clients" 200 "$(code "$KEYCLOAK_URL/realms/pme/protocol/openid-connect/registrations?client_id=pme-web&response_type=code&scope=openid&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fapp.pme.local%3A8443%2F")"
 # Espace communautaire : annonces publiques, publication et proposition entre membres, salons, modération.
 C="$BASE_URL/api/v1/community"
 annonces=$(api "$C/listings" | jq -r '.totalElements // 0')

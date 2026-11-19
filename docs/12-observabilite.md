@@ -70,6 +70,7 @@ Les threads diffèrent (requête HTTP, publication planifiée, consommateur Rabb
 | `pme_saga_duration_seconds` | histogramme | — | Durée entre la création d'une commande et son état final |
 | `pme_stock_reservations_total` | compteur | `outcome` = `reserved`, `rejected`, `duplicate` | Issue des demandes de réservation ; `duplicate` prouve en production l'idempotence validée par E3 |
 | `pme_outbox_pending` | jauge | `service` | Événements écrits mais pas encore publiés (broker injoignable si elle reste > 0) |
+| `pme_stock_restocked_units_total` | compteur | — | Unités ajoutées par réapprovisionnement depuis l'administration (US18) |
 | `rabbitmq_detailed_queue_messages_ready` | jauge | `queue` | Messages en attente par file, dont les files de rebut `*.dlq` |
 | `jvm_memory_used_bytes` | jauge | `area` | Mémoire JVM |
 | `nginx_http_requests_total` | compteur | `service` = `web-frontend` | Requêtes servies par le site (pages, fichiers, configuration) |

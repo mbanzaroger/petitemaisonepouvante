@@ -113,9 +113,14 @@ describe('Accès aux pages de commandes', () => {
     expect(auth.connecter).toHaveBeenCalled();
   });
 
-  it('refuse un compte sans rôle client', () => {
+  it('refuse un compte sans rôle client et propose de changer de compte', async () => {
     simulerApi({});
-    rendreApp('/commandes', fausseAuth({ connecte: true, utilisateur: 'bob', roles: [] }));
+    const auth = fausseAuth({ connecte: true, utilisateur: 'bob', roles: [] });
+    const { utilisateur } = rendreApp('/commandes', auth);
     expect(screen.getByRole('heading', { level: 1, name: 'Accès refusé' })).toBeInTheDocument();
+    const principal = within(screen.getByRole('main'));
+    expect(principal.getByText(/Vous êtes connecté avec le compte « bob »/)).toBeInTheDocument();
+    await utilisateur.click(principal.getByRole('button', { name: 'Changer de compte' }));
+    expect(auth.changerDeCompte).toHaveBeenCalled();
   });
 });

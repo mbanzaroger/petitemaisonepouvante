@@ -25,10 +25,18 @@ function Commander({ bloque }: { bloque: boolean }) {
   if (!auth.connecte) {
     return (
       <div className="commande-action">
-        <p>Connectez-vous pour valider votre commande : votre panier est conservé.</p>
-        <button type="button" className="bouton" onClick={auth.connecter}>
-          Se connecter pour commander
-        </button>
+        <p>
+          Connectez-vous pour valider votre commande, ou créez votre compte client en quelques secondes : votre panier
+          est conservé.
+        </p>
+        <div className="actions">
+          <button type="button" className="bouton" onClick={auth.connecter}>
+            Se connecter pour commander
+          </button>
+          <button type="button" className="bouton bouton-secondaire" onClick={auth.inscrire}>
+            Créer un compte client
+          </button>
+        </div>
       </div>
     );
   }
@@ -40,7 +48,7 @@ function Commander({ bloque }: { bloque: boolean }) {
           n'a pas le profil client et ne peut pas passer de commande. Votre panier est conservé : connectez-vous avec un
           compte client pour le valider.
         </p>
-        <button type="button" className="bouton bouton-secondaire" onClick={auth.deconnecter}>
+        <button type="button" className="bouton bouton-secondaire" onClick={auth.changerDeCompte}>
           Changer de compte
         </button>
       </div>

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ACCES_MEMBRE, ROLE_CLIENT, aLeRole, estMembre, useAuth, type Role } from '../auth/auth';
+import { ACCES_MEMBRE, ROLE_ADMIN, ROLE_CLIENT, aLeRole, estMembre, useAuth, type Role } from '../auth/auth';
 import { useTitre } from '../hooks/useTitre';
 import { Chargement } from './Etats';
 
@@ -44,16 +44,28 @@ export function ConnexionRequise({ children, role = ROLE_CLIENT }: { children: R
     return (
       <Refus titre="Connexion requise">
         <p>{TEXTES[role].connexion}</p>
-        <button type="button" className="bouton" onClick={auth.connecter}>
-          Se connecter
-        </button>
+        <div className="actions">
+          <button type="button" className="bouton" onClick={auth.connecter}>
+            Se connecter
+          </button>
+          {role !== ROLE_ADMIN && (
+            <button type="button" className="bouton bouton-secondaire" onClick={auth.inscrire}>
+              Créer un compte client
+            </button>
+          )}
+        </div>
       </Refus>
     );
   }
   if (role === ACCES_MEMBRE ? !estMembre(auth) : !aLeRole(auth, role)) {
     return (
       <Refus titre="Accès refusé">
-        <p>{TEXTES[role].refus}</p>
+        <p>
+          Vous êtes connecté avec le compte « {auth.utilisateur} ». {TEXTES[role].refus}
+        </p>
+        <button type="button" className="bouton" onClick={auth.changerDeCompte}>
+          Changer de compte
+        </button>
       </Refus>
     );
   }
