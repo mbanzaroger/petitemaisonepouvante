@@ -6,7 +6,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ### Corrigé
 - Supervision : `verify.sh` lit les journaux de toutes les répliques d'un service (l'autoscaling peut en démarrer plusieurs pendant le test de charge ; une seule était lue, d'où un échec intermittent de la corrélation des appels du site).
-- CI : la construction d'une image Java est retentée automatiquement une fois, deux minutes plus tard, quand Maven Central refuse le runner (429, ou artefact déclaré absent) ; il n'est plus nécessaire de relancer le job à la main.
+- CI et release : l'image d'un service Java est construite à partir du jar compilé et testé (substitué à l'étape Maven du Dockerfile) ; plus aucun téléchargement Maven pendant `docker build`, où Maven Central refusait certains runners. La seconde tentative automatique ajoutée juste avant échouait de la même façon ; elle est retirée.
 
 ## [1.5.0] - 2026-11-19
 
