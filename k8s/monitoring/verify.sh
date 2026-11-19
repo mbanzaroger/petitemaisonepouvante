@@ -7,6 +7,9 @@
 set -uo pipefail
 CORRELATION_ID="${CORRELATION_ID:-smoke-saga-1}"
 RESULTS=$(mktemp); failures=0; pids=()
+# Journaux de toutes les répliques d'un service : l'autoscaling (HPA) peut en démarrer plusieurs pendant le test de
+# charge, et « kubectl logs deploy/… » n'en lit qu'une.
+logs_service() { kubectl -n pme logs -l "app=$1" --tail=-1 --max-log-requests=10 2>/dev/null; }
 # Valeurs attendues tirées du dépôt (elles suivent l'ajout d'un service, d'une alerte ou d'un panneau) :
 # une cible par microservice, plus RabbitMQ et le site.
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -60,8 +63,8 @@ via_grafana=$(jq -r '.results.A.frames[0].data.values[1][0] // 0' "$RESULTS.graf
 [ "$(positive "$via_grafana")" = oui ] || { echo "Réponse Grafana :"; head -c 600 "$RESULTS.grafana"; echo; }
 check "Métriques lisibles dans Grafana (source « prometheus »)" oui "$(positive "$via_grafana")"
 
-kubectl -n pme logs deploy/order-service --tail=-1 | grep -F "$CORRELATION_ID" > "$RESULTS.order"
-kubectl -n pme logs deploy/stock-service --tail=-1 | grep -F "$CORRELATION_ID" > "$RESULTS.stock"
+logs_service order-service | grep -F "$CORRELATION_ID" > "$RESULTS.order"
+logs_service stock-service | grep -F "$CORRELATION_ID" > "$RESULTS.stock"
 check "Corrélation $CORRELATION_ID : logs order-service (création, publication, résultat)" oui \
   "$([ "$(wc -l < "$RESULTS.order")" -ge 3 ] && echo oui || echo non)"
 check "Corrélation $CORRELATION_ID : logs stock-service (réservation, publication)" oui \
@@ -74,7 +77,7 @@ kubectl -n pme logs deploy/web-frontend -c web-frontend --tail=200 \
   | jq -cR 'fromjson? | select(.service == "web-frontend")' > "$RESULTS.web" || true
 check "Site : journaux d'accès au format JSON" oui "$([ -s "$RESULTS.web" ] && echo oui || echo non)"
 check "Site : appels du navigateur (web-…) corrélés dans les logs order-service" oui \
-  "$(kubectl -n pme logs deploy/order-service --tail=-1 | grep -q 'web-' && echo oui || echo non)"
+  "$(logs_service order-service | grep -q 'web-' && echo oui || echo non)"
 
 cat "$RESULTS" >> "$RESULTS.md"
 {
