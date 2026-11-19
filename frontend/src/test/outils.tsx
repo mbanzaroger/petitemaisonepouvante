@@ -16,6 +16,7 @@ export function fausseAuth(etat: Partial<EtatAuth> = {}) {
     abonner: () => () => undefined,
     connecter: vi.fn(),
     deconnecter: vi.fn(),
+    changerDeCompte: vi.fn(),
     jeton: vi.fn(async () => (courant.connecte ? 'jeton-de-test' : undefined)),
   } satisfies SourceAuth;
   return source;

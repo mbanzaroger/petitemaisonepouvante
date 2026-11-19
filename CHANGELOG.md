@@ -4,6 +4,11 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [1.4.1] - 2026-11-19
+
+### Corrigé
+- **Changer de compte** : un compte refusé (par exemple `bob`, sans profil client) restait reconnecté automatiquement par la session Keycloak quand on cliquait sur « Se connecter ». Les pages « Accès refusé », le panier, l'annonce de troc et le fanzine proposent désormais « Changer de compte » : la session est fermée et le formulaire de connexion s'ouvre aussitôt, avec retour sur la même page. Tests unitaires et parcours Playwright (bob refusé, puis connexion en alice).
+
 ## [1.4.0] - 2026-11-19
 ### Ajouté
 - **Recommandations** (US13) : sélection « Recommandé pour vous » sur le catalogue et « Vous aimerez aussi » sur les fiches, selon les recherches, consultations et achats du membre, avec la raison affichée ; consentement dans « Mon espace » (désactivé par défaut), effacement de l'historique, conservation 90 jours ; sélection commune pour les visiteurs.

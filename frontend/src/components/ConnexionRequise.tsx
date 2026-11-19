@@ -53,7 +53,12 @@ export function ConnexionRequise({ children, role = ROLE_CLIENT }: { children: R
   if (role === ACCES_MEMBRE ? !estMembre(auth) : !aLeRole(auth, role)) {
     return (
       <Refus titre="Accès refusé">
-        <p>{TEXTES[role].refus}</p>
+        <p>
+          Vous êtes connecté avec le compte « {auth.utilisateur} ». {TEXTES[role].refus}
+        </p>
+        <button type="button" className="bouton" onClick={auth.changerDeCompte}>
+          Changer de compte
+        </button>
       </Refus>
     );
   }

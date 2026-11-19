@@ -82,6 +82,17 @@ export function FanzinePage() {
           </button>
         </p>
       )}
+      {auth.connecte && !estMembre(auth) && (
+        <div className="alerte">
+          <p>
+            Le compte « {auth.utilisateur} » n'a pas le profil client : il lit les extraits mais ne peut ni acheter ni
+            s'abonner.
+          </p>
+          <button type="button" className="bouton bouton-secondaire" onClick={auth.changerDeCompte}>
+            Changer de compte
+          </button>
+        </div>
+      )}
       {numeros.chargement && <Chargement texte="Chargement des numéros…" />}
       {numeros.erreur && <MessageErreur erreur={numeros.erreur} onReessayer={numeros.recharger} />}
       {numeros.donnees && (

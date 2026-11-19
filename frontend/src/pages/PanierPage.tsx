@@ -40,7 +40,7 @@ function Commander({ bloque }: { bloque: boolean }) {
           n'a pas le profil client et ne peut pas passer de commande. Votre panier est conservé : connectez-vous avec un
           compte client pour le valider.
         </p>
-        <button type="button" className="bouton bouton-secondaire" onClick={auth.deconnecter}>
+        <button type="button" className="bouton bouton-secondaire" onClick={auth.changerDeCompte}>
           Changer de compte
         </button>
       </div>
