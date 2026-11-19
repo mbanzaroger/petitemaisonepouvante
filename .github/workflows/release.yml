@@ -93,6 +93,22 @@ jobs:
             [ "$PRERELEASE" = "true" ] || echo "$image:latest"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+      # Services Java : jar compilé sur le runner (dépôt Maven en cache), puis substitué à l'étape « build » du
+      # Dockerfile ; la construction de l'image ne télécharge rien (Maven Central refusait certains runners).
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        if: matrix.service != 'web-frontend'
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Compilation du jar
+        if: matrix.service != 'web-frontend'
+        working-directory: services/${{ matrix.service }}
+        run: |
+          if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
+          $MVN -B -ntp -q package -DskipTests
+          mkdir -p "$RUNNER_TEMP/etape-build/workspace/target"
+          cp "target/${{ matrix.service }}.jar" "$RUNNER_TEMP/etape-build/workspace/target/"
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
@@ -103,6 +119,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: ${{ matrix.service == 'web-frontend' && 'frontend' || format('services/{0}', matrix.service) }}
+          build-contexts: ${{ matrix.service != 'web-frontend' && format('build={0}/etape-build', runner.temp) || '' }}
           push: true
           provenance: mode=max
           sbom: true

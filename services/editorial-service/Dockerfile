@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Étape 1 : compilation (image de build, non livrée)
+# Étape 1 : compilation (image de build, non livrée). En CI et en release, cette étape est remplacée par le jar
+# déjà compilé et testé (build-contexts : build=…) : l'image embarque le code testé, sans téléchargement Maven.
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY pom.xml .
