@@ -4,7 +4,9 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
 const BUDGET_ENTREE_KO = 110; // bundle chargé au premier affichage (React, routeur, keycloak-js, parcours d'achat)
-const BUDGET_TOTAL_KO = 140; // JavaScript et CSS de toutes les pages
+// Total relevé de 140 à 155 Ko en v1.5.0 : pages d'administration de la boutique chargées à la demande (produits,
+// commandes clients) ; le premier affichage, seul vu par tous les visiteurs, garde son budget.
+const BUDGET_TOTAL_KO = 155; // JavaScript et CSS de toutes les pages
 
 const dossier = join(import.meta.dirname, '..', 'dist', 'assets');
 const fichiers = readdirSync(dossier)

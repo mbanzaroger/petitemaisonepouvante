@@ -5,10 +5,10 @@ La plateforme est à visée commerciale : la sécurité est une contrainte forte
 ## 1. Identité et contrôle d'accès
 | Rôle | Droits |
 |---|---|
-| Visiteur (anonyme) | Lecture du catalogue, des annonces de troc, des actualités et des extraits du fanzine |
+| Visiteur (anonyme) | Lecture du catalogue, des annonces de troc, des actualités et des extraits du fanzine ; création de son compte client (inscription : rôle `CUSTOMER` uniquement) |
 | `CUSTOMER` | Passer des commandes, consulter **ses** commandes ; espace communautaire ; acheter et lire le fanzine, s'abonner |
 | `MODERATOR` | Modérer l'espace communautaire (roadmap) |
-| `ADMIN` | Gestion du catalogue et du stock ; modération ; rédaction (actualités, articles) et liste d'expédition du fanzine papier |
+| `ADMIN` | Gestion des produits (création, modification, retrait de la vente), réapprovisionnement et inventaire, suivi des commandes de tous les clients ; modération ; rédaction (actualités, articles) et liste d'expédition du fanzine papier |
 
 - Authentification : OIDC (flux code + PKCE) via Keycloak ; pas d'authentification maison.
 - Chaque service valide le JWT (signature par JWKS, expiration, audience) et applique les rôles **côté serveur**.

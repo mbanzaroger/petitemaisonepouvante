@@ -9,6 +9,7 @@ export function AuthProvider({ source, children }: { source: SourceAuth; childre
       connecter: source.connecter,
       deconnecter: source.deconnecter,
       changerDeCompte: source.changerDeCompte,
+      inscrire: source.inscrire,
       jeton: source.jeton,
     }),
     [etat, source],

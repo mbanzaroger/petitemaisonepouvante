@@ -2,19 +2,19 @@ import { expect, test } from '@playwright/test';
 import { auditerAccessibilite, ouvrirConnexion, seConnecter } from './outils';
 
 test.describe('Espace administrateur', () => {
-  test('un administrateur consulte le stock en direct', async ({ page }, testInfo) => {
+  test('un administrateur consulte les produits et le stock en direct', async ({ page }, testInfo) => {
     await page.goto('/');
     await seConnecter(page, 'admin-pme');
     const navigation = page.getByRole('navigation', { name: 'Navigation principale' });
     await expect(navigation.getByRole('link', { name: 'Mes commandes' })).toHaveCount(0);
-    await navigation.getByRole('link', { name: 'Stock' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Stock' })).toBeFocused();
-    const tableau = page.getByRole('table', { name: /Stock des produits du catalogue/ });
+    await navigation.getByRole('link', { name: 'Produits et stock' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Produits et stock' })).toBeFocused();
+    const tableau = page.getByRole('table', { name: /Produits et stock/ });
     await expect(tableau.getByRole('row')).not.toHaveCount(1);
     await expect(tableau).toContainText(/Correct|Stock bas|Épuisé|Non suivi/);
     await auditerAccessibilite(page, testInfo, 'stock');
     await page.getByLabel(/N'afficher que les produits à surveiller/).check();
-    await expect(page.getByRole('status').filter({ hasText: 'à surveiller' })).toBeVisible();
+    await expect(page.getByText(/à surveiller sur cette page/)).toBeVisible();
   });
 
   test('un client est refusé sur la page de stock', async ({ page }) => {

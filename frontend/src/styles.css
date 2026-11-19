@@ -848,3 +848,30 @@ textarea {
 .liens-rapides a[aria-current='page'] {
   font-weight: 700;
 }
+
+/* --- Administration de la boutique (US18, US19) --- */
+
+.reapprovisionnement {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.reapprovisionnement input {
+  width: 6rem;
+  margin: 0;
+}
+
+.synthese {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.liste-simple {
+  margin: 0;
+  padding-left: 1.1rem;
+}

@@ -7,6 +7,7 @@ import java.util.UUID;
 public record Order(
         UUID id,
         String customerId,
+        String customerName,
         OrderStatus status,
         int totalCents,
         String currency,

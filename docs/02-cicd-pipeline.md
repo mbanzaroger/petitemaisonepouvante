@@ -60,7 +60,7 @@ Le déploiement en staging est un **workflow réutilisable** (`on: workflow_call
 | Tests d'intégration | Testcontainers (PostgreSQL, RabbitMQ réels) | `ci.yml` / `build-test` | Oui | 1 et fiabilité |
 | Tests d'acceptation | Cucumber, Gherkin en français (US1 à US4, 401/403/404), contre le staging déployé | `cd.yml` | Oui | Adéquation fonctionnelle |
 | Front-end : lint et types | ESLint (`jsx-a11y` strict, règles React), TypeScript strict | `ci.yml` / `frontend` | Oui | Maintenabilité, accessibilité |
-| Front-end : tests | Vitest + Testing Library (composants rendus, API simulée), build sans code en ligne, budget de poids gzip (premier affichage ≤ 110 Ko, total ≤ 140 Ko) | `ci.yml` / `frontend` | Oui | 1 — couverture ≥ 80 % (lignes, `coverage-summary.json`) ; performance (3) côté navigateur |
+| Front-end : tests | Vitest + Testing Library (composants rendus, API simulée), build sans code en ligne, budget de poids gzip (premier affichage ≤ 110 Ko, total ≤ 155 Ko) | `ci.yml` / `frontend` | Oui | 1 — couverture ≥ 80 % (lignes, `coverage-summary.json`) ; performance (3) côté navigateur |
 | Image du site | Démarrage en lecture seule et contrôle des en-têtes, Trivy, SBOM | `ci.yml` / `frontend-image` | Oui | 4 |
 | Tests de bout en bout | Playwright (Chromium) contre le site déployé : parcours confirmé et annulé, connexion Keycloak réelle, espace administrateur, refus selon le rôle, pages légales, en-têtes, absence de jeton dans le stockage | `cd.yml` | Oui | Adéquation fonctionnelle, sécurité |
 | Accessibilité | axe-core (WCAG 2.2 A/AA, base du RGAA 4.1) sur 14 pages ou états, dont la page de connexion Keycloak, captures jointes au rapport | `cd.yml` (Playwright) | Oui (0 violation) | Utilisabilité (ISO 25010) |

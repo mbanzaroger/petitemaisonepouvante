@@ -12,7 +12,8 @@ Fonctionnalités métier implémentées, de bout en bout dans le navigateur :
 - **commander un produit dérivé (figurines, goodies, Blu-ray) avec réservation de stock** (US1 à US7) ;
 - **espace communautaire** : troc et dons entre particuliers, conversation privée et salons de discussion entre passionnés, objets recherchés et notifications, modération (US8 à US12, v1.3.0) ;
 - **personnalisation** : recommandations de produits selon les recherches, consultations et achats, gamme exclusive Evil Ed, notifications selon la navigation, avec consentement (US13, US14) ;
-- **éditions** : actualités et articles de fond ouverts à tous, fanzine numérique (extrait, achat, liseuse et bibliothèque dans « Mon espace »), abonnement numérique ou papier et renouvellement (US15 à US17, ADR-006).
+- **éditions** : actualités et articles de fond ouverts à tous, fanzine numérique (extrait, achat, liseuse et bibliothèque dans « Mon espace »), abonnement numérique ou papier et renouvellement (US15 à US17, ADR-006) ;
+- **administration de la boutique et inscription** : création de produits et réapprovisionnement, suivi des commandes de tous les clients, création d'un compte client en ligne (US18 à US20, v1.5.0).
 
 Hébergement cible en Europe et feuille de route (enchères et diffusion des productions Evil Ed en v2, projections du festival en v3) : [ADR-006](docs/adr/ADR-006-service-editorial-hebergement-feuille-de-route.md).
 
@@ -68,12 +69,13 @@ Hébergement cible en Europe et feuille de route (enchères et diffusion des pro
 ```bash
 infra/init-env.sh                              # génère infra/.env (mots de passe aléatoires, jamais versionné)
 cd infra && docker compose --profile app up -d --build
-# Site http://localhost:5173 (alice ou carol : client et membre ; admin-pme : stock et modération) — API relayée sur la même origine
+# Site http://localhost:5173 (alice ou carol : client et membre ; admin-pme : produits, stock, commandes clients, modération, rédaction ;
+# « Créer un compte » pour un nouveau client) — API relayée sur la même origine
 # API : catalogue http://localhost:8081, commandes :8082, stock :8083, communauté :8084, éditions :8085 (ports liés à 127.0.0.1)
 # Keycloak http://localhost:8080 (admin / KEYCLOAK_ADMIN_PASSWORD) · RabbitMQ http://localhost:15672
 # Prometheus http://localhost:9090 · Grafana http://localhost:3000 (tableau de bord « PME — RED des microservices »)
 ```
-Comptes de test du royaume `pme` (mots de passe dans `infra/.env`) : `alice` et `carol` (CUSTOMER), `bob` (sans rôle), `admin-pme` (ADMIN).
+Comptes de test du royaume `pme` (mots de passe dans `infra/.env`) : `alice` et `carol` (CUSTOMER), `bob` (sans rôle), `admin-pme` (ADMIN). Tout visiteur peut aussi créer son compte client (« Créer un compte ») ; après une mise à jour, recréer Keycloak une fois : `docker compose up -d --force-recreate keycloak`.
 Sans `--profile app`, seules les dépendances démarrent (pour lancer les services depuis l'IDE).
 Pour travailler sur le site : `cd frontend && npm ci && npm run dev` (http://localhost:5173, à la place du conteneur `web-frontend` ; voir [`frontend/README.md`](frontend/README.md)).
 
@@ -124,6 +126,7 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Site web v2 : espace administrateur, conformité RGAA/RGPD, thème de connexion, Lighthouse, observabilité (v1.2.0)
 - [x] Espace communautaire : troc, dons, salons, notifications, modération (v1.3.0, ADR-004, ADR-005)
 - [x] Recommandations, gamme Evil Ed, actualités, fanzine numérique et abonnements (v1.4.0, ADR-006)
+- [x] Administration de la boutique (produits, stock, commandes clients) et inscription des clients (v1.5.0)
 - [ ] v2 : enchères, diffusion des productions Evil Ed ; v3 : projections en ligne du festival (ADR-006)
 - [ ] Répétitions chronométrées et vidéo de secours (#41)
 - [ ] SonarQube Cloud, indicateur 2 (#32)

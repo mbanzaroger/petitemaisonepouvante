@@ -41,7 +41,7 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderDto> place(@AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody PlaceOrderRequest request) {
-        Order order = orders.placeOrder(jwt.getSubject(), request);
+        Order order = orders.placeOrder(jwt.getSubject(), jwt.getClaimAsString("preferred_username"), request);
         return ResponseEntity.accepted()
                 .location(URI.create("/api/v1/orders/" + order.id()))
                 .body(OrderDto.from(order));

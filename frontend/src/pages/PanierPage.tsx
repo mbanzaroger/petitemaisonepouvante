@@ -25,10 +25,18 @@ function Commander({ bloque }: { bloque: boolean }) {
   if (!auth.connecte) {
     return (
       <div className="commande-action">
-        <p>Connectez-vous pour valider votre commande : votre panier est conservé.</p>
-        <button type="button" className="bouton" onClick={auth.connecter}>
-          Se connecter pour commander
-        </button>
+        <p>
+          Connectez-vous pour valider votre commande, ou créez votre compte client en quelques secondes : votre panier
+          est conservé.
+        </p>
+        <div className="actions">
+          <button type="button" className="bouton" onClick={auth.connecter}>
+            Se connecter pour commander
+          </button>
+          <button type="button" className="bouton bouton-secondaire" onClick={auth.inscrire}>
+            Créer un compte client
+          </button>
+        </div>
       </div>
     );
   }
