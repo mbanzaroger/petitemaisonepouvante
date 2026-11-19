@@ -1,7 +1,17 @@
 import { act, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Abonnement, Numero } from '../../api/editions';
-import { CLIENT, MEMBRE_ADMIN, corpsEnvoye, fausseAuth, json, page, rendreApp, simulerApi } from '../../test/outils';
+import {
+  CLIENT,
+  MEMBRE_ADMIN,
+  SANS_ROLE,
+  corpsEnvoye,
+  fausseAuth,
+  json,
+  page,
+  rendreApp,
+  simulerApi,
+} from '../../test/outils';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -84,6 +94,20 @@ describe('Fanzine numérique (US16)', () => {
     expect(await screen.findByText(/Numéro ajouté à votre bibliothèque/)).toBeInTheDocument();
     expect(await screen.findByRole('heading', { level: 2, name: 'Page 2 sur 3 : Titre 2' })).toBeInTheDocument();
     await vi.waitFor(() => expect(corpsEnvoye(fetch, 'PUT', `${API}/library/37/progress`)).toEqual({ page: 2 }));
+  });
+
+  it("explique à un compte sans profil client qu'il ne peut pas acheter et propose de changer de compte", async () => {
+    simulerApi({
+      [`GET ${API}/issues`]: () => json([numero(37)]),
+      [`GET ${API}/plans`]: () => json(FORMULES),
+    });
+    const bob = fausseAuth(SANS_ROLE);
+    const { utilisateur } = rendreApp('/fanzine', bob);
+    expect(await screen.findByRole('link', { name: "Lire l'extrait du numéro 37" })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Acheter/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Le compte « bob » n'a pas le profil client/)).toBeInTheDocument();
+    await utilisateur.click(screen.getByRole('button', { name: 'Changer de compte' }));
+    expect(bob.changerDeCompte).toHaveBeenCalled();
   });
 
   it("réserve la suite d'un numéro et permet de tourner les pages au clavier", async () => {

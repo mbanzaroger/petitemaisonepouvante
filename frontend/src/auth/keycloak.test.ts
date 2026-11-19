@@ -120,6 +120,37 @@ describe('creerSourceKeycloak', () => {
     expect(kc.logout).toHaveBeenCalledWith({ redirectUri: `${window.location.origin}/` });
   });
 
+  it('change de compte : déconnexion puis formulaire de connexion au retour sur la même page', async () => {
+    window.history.replaceState(null, '', '/mon-espace?onglet=notifications');
+    const source = creerSourceKeycloak(CONFIG);
+    const kc = instances[0]!;
+    source.changerDeCompte();
+    expect(kc.logout).toHaveBeenCalledWith({
+      redirectUri: `${window.location.origin}/mon-espace?onglet=notifications&connexion=1`,
+    });
+
+    // Retour de Keycloak, session fermée : le formulaire s'ouvre et le paramètre disparaît de l'adresse.
+    window.history.replaceState(null, '', '/mon-espace?onglet=notifications&connexion=1');
+    const retour = creerSourceKeycloak(CONFIG);
+    await retour.demarrer();
+    const kcRetour = instances[1]!;
+    expect(window.location.search).toBe('?onglet=notifications');
+    expect(kcRetour.login).toHaveBeenCalledWith({
+      redirectUri: `${window.location.origin}/mon-espace?onglet=notifications`,
+    });
+  });
+
+  it("n'ouvre pas le formulaire si une session est déjà active au retour", async () => {
+    window.history.replaceState(null, '', '/?connexion=1');
+    const source = creerSourceKeycloak(CONFIG);
+    const kc = instances[0]!;
+    connecter(kc);
+    await source.demarrer();
+    expect(window.location.search).toBe('');
+    expect(kc.login).not.toHaveBeenCalled();
+    window.history.replaceState(null, '', '/');
+  });
+
   it('permet de se désabonner', async () => {
     const source = creerSourceKeycloak(CONFIG);
     const rappel = vi.fn();

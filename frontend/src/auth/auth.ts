@@ -26,12 +26,15 @@ export interface SourceAuth {
   abonner(rappel: () => void): () => void;
   connecter(): void;
   deconnecter(): void;
+  /** Ferme la session en cours puis affiche le formulaire de connexion, en revenant sur la même page. */
+  changerDeCompte(): void;
   jeton: TokenProvider;
 }
 
 export interface Auth extends EtatAuth {
   connecter(): void;
   deconnecter(): void;
+  changerDeCompte(): void;
   jeton: TokenProvider;
 }
 

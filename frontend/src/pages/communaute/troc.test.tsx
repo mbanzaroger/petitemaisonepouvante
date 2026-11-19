@@ -191,8 +191,12 @@ describe("Détail d'une annonce", () => {
 
   it("refuse la proposition à un compte sans profil client et gère l'annonce introuvable", async () => {
     simulerApi({ [`GET ${API}/listings/${a.id}`]: () => json(a) });
-    const { unmount } = rendreApp(`/communaute/annonces/${a.id}`, fausseAuth(SANS_ROLE));
-    expect(await screen.findByRole('alert')).toHaveTextContent("n'a pas le profil client");
+    const bob = fausseAuth(SANS_ROLE);
+    const { unmount, utilisateur } = rendreApp(`/communaute/annonces/${a.id}`, bob);
+    const alerte = await screen.findByRole('alert');
+    expect(alerte).toHaveTextContent("n'a pas le profil client");
+    await utilisateur.click(within(alerte).getByRole('button', { name: 'Changer de compte' }));
+    expect(bob.changerDeCompte).toHaveBeenCalled();
     unmount();
     simulerApi({});
     rendreApp('/communaute/annonces/inconnue', fausseAuth(CLIENT));

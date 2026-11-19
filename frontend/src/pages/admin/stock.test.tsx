@@ -84,7 +84,8 @@ describe('Espace administrateur : stock', () => {
     api();
     rendreApp('/admin/stock', fausseAuth(CLIENT));
     expect(await screen.findByRole('heading', { level: 1, name: 'Accès refusé' })).toBeInTheDocument();
-    expect(screen.getByText('Cette page est réservée aux administrateurs de la boutique.')).toBeInTheDocument();
+    expect(screen.getByText(/Cette page est réservée aux administrateurs de la boutique\./)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Changer de compte' })).toBeInTheDocument();
   });
 
   it('demande une connexion d’administration à un visiteur', async () => {
