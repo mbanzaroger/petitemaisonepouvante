@@ -191,6 +191,42 @@ spec:
               - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: editorial-service, port: 8085 }]
 ---
+# Administration de la boutique (US18, US19) : gestion des produits (catalogue) et suivi des commandes de tous les
+# clients (le préfixe le plus long l'emporte sur la route « orders » réservée aux clients). Rôle ADMIN exigé.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: catalog-admin
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/catalog/admin } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: catalog-service, port: 8081 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: orders-admin
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/orders/admin } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: order-service, port: 8082 }]
+---
 # Site web : tout le reste de app.pme.local est servi par web-frontend (nginx), qui pose ses propres en-têtes
 # (CSP, anti-clickjacking) ; le Gateway ajoute HSTS puisque le TLS se termine ici.
 apiVersion: gateway.networking.k8s.io/v1
@@ -328,6 +364,8 @@ spec:
   targetRefs:
     - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community-moderation }
     - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial-admin }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: catalog-admin }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: orders-admin }
   jwt:
     providers:
       - name: keycloak

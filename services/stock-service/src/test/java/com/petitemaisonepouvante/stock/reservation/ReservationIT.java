@@ -5,6 +5,8 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -33,6 +35,7 @@ import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -246,5 +249,40 @@ class ReservationIT extends AbstractIntegrationTest {
         mvc.perform(get("/api/v1/stock/{id}", UUID.randomUUID())
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"))))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("US18 — L'administrateur réapprovisionne un nouveau produit, corrige l'inventaire ; le stock sert la saga")
+    void reapprovisionnementEtInventaire() throws Exception {
+        UUID nouveau = UUID.randomUUID();
+        var admin = jwt().jwt(token -> token.claim("preferred_username", "admin-pme"))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        double avant = meters.get("pme.stock.restocked.units").counter().count();
+
+        mvc.perform(post("/api/v1/stock/{id}/restock", nouveau).with(admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"quantity\":12}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available", is(12)))
+                .andExpect(jsonPath("$.reserved", is(0)));
+        mvc.perform(post("/api/v1/stock/{id}/restock", nouveau).with(admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"quantity\":8}"))
+                .andExpect(jsonPath("$.available", is(20)));
+        assertThat(meters.get("pme.stock.restocked.units").counter().count()).isEqualTo(avant + 20);
+        mvc.perform(put("/api/v1/stock/{id}", nouveau).with(admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"available\":5}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.available", is(5)));
+        assertThat(available(nouveau)).isEqualTo(5);
+
+        mvc.perform(post("/api/v1/stock/{id}/restock", nouveau).with(admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"quantity\":0}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/v1/stock/{id}", nouveau).with(admin)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"available\":-1}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/v1/stock/{id}/restock", nouveau)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER")))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"quantity\":5}"))
+                .andExpect(status().isForbidden());
     }
 }

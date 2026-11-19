@@ -94,6 +94,55 @@ public class ProductRepository {
                 .query(ProductRepository::map).list();
     }
 
+    /** US18 — tous les produits, en vente ou retirés, les plus récents d'abord (administration). */
+    public List<Product> findAll(int page, int size) {
+        return jdbc.sql(SELECT + " order by p.created_at desc, p.name, p.id limit :limit offset :offset")
+                .param("limit", size)
+                .param("offset", (long) page * size)
+                .query(ProductRepository::map)
+                .list();
+    }
+
+    public long countAll() {
+        return jdbc.sql("select count(*) from product").query(Long.class).single();
+    }
+
+    /** Crée un produit ; une référence (SKU) déjà utilisée lève DuplicateKeyException (contrainte d'unicité). */
+    public UUID insert(String sku, String name, String description, int priceCents, long categoryId,
+            boolean exclusive) {
+        return jdbc.sql("""
+                insert into product (sku, name, description, price_cents, category_id, exclusive)
+                values (:sku, :name, :description, :price, :category, :exclusive)
+                returning id
+                """)
+                .param("sku", sku)
+                .param("name", name)
+                .param("description", description)
+                .param("price", priceCents)
+                .param("category", categoryId)
+                .param("exclusive", exclusive)
+                .query(UUID.class)
+                .single();
+    }
+
+    /** Met à jour un produit (la référence ne change pas) ; renvoie false s'il n'existe pas. */
+    public boolean update(UUID id, String name, String description, int priceCents, long categoryId,
+            boolean exclusive, boolean active) {
+        return jdbc.sql("""
+                update product set name = :name, description = :description, price_cents = :price,
+                       category_id = :category, exclusive = :exclusive, active = :active
+                where id = :id
+                """)
+                .param("id", id)
+                .param("name", name)
+                .param("description", description)
+                .param("price", priceCents)
+                .param("category", categoryId)
+                .param("exclusive", exclusive)
+                .param("active", active)
+                .update() == 1;
+    }
+
     public List<String> findCategoryNames() {
         return jdbc.sql("select name from category order by name").query(String.class).list();
     }

@@ -13,6 +13,12 @@ import { ProduitPage } from './pages/ProduitPage';
 const CommandesPage = lazy(() => import('./pages/CommandesPage').then((m) => ({ default: m.CommandesPage })));
 const CommandePage = lazy(() => import('./pages/CommandePage').then((m) => ({ default: m.CommandePage })));
 const StockPage = lazy(() => import('./pages/admin/StockPage').then((m) => ({ default: m.StockPage })));
+const NouveauProduitPage = lazy(() =>
+  import('./pages/admin/NouveauProduitPage').then((m) => ({ default: m.NouveauProduitPage })),
+);
+const CommandesClientsPage = lazy(() =>
+  import('./pages/admin/CommandesClientsPage').then((m) => ({ default: m.CommandesClientsPage })),
+);
 const ModerationPage = lazy(() => import('./pages/admin/ModerationPage').then((m) => ({ default: m.ModerationPage })));
 // Espace communautaire (US8 à US12) : un fichier par page, chargé à la demande.
 const TrocPage = lazy(() => import('./pages/communaute/TrocPage').then((m) => ({ default: m.TrocPage })));
@@ -76,6 +82,22 @@ export function App() {
           element={
             <ConnexionRequise role={ROLE_ADMIN}>
               <StockPage />
+            </ConnexionRequise>
+          }
+        />
+        <Route
+          path="admin/produits/nouveau"
+          element={
+            <ConnexionRequise role={ROLE_ADMIN}>
+              <NouveauProduitPage />
+            </ConnexionRequise>
+          }
+        />
+        <Route
+          path="admin/commandes"
+          element={
+            <ConnexionRequise role={ROLE_ADMIN}>
+              <CommandesClientsPage />
             </ConnexionRequise>
           }
         />

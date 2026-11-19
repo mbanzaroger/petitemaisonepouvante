@@ -41,9 +41,14 @@ function CompteUtilisateur() {
   if (!auth.pret) return null;
   if (!auth.connecte) {
     return (
-      <button type="button" className="bouton bouton-secondaire" onClick={auth.connecter}>
-        Se connecter
-      </button>
+      <>
+        <button type="button" className="bouton bouton-secondaire" onClick={auth.connecter}>
+          Se connecter
+        </button>
+        <button type="button" className="bouton-lien" onClick={auth.inscrire}>
+          Créer un compte
+        </button>
+      </>
     );
   }
   const nom = auth.utilisateur ?? 'utilisateur';
@@ -173,7 +178,10 @@ export function Layout() {
             {estAdmin(auth) && (
               <>
                 <li>
-                  <NavLink to="/admin/stock">Stock</NavLink>
+                  <NavLink to="/admin/stock">Produits et stock</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/commandes">Commandes clients</NavLink>
                 </li>
                 <li>
                   <NavLink to="/admin/moderation">Modération</NavLink>

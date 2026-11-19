@@ -2,6 +2,8 @@ package com.petitemaisonepouvante.order.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.startsWith;
@@ -112,8 +114,22 @@ class OrderApiIT extends AbstractIntegrationTest {
         return "{\"lines\":[" + lines + "]}";
     }
 
+    private static RequestPostProcessor named(String subject, String name) {
+        return jwt().jwt(token -> token.subject(subject).claim("preferred_username", name))
+                .authorities(new SimpleGrantedAuthority("ROLE_CUSTOMER"));
+    }
+
+    private static RequestPostProcessor administrator() {
+        return jwt().jwt(token -> token.subject(UUID.randomUUID().toString()).claim("preferred_username", "admin-pme"))
+                .authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
+    }
+
     private String placeOrder(String subject, String requestBody) throws Exception {
-        String response = mvc.perform(post("/api/v1/orders").with(customer(subject))
+        return placeOrderAs(customer(subject), requestBody);
+    }
+
+    private String placeOrderAs(RequestPostProcessor who, String requestBody) throws Exception {
+        String response = mvc.perform(post("/api/v1/orders").with(who)
                         .contentType(MediaType.APPLICATION_JSON).content(requestBody))
                 .andExpect(status().isAccepted())
                 .andReturn().getResponse().getContentAsString();
@@ -307,5 +323,44 @@ class OrderApiIT extends AbstractIntegrationTest {
                 MessageBuilder.withBody("pas du json".getBytes(StandardCharsets.UTF_8)).build());
         await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
                 assertThat(rabbit.receive(Messaging.STOCK_RESULT_DLQ, 1_000)).isNotNull());
+    }
+
+    @Test
+    @DisplayName("US19 — L'administrateur suit les commandes de tous les clients, par statut, avec le nom du client")
+    void suiviAdministrateur() throws Exception {
+        String nom = "client-" + UUID.randomUUID().toString().substring(0, 8);
+        String subject = UUID.randomUUID().toString();
+        String confirmee = placeOrderAs(named(subject, nom), body(MUG, 2));
+        String enAttente = placeOrderAs(named(subject, nom), body(FIGURINE, 1));
+        publishStockResult("StockReserved", confirmee, Messaging.STOCK_RESERVED);
+        awaitStatus(subject, confirmee, "CONFIRMED");
+
+        mvc.perform(get("/api/v1/orders/admin").param("size", "100").with(administrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.customerName == '" + nom + "')]", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].customerId").doesNotExist());
+        mvc.perform(get("/api/v1/orders/admin").param("status", "CONFIRMED").param("size", "100")
+                        .with(administrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.id == '" + confirmee + "')].customerName", contains(nom)))
+                .andExpect(jsonPath("$.content[?(@.id == '" + confirmee + "')].lines[0].productName", contains("Mug")))
+                .andExpect(jsonPath("$.content[?(@.id == '" + enAttente + "')]", hasSize(0)));
+        mvc.perform(get("/api/v1/orders/admin/summary").with(administrator()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.countsByStatus.CONFIRMED", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.countsByStatus.PENDING", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.confirmedRevenueCents", greaterThanOrEqualTo(2580)))
+                .andExpect(jsonPath("$.currency", is("EUR")));
+    }
+
+    @Test
+    @DisplayName("US19 — Le suivi des commandes est refusé à un client (403) et à un visiteur (401) ; statut inconnu : 400")
+    void suiviReserveAdministrateur() throws Exception {
+        String client = UUID.randomUUID().toString();
+        mvc.perform(get("/api/v1/orders/admin").with(customer(client))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/orders/admin/summary").with(customer(client))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/orders/admin")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/orders/admin").param("status", "INCONNU").with(administrator()))
+                .andExpect(status().isBadRequest());
     }
 }

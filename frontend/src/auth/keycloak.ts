@@ -88,6 +88,9 @@ export function creerSourceKeycloak(config: AppConfig): SourceAuth & { demarrer(
     deconnecter() {
       void keycloak.logout({ redirectUri: `${window.location.origin}/` });
     },
+    inscrire() {
+      void keycloak.register({ redirectUri: window.location.href });
+    },
     changerDeCompte() {
       const retour = new URL(window.location.href);
       retour.searchParams.set(PARAM_CONNEXION, '1');

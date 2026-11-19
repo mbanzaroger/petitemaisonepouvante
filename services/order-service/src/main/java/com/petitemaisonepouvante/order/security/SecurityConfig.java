@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/v1/orders/admin", "/api/v1/orders/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/orders", "/api/v1/orders/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)))

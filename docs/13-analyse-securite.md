@@ -173,3 +173,18 @@ Le service ouvre deux surfaces nouvelles : des **contenus payants** à protéger
 
 **RGPD** : base légale « exécution du contrat » (achats, abonnement, livraison) ; minimisation (adresse demandée pour la formule papier seulement, aucun moyen de paiement stocké : paiement simulé dans le POC, prestataire UE en production) ; conservation : adresse de livraison effacée 90 jours après l'échéance (tâche nocturne testée, `SubscriptionApiIT`), historique des souscriptions conservé pour la comptabilité, page atteinte conservée tant que le numéro reste dans la bibliothèque ; hébergement dans l'UE (ADR-006, décision 2). **Reste à faire avant ouverture publique** : paiement réel et factures, effacement des données d'un membre à la suppression de son compte, filigrane nominatif discret des pages (dissuasion de la copie).
 
+## 11. Administration de la boutique et inscription des clients (US18 à US20)
+
+Demandées en recette le 19/11/2026 : l'administrateur doit pouvoir mettre en vente et approvisionner des produits, suivre les commandes de tous les clients, et un visiteur doit pouvoir créer son compte. Analyse ciblée :
+
+| Menace | Scénario | Mesures | Preuve |
+|---|---|---|---|
+| Élévation de privilèges par l'inscription | Un inscrit obtient `ADMIN` ou un rôle non prévu | Rôle par défaut du royaume limité à `CUSTOMER` (plus les rôles techniques de Keycloak) ; aucun rôle ni attribut d'autorisation dans le formulaire ; `ADMIN` attribué seulement par un administrateur Keycloak | Parcours Playwright (profil « Client » après inscription), test de fumée du formulaire |
+| Comptes en masse, mots de passe faibles | Robot qui crée des comptes, devinette de mot de passe | Politique de mot de passe (12 à 64 caractères, différent de l'identifiant et de l'e-mail), e-mail unique, protection contre la force brute de Keycloak ; **en production** : vérification de l'e-mail (SMTP hébergé dans l'UE), captcha et limitation de débit sur les pages de Keycloak | Configuration du royaume (`realm-pme.json`) |
+| Accès aux fonctions d'administration | Un client crée un produit, réapprovisionne ou lit les commandes des autres | Rôle `ADMIN` exigé au Gateway (`SecurityPolicy` sur `catalog-admin`, `orders-admin`, `stock`) **et** dans chaque service ; 401 sans jeton | `AdminProductApiIT`, `ReservationIT`, `OrderApiIT` (403/401), contrôles de fumée, Cucumber |
+| Altération du catalogue | Prix négatif ou démesuré, référence dupliquée, champs non prévus | Validation côté serveur (prix 1 centime à 10 000 €, référence au format imposé et unique, catégorie existante, longueurs bornées) ; la référence n'est jamais modifiée ; le prix d'une commande est toujours relu dans le catalogue | `AdminProductApiIT` (400, 409) |
+| Répudiation | Contester une création de produit, un réapprovisionnement ou une correction d'inventaire | Chaque écriture est journalisée avec son auteur (`preferred_username`) et l'identifiant de corrélation ; métrique `pme_stock_restocked_units_total` | Journaux des services |
+| Exposition de données des clients | L'administrateur ou un tiers voit plus que nécessaire | La vue d'administration ne montre que le nom affiché du compte, le contenu et le statut des commandes ; l'identifiant Keycloak n'est pas exposé ; aucun panier n'est stocké côté serveur (stockage de session du navigateur) | `OrderApiIT` (`customerId` absent) |
+
+**RGPD** : l'inscription collecte identifiant, e-mail, prénom et nom (exécution du contrat), mot de passe haché par Keycloak ; la page « Données personnelles » du site est mise à jour. **Reste à faire avant ouverture publique** : vérification de l'e-mail et réinitialisation du mot de passe (SMTP), captcha, acceptation des conditions générales à l'inscription, suppression du compte par le client.
+

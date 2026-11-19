@@ -10,7 +10,8 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * Le catalogue et les recommandations sont en lecture publique ; la personnalisation (signaux d'intérêt, consentement)
- * est réservée aux membres (CUSTOMER ou ADMIN) ; toute autre opération exige un jeton Keycloak valide
+ * est réservée aux membres (CUSTOMER ou ADMIN), la gestion des produits au rôle ADMIN ; toute autre opération exige
+ * un jeton Keycloak valide
  * (signature JWKS, émetteur, audience {@code pme-api}). API sans état : pas de session ni de cookie,
  * l'authentification passe uniquement par l'en-tête Authorization.
  */
@@ -31,6 +32,7 @@ public class SecurityConfig {
                                 "/api/v1/recommendations")
                         .permitAll()
                         .requestMatchers("/api/v1/interests", "/api/v1/interests/**").hasAnyRole("CUSTOMER", "ADMIN")
+                        .requestMatchers("/api/v1/catalog/admin/**").hasRole("ADMIN")
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())

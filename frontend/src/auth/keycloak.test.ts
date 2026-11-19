@@ -14,6 +14,7 @@ const { FauxKeycloak, instances } = vi.hoisted(() => {
     onTokenExpired?: () => void;
     init = vi.fn(async () => this.authenticated);
     login = vi.fn(async () => undefined);
+    register = vi.fn(async () => undefined);
     logout = vi.fn(async () => undefined);
     updateToken = vi.fn(async () => true);
     clearToken = vi.fn(async () => {
@@ -111,13 +112,15 @@ describe('creerSourceKeycloak', () => {
     expect(kc.clearToken).toHaveBeenCalledTimes(2);
   });
 
-  it('redirige vers Keycloak pour la connexion et la déconnexion', () => {
+  it('redirige vers Keycloak pour la connexion, la déconnexion et l’inscription', () => {
     const source = creerSourceKeycloak(CONFIG);
     const kc = instances[0]!;
     source.connecter();
     expect(kc.login).toHaveBeenCalledWith({ redirectUri: window.location.href });
     source.deconnecter();
     expect(kc.logout).toHaveBeenCalledWith({ redirectUri: `${window.location.origin}/` });
+    source.inscrire();
+    expect(kc.register).toHaveBeenCalledWith({ redirectUri: window.location.href });
   });
 
   it('change de compte : déconnexion puis formulaire de connexion au retour sur la même page', async () => {
