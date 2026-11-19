@@ -15,7 +15,8 @@ import org.springframework.stereotype.Repository;
 public class ProductRepository {
 
     private static final String SELECT = """
-            select p.id, p.sku, p.name, p.description, p.price_cents, p.currency, c.name as category, p.active
+            select p.id, p.sku, p.name, p.description, p.price_cents, p.currency, c.name as category, p.active,
+                   p.exclusive
             from product p
             left join category c on c.id = p.category_id
             """;
@@ -26,10 +27,13 @@ public class ProductRepository {
         this.jdbc = jdbc;
     }
 
-    public List<Product> findActive(String category, int page, int size) {
+    public List<Product> findActive(String category, boolean exclusiveOnly, int page, int size) {
         StringBuilder sql = new StringBuilder(SELECT).append(" where p.active");
         if (category != null) {
             sql.append(" and c.name = :category");
+        }
+        if (exclusiveOnly) {
+            sql.append(" and p.exclusive");
         }
         sql.append(" order by p.name, p.id limit :limit offset :offset");
         JdbcClient.StatementSpec statement = jdbc.sql(sql.toString())
@@ -41,12 +45,44 @@ public class ProductRepository {
         return statement.query(ProductRepository::map).list();
     }
 
-    public long countActive(String category) {
-        String sql = "select count(*) from product p left join category c on c.id = p.category_id where p.active";
-        if (category == null) {
-            return jdbc.sql(sql).query(Long.class).single();
+    public long countActive(String category, boolean exclusiveOnly) {
+        StringBuilder sql = new StringBuilder(
+                "select count(*) from product p left join category c on c.id = p.category_id where p.active");
+        if (exclusiveOnly) {
+            sql.append(" and p.exclusive");
         }
-        return jdbc.sql(sql + " and c.name = :category").param("category", category).query(Long.class).single();
+        if (category == null) {
+            return jdbc.sql(sql.toString()).query(Long.class).single();
+        }
+        return jdbc.sql(sql.append(" and c.name = :category").toString()).param("category", category)
+                .query(Long.class).single();
+    }
+
+    /** Produits en vente des catégories données (recommandations), exclusivités d'abord. */
+    public List<Product> findActiveInCategories(Collection<Long> categoryIds, int limit) {
+        return jdbc.sql(SELECT + " where p.active and p.category_id in (:categories)"
+                        + " order by p.exclusive desc, p.created_at desc, p.id limit :limit")
+                .param("categories", categoryIds)
+                .param("limit", limit)
+                .query(ProductRepository::map)
+                .list();
+    }
+
+    /** Sélection par défaut (visiteur, ou membre sans personnalisation) : exclusivités puis nouveautés. */
+    public List<Product> findShowcase(int limit) {
+        return jdbc.sql(SELECT + " where p.active order by p.exclusive desc, p.created_at desc, p.name, p.id limit :limit")
+                .param("limit", limit)
+                .query(ProductRepository::map)
+                .list();
+    }
+
+    public Optional<Long> findCategoryId(String name) {
+        return jdbc.sql("select id from category where name = :name").param("name", name).query(Long.class).optional();
+    }
+
+    public Optional<Long> findCategoryIdOfProduct(UUID productId) {
+        return jdbc.sql("select category_id from product where id = :id and category_id is not null")
+                .param("id", productId).query(Long.class).optional();
     }
 
     public Optional<Product> findById(UUID id) {
@@ -71,6 +107,7 @@ public class ProductRepository {
                 rs.getInt("price_cents"),
                 rs.getString("currency").trim(),
                 rs.getString("category"),
-                rs.getBoolean("active"));
+                rs.getBoolean("active"),
+                rs.getBoolean("exclusive"));
     }
 }

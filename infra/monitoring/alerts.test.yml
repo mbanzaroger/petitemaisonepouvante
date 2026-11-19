@@ -105,3 +105,43 @@ tests:
           - exp_labels: { severity: warning }
             exp_annotations:
               summary: "Plus de 20 % des commandes annulées sur 15 minutes : ruptures de stock à traiter"
+
+  - name: Espace communautaire arrêté
+    interval: 30s
+    input_series:
+      - series: 'up{service="community-service"}'
+        values: '1 1 0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ServiceIndisponible
+        exp_alerts:
+          - exp_labels: { severity: critical, service: community-service }
+            exp_annotations:
+              summary: "community-service ne répond plus à la collecte depuis 1 minute"
+
+  - name: Service éditorial arrêté
+    interval: 30s
+    input_series:
+      - series: 'up{service="editorial-service"}'
+        values: '1 1 0x10'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: ServiceIndisponible
+        exp_alerts:
+          - exp_labels: { severity: critical, service: editorial-service }
+            exp_annotations:
+              summary: "editorial-service ne répond plus à la collecte depuis 1 minute"
+
+  - name: Signalements en attente de modération
+    interval: 1m
+    input_series:
+      - series: 'pme_community_reports_open{service="community-service"}'
+        values: '2 8x40'
+    alert_rule_test:
+      - { eval_time: 10m, alertname: ModerationEnAttente, exp_alerts: [] }
+      - eval_time: 35m
+        alertname: ModerationEnAttente
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "8 signalement(s) en attente de modération depuis 30 minutes"

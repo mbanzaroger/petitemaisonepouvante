@@ -11,6 +11,14 @@ export function formaterPrix(centimes: number, devise = 'EUR'): string {
   return formatteur.format(centimes / 100);
 }
 
+const formatJour = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' });
+
+/** Date sans heure (« 2026-11-18 » → « 18 novembre 2026 »). */
+export function formaterJour(iso: string): string {
+  const date = new Date(`${iso}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? iso : formatJour.format(date);
+}
+
 const formatDate = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long', timeStyle: 'short' });
 
 export function formaterDate(iso: string): string {

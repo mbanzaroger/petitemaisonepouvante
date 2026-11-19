@@ -42,7 +42,7 @@ kubectl -n cert-manager wait certificate/pme-ca --for=condition=Ready --timeout=
 kubectl apply -f platform/gateway.yaml
 
 log "Secrets générés à l'exécution (jamais versionnés)"
-for db in catalog orders stock; do
+for db in catalog orders stock community editorial; do
   db_pw=$(gen_secret); mask "$db_pw"
   kubectl -n pme create secret generic "$db-db" --from-literal=username="$db" \
     --from-literal=password="$db_pw" --dry-run=client -o yaml | kubectl apply -f -

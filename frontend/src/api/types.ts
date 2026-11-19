@@ -12,6 +12,8 @@ export interface Product {
   price: Money;
   category: string;
   available: boolean;
+  /** Vendu en exclusivité sur le site (gamme de figurines du collectif Evil Ed). */
+  exclusive: boolean;
 }
 
 export interface Page<T> {

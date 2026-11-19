@@ -12,7 +12,8 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 ## Préparation (la veille)
 1. Vérifier que le dernier run **CD staging** de `develop` est vert (Actions) : il prouve le déploiement, les tests de bout en bout et Cucumber.
 2. Démarrer l'environnement A, ouvrir Bruno (`docs/api/bruno/`), renseigner les 4 mots de passe secrets depuis `infra/.env`.
-3. Ouvrir dans le navigateur : le dépôt (README), le dernier run CI, le kanban, Grafana (`http://localhost:3000`), le site (`http://localhost:5173`) dans une fenêtre privée, une seconde fenêtre privée connectée avec `admin-pme` sur « Stock », et les rapports Playwright et Lighthouse du dernier CD (artefacts `e2e-staging-…` et `lighthouse-staging-…`).
+3. Ouvrir dans le navigateur : le dépôt (README), le dernier run CI, le kanban, Grafana (`http://localhost:3000`), le site (`http://localhost:5173`) dans une fenêtre privée, une seconde fenêtre privée connectée avec `admin-pme` sur « Stock », une troisième (autre profil de navigateur) connectée avec `carol` pour la partie communautaire, et les rapports Playwright et Lighthouse du dernier CD (artefacts `e2e-staging-…` et `lighthouse-staging-…`).
+5. En cas de doute sur l'environnement local : `bash infra/diagnostic.sh` (configuration, conteneurs, Keycloak, services).
 4. Lancer une fois le test de charge (`load-tests/`) pour réchauffer les services.
 
 ## Déroulé de la démonstration
@@ -23,13 +24,15 @@ Deux environnements possibles. **Préparer les deux** : la vidéo de secours (#4
 | 1 min | Sécurité (US2) | Site : « Se connecter pour commander » → page Keycloak (PKCE) → retour au panier conservé ; outils de développement : CSP dans les en-têtes, `localStorage` sans jeton ; Bruno 04 à 06 (401, 403) | Connexion sans mot de passe côté site ; jetons en mémoire ; refus sans jeton ou sans rôle |
 | 2 min | Saga (US3) | Site : « Valider la commande » → suivi « En attente » puis « Confirmée » ; fenêtre `admin-pme` : « Actualiser » sur « Stock » → le mug passe de disponible à réservé ; puis 10 bustes de l'Orc (stock 2) → « Annulée » | Statut annoncé sans recharger ; effet de la saga visible côté exploitation ; annulation expliquée |
 | 1 min | Historique (US4) | Site : « Mes commandes » ; Bruno 13 (commande d'autrui → 404) | Seules ses commandes ; 404 sur celle d'autrui |
+| 2 min | Communauté (US8 à US12) | Fenêtre `alice` : « Troc et dons » → « Publier une annonce » (échange, contrepartie) ; fenêtre `carol` (objet recherché « Orc » dans « Mon espace ») : notification, proposition ; `alice` : pastille « Mon espace », « Accepter la proposition », message ; `carol` voit la réponse sans recharger ; salon « Films et Blu-ray » ; signalement d'un message puis fenêtre `admin-pme` : « Modération » → « Masquer » | Annonce conclue, notifications, conversation privée relevée toutes les 5 s, contenu masqué et auteur prévenu ; un tiers reçoit 404 sur la proposition (ADR-004, ADR-005) |
+| 2 min | Personnalisation et éditions (US13 à US17) | Fenêtre `carol` : « Mon espace » → activer la personnalisation, rechercher « Blu-ray » → « Recommandé pour vous » change avec la raison affichée ; « Fanzine » → « Lire l'extrait » du numéro 36, flèche droite : suite réservée ; « Acheter » → la liseuse s'ouvre page 2, sommaire, « Ma bibliothèque » propose « Reprendre la lecture » ; fenêtre `alice` : « Abonnement » numérique ; fenêtre `admin-pme` : « Rédaction » → publier une actualité, visible aussitôt dans « Actualités » | Consentement explicite, droit vérifié à chaque page (401/403), liseuse au clavier, abonnement daté ; hébergement UE et feuille de route v2/v3 expliqués avec l'ADR-006 |
 | 2 min | Charge et observabilité | Test de charge JMeter (`load-tests/README.md`, commande « sur le poste ») avec Grafana « PME — RED et saga des microservices » à l'écran ; puis `grep` d'un correlationId dans les logs des 2 services | Débit, p95 < 300 ms, 0 % d'erreurs, commandes par étape ; mêmes identifiants dans order-service et stock-service |
 | (option) | Kubernetes | `kubectl get pods,hpa,networkpolicy,gateway,httproute -n pme` ; dernier run CD lancé avec la case « charge » | Déploiements durcis, flux réseau explicites, montée du catalogue à 3 instances |
 
 ## Environnement B : staging sur le poste
 ```bash
 kind create cluster --name pme
-for s in catalog-service order-service stock-service web-frontend; do
+for s in catalog-service order-service stock-service community-service editorial-service web-frontend; do
   dir="services/$s"; [ "$s" = web-frontend ] && dir=frontend
   docker build -t "$s:demo" "$dir" && kind load docker-image "$s:demo" --name pme
   (cd k8s/overlays/staging && kustomize edit set image "ghcr.io/mbanzaroger/petitemaisonepouvante/$s=$s:demo")
@@ -39,9 +42,9 @@ kubectl apply -k k8s/overlays/staging
 kubectl wait --for=condition=available deployment --all -n pme --timeout=600s
 echo "127.0.0.1 api.pme.local keycloak.pme.local app.pme.local" | sudo tee -a /etc/hosts
 set -a; source /tmp/pme-staging/staging.env; set +a
-scripts/smoke-test.sh "$BASE_URL"              # 13 contrôles de bout en bout
+scripts/smoke-test.sh "$BASE_URL"              # 35 contrôles de bout en bout (dont communauté, recommandations et éditions)
 bash k8s/monitoring/install.sh && set -a && source /tmp/pme-monitoring.env && set +a
-bash k8s/monitoring/verify.sh                  # 14 contrôles de supervision (US5)
+bash k8s/monitoring/verify.sh                  # contrôles de supervision (US5), valeurs attendues tirées du dépôt
 (cd frontend && npm ci && npx playwright install chromium && npx playwright test)   # parcours du site + axe
 ```
 Ne pas valider les modifications d'images faites par `kustomize edit` (`git checkout k8s/overlays/staging`).

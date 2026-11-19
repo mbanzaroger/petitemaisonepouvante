@@ -3,7 +3,37 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
 ## [Non publié]
+
+## [1.4.0] - 2026-11-19
 ### Ajouté
+- **Recommandations** (US13) : sélection « Recommandé pour vous » sur le catalogue et « Vous aimerez aussi » sur les fiches, selon les recherches, consultations et achats du membre, avec la raison affichée ; consentement dans « Mon espace » (désactivé par défaut), effacement de l'historique, conservation 90 jours ; sélection commune pour les visiteurs.
+- **Gamme exclusive Evil Ed** : produits signalés « Exclusivité Evil Ed », filtre du catalogue, mise en avant dans les recommandations.
+- **Notifications selon la navigation** (US14) : un membre qui l'accepte est prévenu des nouvelles annonces de troc dans les catégories qu'il consulte souvent ; centres d'intérêt effacés au retrait de l'accord, conservés 180 jours.
+- **Actualités et articles de fond** (US15, ADR-006) : pages « Actualités » ouvertes à tous (filtre actualités / articles de fond, article complet) ; page « Rédaction » (ADMIN) pour publier ou retirer un texte.
+- **Fanzine numérique** (US16) : numéros parus avec extrait gratuit, achat à l'unité, liseuse intégrée (une page à la fois, sommaire, flèches du clavier, page atteinte mémorisée), « Ma bibliothèque » dans « Mon espace ».
+- **Abonnement au fanzine** (US17) : formules numérique ou papier et numérique (adresse de livraison), renouvellement dans les 60 jours précédant l'échéance, liste d'expédition des abonnés papier (ADMIN) ; adresse effacée 90 jours après l'échéance (RGPD).
+- Nouveau service `editorial-service` (Spring Boot 4.1, PostgreSQL `editorial`, port 8085) : routes Gateway (lecture publique, membres JWT, rédaction ADMIN, limitation par IP), NetworkPolicies, base de staging, secrets générés, ServiceMonitor ; métriques `pme_editorial_*`, panneaux Grafana « Éditions ».
+- Qualité : 27 tests du service (13 d'intégration Testcontainers), 4 scénarios Cucumber à travers le Gateway, 10 contrôles de fumée, parcours Playwright + axe (actualités, extrait, achat et liseuse, abonnement, rédaction), contrat OpenAPI des 15 routes éditoriales.
+- ADR-006 : service éditorial, hébergement en Europe (fournisseur, bases, sauvegardes, registre, CI sans données réelles) et feuille de route (enchères et diffusion Evil Ed en v2, projections du festival en v3).
+
+### Corrigé
+- Staging : `community-service` et `editorial-service` autorisés à lire les clés JWKS de Keycloak (NetworkPolicy) ; les routes authentifiées de la communauté répondaient 504.
+- Image du site : 5 CVE hautes de nginx 1.30.6 (publiées le 18/11/2026, code non atteint par notre configuration) en exception datée jusqu'au 26/11/2026 (V-28) ; le Dockerfile installe nginx 1.30.7 depuis le dépôt officiel nginx.org (clé vérifiée) dès sa publication pour Alpine.
+- Supervision : `verify.sh` calcule les cibles, alertes et panneaux attendus depuis le dépôt (les valeurs figées dataient d'avant l'espace communautaire).
+- DAST : traversée de répertoire signalée par ZAP sur la publication d'annonce qualifiée en faux positif pour cette seule URL (V-29) ; le résumé du CD publie la preuve des alertes moyennes et hautes.
+- CI : construction des images Java résistante aux refus de Maven Central (`mvn -U`, tentatives espacées sur 429 et 503) ; un refus mis en cache faisait échouer toutes les constructions suivantes.
+
+## [1.3.0] - 2026-11-18
+### Ajouté
+- **Espace communautaire** (US8 à US12, ADR-004) : nouveau service `community-service` (Spring Boot 4.1, PostgreSQL `community`, port 8084) et pages du site :
+  - troc et dons entre particuliers : annonces publiques filtrables, publication, retrait, proposition d'échange ou demande de don, acceptation, refus, annulation ;
+  - conversation privée entre les deux membres d'une proposition, salons de discussion thématiques (relevé périodique par curseur, ADR-005), anti-flood (5 messages / 10 s) ;
+  - « Mon espace » : notifications (pastille dans l'en-tête), préférences de notification, objets recherchés avec alerte à la publication d'une annonce correspondante, mes annonces ;
+  - signalement par les membres et page « Modération » (ADMIN) : masquer un contenu (auteur prévenu) ou rejeter le signalement ;
+  - conservation RGPD (notifications lues 90 jours, messages de salon 365 jours).
+- Plateforme : routes Gateway (lecture publique des annonces, membres CUSTOMER/ADMIN, modération ADMIN, limitation par IP), NetworkPolicies dédiées, base de staging, secrets générés, ServiceMonitor ; métriques `pme_community_*`, alerte `ModerationEnAttente`, panneaux Grafana.
+- Qualité : 41 tests du service (25 d'intégration Testcontainers), scénarios Cucumber US8 à US12, contrôles de fumée, parcours Playwright + axe (troc complet, salon, modération), page « Troc et dons » auditée par Lighthouse.
+- `infra/init-env.sh` complète un `infra/.env` existant avec les variables manquantes (ex. `COMMUNITY_DB_PASSWORD`) sans changer les autres valeurs.
 - Script de diagnostic de l'environnement local (`infra/diagnostic.sh`) : configuration, conteneurs, adresses Keycloak, émetteur attendu par les services, santé, jetons refusés.
 - Mode GitHub Codespaces (`infra/codespaces.sh`) : le site est servi sur l'adresse publique du Codespace et Keycloak est relayé sur la même origine ; adresses paramétrées par `PME_SITE_URL` et `KEYCLOAK_PUBLIC_URL` (valeurs locales inchangées par défaut).
 

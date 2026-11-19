@@ -14,6 +14,12 @@ scrape_configs:
   - job_name: stock-service
     metrics_path: /actuator/prometheus
     static_configs: [{ targets: ["stock-service:8083"], labels: { service: stock-service } }]
+  - job_name: community-service
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ["community-service:8084"], labels: { service: community-service } }]
+  - job_name: editorial-service
+    metrics_path: /actuator/prometheus
+    static_configs: [{ targets: ["editorial-service:8085"], labels: { service: editorial-service } }]
   # Site : métriques nginx (stub_status) exposées par l'exporteur qui partage le réseau du conteneur web-frontend
   - job_name: web-frontend
     static_configs: [{ targets: ["web-frontend:9113"], labels: { service: web-frontend } }]

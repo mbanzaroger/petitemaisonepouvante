@@ -39,7 +39,7 @@ if ! docker compose ps >/dev/null 2>&1; then
   echec "docker compose ne répond pas" "vérifier que Docker est démarré"
   exit 1
 fi
-attendus="catalog-db orders-db stock-db community-db rabbitmq keycloak catalog-service order-service stock-service community-service web-frontend"
+attendus="catalog-db orders-db stock-db community-db editorial-db rabbitmq keycloak catalog-service order-service stock-service community-service editorial-service web-frontend"
 for service in $attendus; do
   etat=$(docker compose ps -a --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null | awk -v s="$service" '$1 == s { print $2, $3 }')
   if ! docker compose config --services 2>/dev/null | grep -qx "$service"; then
@@ -100,7 +100,7 @@ else
 fi
 
 info "4. Microservices (validation des jetons et santé)"
-for paire in catalog-service:8081 order-service:8082 stock-service:8083 community-service:8084; do
+for paire in catalog-service:8081 order-service:8082 stock-service:8083 community-service:8084 editorial-service:8085; do
   service=${paire%%:*}; port=${paire##*:}
   docker compose config --services 2>/dev/null | grep -qx "$service" || continue
   conteneur=$(docker compose ps -q "$service" 2>/dev/null)
@@ -128,9 +128,9 @@ for paire in catalog-service:8081 order-service:8082 stock-service:8083 communit
 done
 
 info "Comptes de test (mots de passe dans infra/.env)"
-echo "      alice, carol : clients (commandes)"
+echo "      alice, carol : clients (commandes, troc, fanzine)"
 echo "      bob          : compte sans profil client (refus attendus)"
-echo "      admin-pme    : administrateur (stock)"
+echo "      admin-pme    : administrateur (stock, modération, rédaction)"
 
 printf '\nRésultat : %d vérification(s) réussie(s), %d en échec.\n' "$ok" "$ko"
 [ "$ko" -eq 0 ]

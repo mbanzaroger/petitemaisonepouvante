@@ -4,7 +4,7 @@ info:
   version: 1.0.0
   description: |
     API exposée par le Gateway (Envoy Gateway, Gateway API) devant les microservices catalog-service,
-    order-service et stock-service. Le TLS est terminé au Gateway ; les jetons Keycloak (OIDC) sont vérifiés
+    order-service, stock-service, community-service et editorial-service. Le TLS est terminé au Gateway ; les jetons Keycloak (OIDC) sont vérifiés
     au Gateway **et** par chaque service (signature JWKS, émetteur, audience `pme-api`, rôles du royaume).
     Les erreurs suivent le format `application/problem+json` (RFC 9457).
 servers:
@@ -19,6 +19,22 @@ tags:
     description: US2 à US4 — rôle CUSTOMER
   - name: Stock
     description: Supervision — rôle ADMIN
+  - name: Recommandations
+    description: US13 — recommandations (ouvertes à tous, personnalisées avec consentement) et personnalisation (CUSTOMER ou ADMIN)
+  - name: Troc
+    description: US8, US9 — annonces (lecture publique), propositions et conversation privée (CUSTOMER ou ADMIN)
+  - name: Discussions
+    description: US10 — salons entre passionnés (CUSTOMER ou ADMIN)
+  - name: Espace personnel
+    description: US11 — notifications, préférences, objets recherchés (CUSTOMER ou ADMIN)
+  - name: Modération
+    description: US12 — signalement (membres) et modération (ADMIN)
+  - name: Actualités
+    description: US15 — actualités et articles de fond (lecture publique), publication (ADMIN)
+  - name: Fanzine
+    description: US16 — numéros numérisés, extrait gratuit, achat à l'unité, liseuse et bibliothèque (CUSTOMER ou ADMIN)
+  - name: Abonnement
+    description: US17 — abonnement numérique ou papier et numérique, renouvellement, liste d'expédition (ADMIN)
 security: []
 paths:
   /api/v1/products:
@@ -28,6 +44,7 @@ paths:
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
         - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: exclusive, in: query, description: Seulement la gamme exclusive Evil Ed, schema: { type: boolean, default: false } }
         - { name: category, in: query, schema: { type: string, maxLength: 100 } }
         - name: ids
           in: query
@@ -122,6 +139,578 @@ paths:
         "401": { description: Jeton absent ou invalide }
         "403": { description: Rôle ADMIN manquant }
         "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/recommendations:
+    get:
+      tags: [Recommandations]
+      summary: Quatre produits recommandés, avec la raison de chaque recommandation
+      description: Visiteur ou membre sans consentement — exclusivités Evil Ed puis sélection de la boutique. Membre consentant — catégories les plus consultées, recherchées ou achetées (90 jours), sans les produits déjà achetés.
+      parameters:
+        - { name: exclude, in: query, description: Produit à exclure (fiche affichée), schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Recommandations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  personalized: { type: boolean, description: Le membre a activé la personnalisation }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        product: { $ref: "#/components/schemas/Product" }
+                        reason: { type: string }
+  /api/v1/interests:
+    post:
+      tags: [Recommandations]
+      summary: Signal d'intérêt (produit consulté ou acheté, catégorie recherchée)
+      description: Ignoré (et non conservé) si le membre n'a pas activé la personnalisation.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: { type: string, enum: [VIEW, SEARCH, PURCHASE] }
+                productId: { type: string, format: uuid }
+                category: { type: string, maxLength: 100 }
+      responses:
+        "202": { description: Signal accepté (enregistré seulement avec consentement) }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { description: Jeton absent ou invalide }
+    delete:
+      tags: [Recommandations]
+      summary: Effacer son historique de navigation et d'achat (droit à l'effacement)
+      security: [{ keycloak: [] }]
+      responses:
+        "204": { description: Historique effacé }
+  /api/v1/interests/preferences:
+    get:
+      tags: [Recommandations]
+      summary: Consentement à la personnalisation (désactivé par défaut)
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Préférence, content: { application/json: { schema: { type: object, properties: { personalized: { type: boolean } } } } } }
+    put:
+      tags: [Recommandations]
+      summary: Activer ou retirer son consentement (le retrait efface l'historique)
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [personalized], properties: { personalized: { type: boolean } } } } }
+      responses:
+        "200": { description: Préférence enregistrée }
+  /api/v1/community/listings:
+    get:
+      tags: [Troc]
+      summary: Rechercher les annonces en cours (lecture publique)
+      parameters:
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/ListingType" } }
+        - { name: category, in: query, schema: { $ref: "#/components/schemas/Category" } }
+        - { name: q, in: query, description: Texte cherché dans le titre et la description, schema: { type: string, maxLength: 60 } }
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 12 } }
+      responses:
+        "200": { description: Page d'annonces, content: { application/json: { schema: { $ref: "#/components/schemas/ListingPage" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+    post:
+      tags: [Troc]
+      summary: Publier une annonce d'échange ou de don
+      description: Les membres dont un objet recherché correspond à l'annonce sont notifiés.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NewListing" } } }
+      responses:
+        "201": { description: Annonce publiée, content: { application/json: { schema: { $ref: "#/components/schemas/Listing" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { description: Jeton absent ou invalide }
+        "403": { description: Rôle CUSTOMER ou ADMIN manquant }
+  /api/v1/community/listings/mine:
+    get:
+      tags: [Troc]
+      summary: Mes annonces (tous statuts)
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Annonces du membre, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Listing" } } } } }
+        "401": { description: Jeton absent ou invalide }
+  /api/v1/community/listings/{id}:
+    get:
+      tags: [Troc]
+      summary: Consulter une annonce
+      description: Une annonce retirée ou masquée n'est visible que de son auteur et de la modération (404 sinon).
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Annonce, content: { application/json: { schema: { $ref: "#/components/schemas/Listing" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/community/listings/{id}/withdrawal:
+    post:
+      tags: [Troc]
+      summary: Retirer son annonce (les propositions en attente sont refusées)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Annonce retirée }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /api/v1/community/listings/{id}/offers:
+    post:
+      tags: [Troc]
+      summary: Proposer un échange ou demander un don
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [message], properties: { message: { type: string, minLength: 2, maxLength: 1000 } } } } }
+      responses:
+        "201": { description: Proposition créée, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Annonce indisponible ou proposition déjà en attente, content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+        "422": { description: Proposition sur sa propre annonce, content: { application/problem+json: { schema: { $ref: "#/components/schemas/Problem" } } } }
+  /api/v1/community/offers:
+    get:
+      tags: [Troc]
+      summary: Mes propositions envoyées et reçues
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Propositions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent: { type: array, items: { $ref: "#/components/schemas/Offer" } }
+                  received: { type: array, items: { $ref: "#/components/schemas/Offer" } }
+  /api/v1/community/offers/{id}:
+    get:
+      tags: [Troc]
+      summary: Consulter une proposition (participants uniquement, 404 sinon)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Proposition, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/community/offers/{id}/{action}:
+    post:
+      tags: [Troc]
+      summary: Accepter (acceptance), refuser (decline) ou annuler (cancellation) une proposition
+      description: Accepter ou refuser est réservé à l'auteur de l'annonce (403 sinon) ; annuler, à l'auteur de la proposition.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [acceptance, decline, cancellation] } }
+      responses:
+        "200": { description: Proposition mise à jour, content: { application/json: { schema: { $ref: "#/components/schemas/Offer" } } } }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Proposition déjà traitée ou annonce indisponible }
+  /api/v1/community/offers/{id}/messages:
+    get:
+      tags: [Troc]
+      summary: Conversation privée de la proposition (curseur after)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: after, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200": { description: Messages, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Message" } } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+    post:
+      tags: [Troc]
+      summary: Écrire à l'autre participant
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NewMessage" } } }
+      responses:
+        "201": { description: Message envoyé, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "409": { description: Conversation close (proposition refusée ou annulée) }
+        "429": { description: Anti-flood (5 messages par 10 secondes) }
+  /api/v1/community/rooms:
+    get:
+      tags: [Discussions]
+      summary: Salons de discussion
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Salons
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { type: object, properties: { code: { type: string }, name: { type: string }, description: { type: string } } }
+        "401": { description: Jeton absent ou invalide }
+  /api/v1/community/rooms/{code}/messages:
+    get:
+      tags: [Discussions]
+      summary: Derniers messages d'un salon, puis nouveaux messages après le curseur
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string, pattern: "^[a-z0-9-]{1,30}$" } }
+        - { name: after, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+      responses:
+        "200": { description: Messages, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Message" } } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+    post:
+      tags: [Discussions]
+      summary: Publier un message dans un salon
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: code, in: path, required: true, schema: { type: string, pattern: "^[a-z0-9-]{1,30}$" } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/NewMessage" } } }
+      responses:
+        "201": { description: Message publié, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "429": { description: Anti-flood (5 messages par 10 secondes) }
+  /api/v1/community/notifications:
+    get:
+      tags: [Espace personnel]
+      summary: 50 dernières notifications
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    type: { type: string, enum: [NEW_OFFER, OFFER_ACCEPTED, OFFER_DECLINED, OFFER_CANCELLED, NEW_MESSAGE, WISH_MATCH, INTEREST_MATCH, CONTENT_HIDDEN] }
+                    text: { type: string }
+                    link: { type: string }
+                    read: { type: boolean }
+                    createdAt: { type: string, format: date-time }
+  /api/v1/community/notifications/unread-count:
+    get:
+      tags: [Espace personnel]
+      summary: Nombre de notifications non lues
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Compteur, content: { application/json: { schema: { type: object, properties: { unread: { type: integer } } } } } }
+  /api/v1/community/notifications/read:
+    post:
+      tags: [Espace personnel]
+      summary: Tout marquer comme lu
+      security: [{ keycloak: [] }]
+      responses:
+        "204": { description: Notifications lues }
+  /api/v1/community/preferences:
+    get:
+      tags: [Espace personnel]
+      summary: Préférences de notification
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Préférences, content: { application/json: { schema: { $ref: "#/components/schemas/Preferences" } } } }
+    put:
+      tags: [Espace personnel]
+      summary: Modifier les préférences de notification
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/Preferences" } } }
+      responses:
+        "200": { description: Préférences enregistrées, content: { application/json: { schema: { $ref: "#/components/schemas/Preferences" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+  /api/v1/community/wishes:
+    get:
+      tags: [Espace personnel]
+      summary: Objets recherchés
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Objets recherchés, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Wish" } } } } }
+    post:
+      tags: [Espace personnel]
+      summary: Ajouter un objet recherché (10 au plus)
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [keywords], properties: { keywords: { type: string, minLength: 2, maxLength: 60 } } } } }
+      responses:
+        "201": { description: Objet recherché ajouté, content: { application/json: { schema: { $ref: "#/components/schemas/Wish" } } } }
+        "409": { description: Déjà dans la liste }
+        "422": { description: Limite de 10 atteinte }
+  /api/v1/community/wishes/{id}:
+    delete:
+      tags: [Espace personnel]
+      summary: Supprimer un objet recherché
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Supprimé }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/community/reports:
+    post:
+      tags: [Modération]
+      summary: Signaler une annonce ou un message
+      description: Idempotent (un second signalement identique est ignoré) ; on ne signale que ce que l'on voit, jamais son propre contenu.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType: { type: string, enum: [LISTING, MESSAGE] }
+                targetId: { type: string, maxLength: 36 }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "202": { description: Signalement enregistré }
+        "404": { $ref: "#/components/responses/Problem" }
+        "422": { description: Signalement de son propre contenu }
+  /api/v1/community/moderation/reports:
+    get:
+      tags: [Modération]
+      summary: Signalements par statut (ADMIN)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, ACTIONED, DISMISSED], default: OPEN } }
+      responses:
+        "200": { description: Signalements, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Report" } } } } }
+        "403": { description: Rôle ADMIN manquant }
+  /api/v1/community/moderation/reports/{id}/{decision}:
+    post:
+      tags: [Modération]
+      summary: Masquer le contenu signalé (hide) ou rejeter le signalement (dismiss)
+      description: Masquer clôt tous les signalements du contenu et prévient son auteur.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: decision, in: path, required: true, schema: { type: string, enum: [hide, dismiss] } }
+      responses:
+        "204": { description: Décision appliquée }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Signalement déjà traité }
+  /api/v1/editorial/articles:
+    get:
+      tags: [Actualités]
+      summary: Actualités et articles publiés, du plus récent au plus ancien
+      parameters:
+        - { name: kind, in: query, schema: { type: string, enum: [NEWS, FEATURE] }, description: "Sans filtre : les deux types" }
+        - { name: page, in: query, schema: { type: integer, minimum: 0, default: 0 } }
+        - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 10 } }
+      responses:
+        "200": { description: Page de résumés (sans le corps), content: { application/json: { schema: { $ref: "#/components/schemas/ArticlePage" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/articles/{slug}:
+    get:
+      tags: [Actualités]
+      summary: Article publié
+      parameters:
+        - { name: slug, in: path, required: true, schema: { type: string, pattern: "^[a-z0-9-]{1,90}$" } }
+      responses:
+        "200": { description: Article, content: { application/json: { schema: { $ref: "#/components/schemas/Article" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/admin/articles:
+    post:
+      tags: [Actualités]
+      summary: Publier une actualité ou un article (ADMIN)
+      description: Texte brut, paragraphes séparés par une ligne vide (aucun HTML interprété). Le slug est dérivé du titre.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, title, summary, body]
+              properties:
+                kind: { type: string, enum: [NEWS, FEATURE] }
+                title: { type: string, minLength: 5, maxLength: 160 }
+                summary: { type: string, minLength: 10, maxLength: 300 }
+                body: { type: string, minLength: 20, maxLength: 20000 }
+      responses:
+        "201":
+          description: Article publié (en-tête Location vers l'article)
+          content: { application/json: { schema: { $ref: "#/components/schemas/Article" } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "403": { description: Rôle ADMIN manquant }
+  /api/v1/editorial/admin/articles/{id}/unpublish:
+    post:
+      tags: [Actualités]
+      summary: Retirer un article publié (ADMIN)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Article retiré }
+        "403": { description: Rôle ADMIN manquant }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/issues:
+    get:
+      tags: [Fanzine]
+      summary: Numéros parus, du plus récent au plus ancien
+      description: Lecture publique ; avec un jeton, `access` indique ce que le membre peut lire.
+      security: [{}, { keycloak: [] }]
+      responses:
+        "200": { description: Numéros, content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Issue" } } } } }
+  /api/v1/editorial/issues/{number}:
+    get:
+      tags: [Fanzine]
+      summary: Numéro et sommaire (titres des pages)
+      security: [{}, { keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "200":
+          description: Numéro et sommaire
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issue: { $ref: "#/components/schemas/Issue" }
+                  contents: { type: array, items: { type: string }, description: "Titre de chaque page, dans l'ordre" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/issues/{number}/pages/{page}:
+    get:
+      tags: [Fanzine]
+      summary: Page d'un numéro (liseuse)
+      description: |
+        La page 1 (extrait) est lisible par tous. Les suivantes exigent un achat du numéro ou un abonnement en cours :
+        401 sans jeton, 403 pour un membre sans droit. Chaque lecture est comptée (pme_editorial_pages_read_total).
+      security: [{}, { keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+        - { name: page, in: path, required: true, schema: { type: integer, minimum: 1, maximum: 500 } }
+      responses:
+        "200": { description: Page, content: { application/json: { schema: { $ref: "#/components/schemas/IssuePage" } } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/editorial/issues/{number}/purchase:
+    post:
+      tags: [Fanzine]
+      summary: Acheter un numéro à l'unité (ajouté à la bibliothèque)
+      description: Paiement simulé dans le POC (comme la commande) ; un seul achat par numéro et par membre.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      responses:
+        "201": { description: Numéro acheté, content: { application/json: { schema: { $ref: "#/components/schemas/Issue" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Déjà acheté ou inclus dans l'abonnement en cours }
+  /api/v1/editorial/library:
+    get:
+      tags: [Fanzine]
+      summary: Bibliothèque du membre (numéros achetés ou inclus dans l'abonnement) et page atteinte
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Bibliothèque
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    issue: { $ref: "#/components/schemas/Issue" }
+                    purchasedAt: { type: [string, "null"], format: date-time, description: "null si inclus dans l'abonnement" }
+                    lastPage: { type: integer, minimum: 1 }
+  /api/v1/editorial/library/{number}/progress:
+    put:
+      tags: [Fanzine]
+      summary: Mémoriser la page atteinte (« Reprendre la lecture »)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: number, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [page], properties: { page: { type: integer, minimum: 1, maximum: 500 } } } } }
+      responses:
+        "204": { description: Page mémorisée }
+        "403": { description: Numéro absent de la bibliothèque }
+        "422": { description: Page hors du numéro }
+  /api/v1/editorial/plans:
+    get:
+      tags: [Abonnement]
+      summary: Formules d'abonnement (un an)
+      responses:
+        "200":
+          description: Formules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code: { type: string, enum: [DIGITAL, PAPER_DIGITAL] }
+                    label: { type: string }
+                    priceCents: { type: integer }
+                    paper: { type: boolean, description: Adresse de livraison requise }
+  /api/v1/editorial/subscription:
+    get:
+      tags: [Abonnement]
+      summary: Abonnement du membre (active=false s'il n'en a pas)
+      security: [{ keycloak: [] }]
+      responses:
+        "200": { description: Abonnement, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+    post:
+      tags: [Abonnement]
+      summary: S'abonner pour un an
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionRequest" } } }
+      responses:
+        "201": { description: Abonnement souscrit, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "409": { description: Abonnement déjà en cours }
+        "422": { description: Adresse manquante pour la formule papier }
+  /api/v1/editorial/subscription/renewal:
+    post:
+      tags: [Abonnement]
+      summary: Renouveler pour un an (à partir de 60 jours avant l'échéance, ou après)
+      description: La nouvelle période commence le lendemain de l'échéance si elle n'est pas passée ; la formule peut changer.
+      security: [{ keycloak: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/SubscriptionRequest" } } }
+      responses:
+        "200": { description: Abonnement renouvelé, content: { application/json: { schema: { $ref: "#/components/schemas/Subscription" } } } }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { description: Hors de la fenêtre de renouvellement }
+        "422": { description: Adresse manquante pour la formule papier }
+  /api/v1/editorial/admin/paper-subscribers:
+    get:
+      tags: [Abonnement]
+      summary: Liste d'expédition du fanzine papier (ADMIN)
+      description: Seules données personnelles de livraison du système ; accès réservé à l'ADMIN (minimisation, docs/13 §10).
+      security: [{ keycloak: [] }]
+      responses:
+        "200":
+          description: Abonnés papier en cours
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    memberName: { type: string }
+                    address: { $ref: "#/components/schemas/Address" }
+                    endsOn: { type: string, format: date }
+        "403": { description: Rôle ADMIN manquant }
 components:
   securitySchemes:
     keycloak:
@@ -155,6 +744,7 @@ components:
         price: { $ref: "#/components/schemas/Price" }
         category: { type: string }
         available: { type: boolean }
+        exclusive: { type: boolean, description: Vendu en exclusivité sur le site (gamme Evil Ed) }
     ProductPage:
       type: object
       properties:
@@ -210,6 +800,163 @@ components:
         productId: { type: string, format: uuid }
         available: { type: integer }
         reserved: { type: integer }
+    ListingType: { type: string, enum: [EXCHANGE, GIFT] }
+    Category: { type: string, enum: [FIGURINES, BLURAY, BOARD_GAMES, BOOKS_COMICS, POSTERS, GOODIES, OTHER] }
+    ItemCondition: { type: string, enum: [NEW, LIKE_NEW, GOOD, USED] }
+    NewListing:
+      type: object
+      required: [type, title, description, category, condition]
+      properties:
+        type: { $ref: "#/components/schemas/ListingType" }
+        title: { type: string, minLength: 3, maxLength: 120 }
+        description: { type: string, minLength: 10, maxLength: 2000 }
+        category: { $ref: "#/components/schemas/Category" }
+        condition: { $ref: "#/components/schemas/ItemCondition" }
+        wanted: { type: string, maxLength: 300, description: Contrepartie recherchée (échange uniquement) }
+    Listing:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/ListingType" }
+        title: { type: string }
+        description: { type: string }
+        category: { $ref: "#/components/schemas/Category" }
+        condition: { $ref: "#/components/schemas/ItemCondition" }
+        wanted: { type: [string, "null"] }
+        status: { type: string, enum: [ACTIVE, CONCLUDED, WITHDRAWN, HIDDEN] }
+        ownerName: { type: string, description: Nom affiché de l'auteur (son identifiant n'est jamais exposé) }
+        mine: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    ListingPage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/Listing" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+    Offer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        listingId: { type: string, format: uuid }
+        listingTitle: { type: string }
+        listingStatus: { type: string, enum: [ACTIVE, CONCLUDED, WITHDRAWN, HIDDEN] }
+        status: { type: string, enum: [PENDING, ACCEPTED, DECLINED, CANCELLED] }
+        message: { type: string }
+        authorName: { type: string }
+        ownerName: { type: string }
+        sent: { type: boolean, description: Proposition faite par le membre qui consulte }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    NewMessage:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, maxLength: 1000 }
+    Message:
+      type: object
+      properties:
+        id: { type: integer, description: Curseur croissant }
+        author: { type: string }
+        content: { type: string }
+        sentAt: { type: string, format: date-time }
+        mine: { type: boolean }
+    Preferences:
+      type: object
+      required: [offers, messages, wishes, browsing]
+      properties:
+        offers: { type: boolean }
+        messages: { type: boolean }
+        wishes: { type: boolean }
+        browsing: { type: boolean, description: "US14 : notifications selon les catégories consultées (consentement, désactivé par défaut)" }
+    Wish:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        keywords: { type: string }
+        createdAt: { type: string, format: date-time }
+    Report:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { type: string, enum: [LISTING, MESSAGE] }
+        targetId: { type: string }
+        excerpt: { type: string }
+        targetAuthorName: { type: string }
+        reporterName: { type: string }
+        reason: { type: string }
+        status: { type: string, enum: [OPEN, ACTIONED, DISMISSED] }
+        createdAt: { type: string, format: date-time }
+        handledBy: { type: [string, "null"] }
+        handledAt: { type: [string, "null"], format: date-time }
+    ArticleSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        kind: { type: string, enum: [NEWS, FEATURE] }
+        title: { type: string }
+        summary: { type: string }
+        author: { type: string }
+        publishedAt: { type: string, format: date-time }
+    Article:
+      allOf:
+        - $ref: "#/components/schemas/ArticleSummary"
+        - type: object
+          properties:
+            body: { type: string, description: "Texte brut, paragraphes séparés par une ligne vide" }
+    ArticlePage:
+      type: object
+      properties:
+        content: { type: array, items: { $ref: "#/components/schemas/ArticleSummary" } }
+        page: { type: integer }
+        size: { type: integer }
+        totalElements: { type: integer }
+        totalPages: { type: integer }
+    Issue:
+      type: object
+      properties:
+        number: { type: integer }
+        title: { type: string }
+        summary: { type: string }
+        publishedOn: { type: string, format: date }
+        priceCents: { type: integer }
+        pageCount: { type: integer }
+        access: { type: string, enum: [PREVIEW, PURCHASE, SUBSCRIPTION], description: "PREVIEW : extrait seul (visiteur ou membre sans droit)" }
+    IssuePage:
+      type: object
+      properties:
+        issueNumber: { type: integer }
+        pageNo: { type: integer }
+        pageCount: { type: integer }
+        title: { type: string }
+        content: { type: string, description: "Texte brut, paragraphes séparés par une ligne vide" }
+        access: { type: string, enum: [PREVIEW, PURCHASE, SUBSCRIPTION] }
+    Address:
+      type: object
+      required: [recipient, street, postalCode, city]
+      properties:
+        recipient: { type: string, maxLength: 100 }
+        street: { type: string, maxLength: 200 }
+        postalCode: { type: string, pattern: "^[0-9]{5}$" }
+        city: { type: string, maxLength: 100 }
+    SubscriptionRequest:
+      type: object
+      required: [plan]
+      properties:
+        plan: { type: string, enum: [DIGITAL, PAPER_DIGITAL] }
+        address: { $ref: "#/components/schemas/Address", description: "Obligatoire pour PAPER_DIGITAL, ignorée sinon" }
+    Subscription:
+      type: object
+      properties:
+        active: { type: boolean }
+        plan: { type: [string, "null"], enum: [DIGITAL, PAPER_DIGITAL, null] }
+        planLabel: { type: [string, "null"] }
+        startsOn: { type: [string, "null"], format: date }
+        endsOn: { type: [string, "null"], format: date }
+        renewable: { type: boolean, description: "Vrai à partir de 60 jours avant l'échéance" }
+        address: { oneOf: [{ $ref: "#/components/schemas/Address" }, { type: "null" }] }
     Problem:
       type: object
       properties:

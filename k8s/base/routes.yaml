@@ -1,5 +1,7 @@
 # Exposition par Gateway API (ADR-003). Le Gateway « pme-gateway » (plateforme) termine le TLS ;
-# chaque route porte sa politique : catalogue public, commandes réservées à CUSTOMER, stock réservé à ADMIN.
+# chaque route porte sa politique : catalogue public, commandes réservées à CUSTOMER, stock réservé à ADMIN,
+# espace communautaire : annonces en lecture publique, le reste réservé aux membres (CUSTOMER ou ADMIN),
+# modération réservée à ADMIN.
 # Le site (app.pme.local) et l'API partagent la même origine pour le navigateur : les routes catalogue,
 # commandes et stock (espace administrateur) répondent aussi sur app.pme.local (ni CORS ni cookie ;
 # ADR-002 révisé). api.pme.local reste l'entrée des intégrations et des tests.
@@ -18,6 +20,7 @@ spec:
     - matches:
         - { path: { type: PathPrefix, value: /api/v1/products }, method: GET }
         - { path: { type: PathPrefix, value: /api/v1/categories }, method: GET }
+        - { path: { type: PathPrefix, value: /api/v1/recommendations }, method: GET }
       filters:
         - type: ResponseHeaderModifier
           responseHeaderModifier:
@@ -59,6 +62,134 @@ spec:
               - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
               - { name: Cross-Origin-Resource-Policy, value: same-origin }
       backendRefs: [{ name: stock-service, port: 8083 }]
+---
+# Personnalisation des recommandations (US13) : consentement et signaux d'intérêt, réservés aux membres.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: catalog-interests
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/interests } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: catalog-service, port: 8081 }]
+---
+# Espace communautaire : la consultation des annonces (GET) est publique ; toute autre requête passe par la route
+# « community » (jeton exigé). Règle de précédence Gateway API : le préfixe le plus long et la méthode l'emportent.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: community-public
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/community/listings }, method: GET }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: community-service, port: 8084 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: community
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/community } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: community-service, port: 8084 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: community-moderation
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/community/moderation } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: community-service, port: 8084 }]
+---
+# Éditions (US15 à US17) : actualités, sommaire du fanzine, pages de lecture et formules en lecture publique (le
+# service vérifie lui-même le droit de lire au-delà de l'extrait) ; achats, bibliothèque, abonnement réservés aux
+# membres ; rédaction et liste d'expédition réservées à ADMIN.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: editorial-public
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches:
+        - { path: { type: PathPrefix, value: /api/v1/editorial/articles }, method: GET }
+        - { path: { type: PathPrefix, value: /api/v1/editorial/issues }, method: GET }
+        - { path: { type: PathPrefix, value: /api/v1/editorial/plans }, method: GET }
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: editorial-service, port: 8085 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: editorial
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/editorial } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: editorial-service, port: 8085 }]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: editorial-admin
+spec:
+  parentRefs: [{ name: pme-gateway }]
+  hostnames: ["api.pme.local", "app.pme.local"]
+  rules:
+    - matches: [{ path: { type: PathPrefix, value: /api/v1/editorial/admin } }]
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - { name: Strict-Transport-Security, value: "max-age=31536000; includeSubDomains" }
+              - { name: Cross-Origin-Resource-Policy, value: same-origin }
+      backendRefs: [{ name: editorial-service, port: 8085 }]
 ---
 # Site web : tout le reste de app.pme.local est servi par web-frontend (nginx), qui pose ses propres en-têtes
 # (CSP, anti-clickjacking) ; le Gateway ajoute HSTS puisque le TLS se termine ici.
@@ -161,6 +292,61 @@ spec:
             provider: keycloak
             claims: [{ name: realm_access.roles, valueType: StringArray, values: ["ADMIN"] }]
 ---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: members-jwt
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: catalog-interests }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial }
+  jwt:
+    providers:
+      - name: keycloak
+        issuer: KEYCLOAK_ISSUER
+        audiences: ["pme-api"]
+        remoteJWKS:
+          uri: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+          backendRefs: [{ group: "", kind: Service, name: keycloak, port: 8080 }]
+          cacheDuration: 300s
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: role-membre
+        action: Allow
+        principal:
+          jwt:
+            provider: keycloak
+            claims: [{ name: realm_access.roles, valueType: StringArray, values: ["CUSTOMER", "ADMIN"] }]
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: admin-routes-jwt
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community-moderation }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial-admin }
+  jwt:
+    providers:
+      - name: keycloak
+        issuer: KEYCLOAK_ISSUER
+        audiences: ["pme-api"]
+        remoteJWKS:
+          uri: http://keycloak:8080/realms/pme/protocol/openid-connect/certs
+          backendRefs: [{ group: "", kind: Service, name: keycloak, port: 8080 }]
+          cacheDuration: 300s
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: role-admin
+        action: Allow
+        principal:
+          jwt:
+            provider: keycloak
+            claims: [{ name: realm_access.roles, valueType: StringArray, values: ["ADMIN"] }]
+---
 # Limitation de débit par adresse IP cliente sur la prise de commande (STRIDE : déni de service).
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: BackendTrafficPolicy
@@ -175,3 +361,22 @@ spec:
         - clientSelectors:
             - sourceCIDR: { value: 0.0.0.0/0, type: Distinct }
           limit: { requests: 50, unit: Second }
+---
+# Routes des membres (communauté, personnalisation, éditions) : limitation par adresse IP (spam de messages,
+# d'annonces, de signalements ou d'achats), en plus de l'anti-flood applicatif par membre (5 messages / 10 s).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: members-rate-limit
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: community }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: catalog-interests }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: editorial }
+  rateLimit:
+    type: Local
+    local:
+      rules:
+        - clientSelectors:
+            - sourceCIDR: { value: 0.0.0.0/0, type: Distinct }
+          limit: { requests: 20, unit: Second }

@@ -4,11 +4,12 @@ import type { Page, Product } from './types';
 export const TAILLE_PAGE_CATALOGUE = 12;
 
 export function listerProduits(
-  { page = 0, categorie }: { page?: number; categorie?: string },
+  { page = 0, categorie, exclusif = false }: { page?: number; categorie?: string; exclusif?: boolean },
   signal?: AbortSignal,
 ): Promise<Page<Product>> {
   const params = new URLSearchParams({ page: String(page), size: String(TAILLE_PAGE_CATALOGUE) });
   if (categorie) params.set('category', categorie);
+  if (exclusif) params.set('exclusive', 'true');
   return appelApi<Page<Product>>(`/api/v1/products?${params.toString()}`, { signal });
 }
 

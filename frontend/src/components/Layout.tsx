@@ -1,13 +1,43 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { estAdmin, estClient, libelleProfil, useAuth } from '../auth/auth';
+import { compterNonLues } from '../api/communaute';
+import { estAdmin, estClient, estMembre, libelleProfil, useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { NOM_SITE } from '../hooks/useTitre';
 import { ErreurInattendue } from './ErreurInattendue';
 import { Chargement } from './Etats';
 
+/** Relevé périodique des notifications non lues (et à chaque changement de page). */
+const INTERVALLE_NOTIFICATIONS_MS = 30000;
+
+function useNonLues(): number {
+  const auth = useAuth();
+  const { pathname } = useLocation();
+  const membre = estMembre(auth);
+  const [nonLues, setNonLues] = useState(0);
+  const relever = useEffectEvent((signal: AbortSignal) =>
+    compterNonLues(auth.jeton, signal).then(
+      (compteur) => setNonLues(compteur.unread),
+      () => undefined,
+    ),
+  );
+
+  useEffect(() => {
+    if (!membre) return;
+    const controleur = new AbortController();
+    void relever(controleur.signal);
+    const minuterie = setInterval(() => void relever(controleur.signal), INTERVALLE_NOTIFICATIONS_MS);
+    return () => {
+      controleur.abort();
+      clearInterval(minuterie);
+    };
+  }, [membre, pathname]);
+  return membre ? nonLues : 0;
+}
+
 function CompteUtilisateur() {
   const auth = useAuth();
+  const nonLues = useNonLues();
   if (!auth.pret) return null;
   if (!auth.connecte) {
     return (
@@ -29,6 +59,22 @@ function CompteUtilisateur() {
           <span className="identite-profil">{libelleProfil(auth)}</span>
         </span>
       </p>
+      {estMembre(auth) && (
+        <Link to="/mon-espace" className="lien-espace">
+          Mon espace
+          {nonLues > 0 && (
+            <>
+              {' '}
+              <span className="pastille" aria-hidden="true">
+                {nonLues}
+              </span>
+              <span className="visuellement-masque">
+                ({nonLues} notification{nonLues > 1 ? 's' : ''} non lue{nonLues > 1 ? 's' : ''})
+              </span>
+            </>
+          )}
+        </Link>
+      )}
       <button type="button" className="bouton bouton-secondaire" onClick={auth.deconnecter}>
         Se déconnecter
       </button>
@@ -99,15 +145,43 @@ export function Layout() {
                 </span>
               </NavLink>
             </li>
+            <li>
+              <NavLink to="/communaute" end>
+                Troc et dons
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/fanzine" end>
+                Fanzine
+              </NavLink>
+            </li>
+            <li>
+              <NavLink to="/actualites" end>
+                Actualités
+              </NavLink>
+            </li>
+            {estMembre(auth) && (
+              <li>
+                <NavLink to="/communaute/salons">Salons</NavLink>
+              </li>
+            )}
             {estClient(auth) && (
               <li>
                 <NavLink to="/commandes">Mes commandes</NavLink>
               </li>
             )}
             {estAdmin(auth) && (
-              <li>
-                <NavLink to="/admin/stock">Stock</NavLink>
-              </li>
+              <>
+                <li>
+                  <NavLink to="/admin/stock">Stock</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/moderation">Modération</NavLink>
+                </li>
+                <li>
+                  <NavLink to="/admin/redaction">Rédaction</NavLink>
+                </li>
+              </>
             )}
           </ul>
         </nav>

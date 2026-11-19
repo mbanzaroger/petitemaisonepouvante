@@ -1,4 +1,4 @@
-# Collecte des métriques Actuator des trois services, de nginx (site) et de la profondeur des files RabbitMQ (US5).
+# Collecte des métriques Actuator des cinq services, de nginx (site) et de la profondeur des files RabbitMQ (US5).
 # Le libellé « service » ajouté par l'opérateur Prometheus vaut le nom du Service Kubernetes :
 # les requêtes du tableau de bord et des alertes sont donc identiques en local et en staging.
 apiVersion: monitoring.coreos.com/v1
@@ -9,7 +9,7 @@ metadata:
 spec:
   selector:
     matchExpressions:
-      - { key: app, operator: In, values: [catalog-service, order-service, stock-service] }
+      - { key: app, operator: In, values: [catalog-service, order-service, stock-service, community-service, editorial-service] }
   endpoints:
     - port: http
       path: /actuator/prometheus

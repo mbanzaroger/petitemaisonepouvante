@@ -39,9 +39,11 @@ describe('Suivi de commande', () => {
       await act(() => vi.advanceTimersByTimeAsync(INTERVALLE_SUIVI_MS));
     }
     expect(await screen.findByText(/prend plus de temps que prévu/)).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledTimes(ESSAIS_SUIVI_MAX + 1);
+    // Seuls les relevés de la commande comptent (l'en-tête relève aussi les notifications non lues).
+    const releves = () => fetch.mock.calls.filter(([url]) => String(url).includes(`/api/v1/orders/${ID}`)).length;
+    expect(releves()).toBe(ESSAIS_SUIVI_MAX + 1);
     await utilisateur.click(screen.getByRole('button', { name: 'Actualiser le statut' }));
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(ESSAIS_SUIVI_MAX + 2));
+    await vi.waitFor(() => expect(releves()).toBe(ESSAIS_SUIVI_MAX + 2));
   });
 
   it('explique une annulation', async () => {

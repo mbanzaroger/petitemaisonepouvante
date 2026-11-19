@@ -2,6 +2,7 @@ import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { vi } from 'vitest';
+import type { Annonce, Message, Proposition, Signalement } from '../api/communaute';
 import type { Order, Page, Product } from '../api/types';
 import { App } from '../App';
 import type { EtatAuth, SourceAuth } from '../auth/auth';
@@ -64,6 +65,7 @@ export function produit(numero: number, surcharge: Partial<Product> = {}): Produ
     price: { amountCents: 1000 + numero, currency: 'EUR' },
     category: 'Goodies',
     available: true,
+    exclusive: false,
     ...surcharge,
   };
 }
@@ -83,4 +85,72 @@ export function commande(surcharge: Partial<Order> = {}): Order {
     lines: [{ productId: produit(8).id, productName: 'Mug', quantity: 2, unitPriceCents: 1200, subtotalCents: 2400 }],
     ...surcharge,
   };
+}
+
+export const MEMBRE_ADMIN: Partial<EtatAuth> = { connecte: true, utilisateur: 'admin-pme', roles: ['ADMIN'] };
+export const SANS_ROLE: Partial<EtatAuth> = { connecte: true, utilisateur: 'bob', roles: [] };
+
+export function annonce(numero: number, surcharge: Partial<Annonce> = {}): Annonce {
+  const nn = String(numero).padStart(2, '0');
+  return {
+    id: `5c0a00${nn}-0000-4000-8000-0000000000${nn}`,
+    type: 'EXCHANGE',
+    title: `Annonce ${nn}`,
+    description: `Description de l'annonce ${nn}`,
+    category: 'FIGURINES',
+    condition: 'GOOD',
+    wanted: 'Un Blu-ray',
+    status: 'ACTIVE',
+    ownerName: 'lucie',
+    mine: false,
+    createdAt: '2026-11-16T10:00:00Z',
+    ...surcharge,
+  };
+}
+
+export function proposition(surcharge: Partial<Proposition> = {}): Proposition {
+  return {
+    id: '0ffe0001-0000-4000-8000-000000000001',
+    listingId: annonce(1).id,
+    listingTitle: 'Annonce 01',
+    listingStatus: 'ACTIVE',
+    status: 'PENDING',
+    message: 'Je propose une affiche.',
+    authorName: 'carol',
+    ownerName: 'alice',
+    sent: false,
+    createdAt: '2026-11-16T10:00:00Z',
+    updatedAt: '2026-11-16T10:05:00Z',
+    ...surcharge,
+  };
+}
+
+export function message(id: number, surcharge: Partial<Message> = {}): Message {
+  return { id, author: 'carol', content: `Message ${id}`, sentAt: '2026-11-16T10:00:00Z', mine: false, ...surcharge };
+}
+
+export function signalement(surcharge: Partial<Signalement> = {}): Signalement {
+  return {
+    id: '4e900001-0000-4000-8000-000000000001',
+    targetType: 'LISTING',
+    targetId: annonce(1).id,
+    excerpt: 'Annonce 01',
+    targetAuthorName: 'lucie',
+    reporterName: 'carol',
+    reason: 'Vente déguisée',
+    status: 'OPEN',
+    createdAt: '2026-11-16T10:00:00Z',
+    handledBy: null,
+    handledAt: null,
+    ...surcharge,
+  };
+}
+
+/** Corps JSON envoyé lors de l'appel « MÉTHODE /chemin » (dernier appel correspondant). */
+export function corpsEnvoye(fetch: ReturnType<typeof simulerApi>, methode: string, chemin: string): unknown {
+  const appel = fetch.mock.calls
+    .filter(([url, init]) => (init?.method ?? 'GET') === methode && new URL(String(url), 'http://localhost').pathname === chemin)
+    .at(-1);
+  if (!appel) throw new Error(`Aucun appel ${methode} ${chemin}`);
+  return JSON.parse(String(appel[1]?.body));
 }
