@@ -11,7 +11,7 @@ RUN npx tsc -p tsconfig.app.json --noEmit && npx vite build
 
 # Étape 2 : nginx non root (UID 101, port 8080), compatible avec un système de fichiers racine en lecture seule
 # (écritures limitées à /tmp et /etc/nginx/conf.d, montés en volumes vides dans Kubernetes)
-FROM nginxinc/nginx-unprivileged:1.30-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 ENV KEYCLOAK_URL=http://localhost:8080 \
     KEYCLOAK_REALM=pme \
     KEYCLOAK_CLIENT_ID=pme-web
