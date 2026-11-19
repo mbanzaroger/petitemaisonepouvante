@@ -76,8 +76,11 @@ check "Site : requêtes servies mesurées (exporteur nginx)" oui \
 kubectl -n pme logs deploy/web-frontend -c web-frontend --tail=200 \
   | jq -cR 'fromjson? | select(.service == "web-frontend")' > "$RESULTS.web" || true
 check "Site : journaux d'accès au format JSON" oui "$([ -s "$RESULTS.web" ] && echo oui || echo non)"
+# Journaux écrits dans un fichier puis lus : avec pipefail, « kubectl logs | grep -q » échoue au hasard quand grep
+# s'arrête au premier résultat et que kubectl reçoit SIGPIPE (journaux volumineux) — faux « non » du 19-20/11/2026.
+logs_service order-service > "$RESULTS.order-all"
 check "Site : appels du navigateur (web-…) corrélés dans les logs order-service" oui \
-  "$(logs_service order-service | grep -q 'web-' && echo oui || echo non)"
+  "$(grep -q 'web-' "$RESULTS.order-all" && echo oui || echo non)"
 
 cat "$RESULTS" >> "$RESULTS.md"
 {

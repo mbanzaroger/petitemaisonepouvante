@@ -5,7 +5,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 ## [Non publié]
 
 ### Corrigé
-- Supervision : `verify.sh` lit les journaux de toutes les répliques d'un service (l'autoscaling peut en démarrer plusieurs pendant le test de charge ; une seule était lue, d'où un échec intermittent de la corrélation des appels du site).
+- Supervision : `verify.sh` lit les journaux de toutes les répliques d'un service, et la recherche des appels du site (`web-…`) se fait dans un fichier. Avec `pipefail`, `kubectl logs | grep -q` échouait au hasard : `grep` s'arrête au premier résultat, et `kubectl` reçoit alors SIGPIPE.
 - CI et release : l'image d'un service Java est construite à partir du jar compilé et testé (substitué à l'étape Maven du Dockerfile) ; plus aucun téléchargement Maven pendant `docker build`, où Maven Central refusait certains runners. La seconde tentative automatique ajoutée juste avant échouait de la même façon ; elle est retirée.
 
 ## [1.5.0] - 2026-11-19
