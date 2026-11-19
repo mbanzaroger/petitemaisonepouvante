@@ -14,45 +14,100 @@ vulnerabilities:
   - id: CVE-2026-113425
     expired_at: 2026-11-26
     statement: >-
-      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Correctif publié
-      la veille (nginx 1.30.7) mais pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les
-      dépôts nginx.org et Alpine : la réinstallation à la construction garde 1.30.6). Code vulnérable non atteint
-      par notre configuration : ni HTTP/2 ni HTTP/3 (nginx écoute en HTTP/1.1 derrière le Gateway), ni module mail,
-      ni stream, ni resolver dans l'image. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      expiration au délai d'une vulnérabilité haute (7 jours).
+  - id: CVE-2026-118899
+    expired_at: 2026-11-26
+    statement: >-
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      expiration au délai d'une vulnérabilité haute (7 jours).
+  - id: CVE-2026-120967
+    expired_at: 2026-11-26
+    statement: >-
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      expiration au délai d'une vulnérabilité haute (7 jours).
+  - id: CVE-2026-120993
+    expired_at: 2026-11-26
+    statement: >-
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
       expiration au délai d'une vulnérabilité haute (7 jours).
   - id: CVE-2026-121810
     expired_at: 2026-11-26
     statement: >-
-      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Correctif publié
-      la veille (nginx 1.30.7) mais pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les
-      dépôts nginx.org et Alpine : la réinstallation à la construction garde 1.30.6). Code vulnérable non atteint
-      par notre configuration : ni HTTP/2 ni HTTP/3 (nginx écoute en HTTP/1.1 derrière le Gateway), ni module mail,
-      ni stream, ni resolver dans l'image. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
       expiration au délai d'une vulnérabilité haute (7 jours).
   - id: CVE-2026-123007
     expired_at: 2026-11-26
     statement: >-
-      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Correctif publié
-      la veille (nginx 1.30.7) mais pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les
-      dépôts nginx.org et Alpine : la réinstallation à la construction garde 1.30.6). Code vulnérable non atteint
-      par notre configuration : ni HTTP/2 ni HTTP/3 (nginx écoute en HTTP/1.1 derrière le Gateway), ni module mail,
-      ni stream, ni resolver dans l'image. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
       expiration au délai d'une vulnérabilité haute (7 jours).
   - id: CVE-2026-123633
     expired_at: 2026-11-26
     statement: >-
-      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Correctif publié
-      la veille (nginx 1.30.7) mais pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les
-      dépôts nginx.org et Alpine : la réinstallation à la construction garde 1.30.6). Code vulnérable non atteint
-      par notre configuration : ni HTTP/2 ni HTTP/3 (nginx écoute en HTTP/1.1 derrière le Gateway), ni module mail,
-      ni stream, ni resolver dans l'image. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
       expiration au délai d'une vulnérabilité haute (7 jours).
   - id: CVE-2026-123634
     expired_at: 2026-11-26
     statement: >-
-      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Correctif publié
-      la veille (nginx 1.30.7) mais pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les
-      dépôts nginx.org et Alpine : la réinstallation à la construction garde 1.30.6). Code vulnérable non atteint
-      par notre configuration : ni HTTP/2 ni HTTP/3 (nginx écoute en HTTP/1.1 derrière le Gateway), ni module mail,
-      ni stream, ni resolver dans l'image. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      expiration au délai d'une vulnérabilité haute (7 jours).
+  - id: CVE-2026-123640
+    expired_at: 2026-11-26
+    statement: >-
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
+      expiration au délai d'une vulnérabilité haute (7 jours).
+  - id: CVE-2026-125283
+    expired_at: 2026-11-26
+    statement: >-
+      19/11/2026 — nginx 1.30.6 de l'image nginxinc/nginx-unprivileged:1.30-alpine (V-28). Les 10 CVE corrigées
+      par nginx 1.30.7 (18/11/2026) sont exemptées ensemble, au fil de leur arrivée dans la base de Trivy. Correctif
+      pas encore empaqueté pour Alpine 3.24 (ni dans l'image de base, ni dans les dépôts nginx.org et Alpine). Code
+      vulnérable non atteint par notre configuration : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway (ni
+      HTTP/2, ni HTTP/3, ni « listen … ssl »), sans module mail ni stream (ssl_preread), sans resolver, sans
+      protocole PROXY ni directive alias. Remédiation automatique dès que 1.30.7 est publiée (Dockerfile) ;
       expiration au délai d'une vulnérabilité haute (7 jours).

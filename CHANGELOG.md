@@ -3,6 +3,8 @@
 Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage : [SemVer](https://semver.org/lang/fr/).
 
 ## [Non publié]
+
+## [1.4.0] - 2026-11-19
 ### Ajouté
 - **Recommandations** (US13) : sélection « Recommandé pour vous » sur le catalogue et « Vous aimerez aussi » sur les fiches, selon les recherches, consultations et achats du membre, avec la raison affichée ; consentement dans « Mon espace » (désactivé par défaut), effacement de l'historique, conservation 90 jours ; sélection commune pour les visiteurs.
 - **Gamme exclusive Evil Ed** : produits signalés « Exclusivité Evil Ed », filtre du catalogue, mise en avant dans les recommandations.
@@ -18,6 +20,8 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 - Staging : `community-service` et `editorial-service` autorisés à lire les clés JWKS de Keycloak (NetworkPolicy) ; les routes authentifiées de la communauté répondaient 504.
 - Image du site : 5 CVE hautes de nginx 1.30.6 (publiées le 18/11/2026, code non atteint par notre configuration) en exception datée jusqu'au 26/11/2026 (V-28) ; le Dockerfile installe nginx 1.30.7 depuis le dépôt officiel nginx.org (clé vérifiée) dès sa publication pour Alpine.
 - Supervision : `verify.sh` calcule les cibles, alertes et panneaux attendus depuis le dépôt (les valeurs figées dataient d'avant l'espace communautaire).
+- DAST : traversée de répertoire signalée par ZAP sur la publication d'annonce qualifiée en faux positif pour cette seule URL (V-29) ; le résumé du CD publie la preuve des alertes moyennes et hautes.
+- CI : construction des images Java résistante aux refus de Maven Central (`mvn -U`, tentatives espacées sur 429 et 503) ; un refus mis en cache faisait échouer toutes les constructions suivantes.
 
 ## [1.3.0] - 2026-11-18
 ### Ajouté
