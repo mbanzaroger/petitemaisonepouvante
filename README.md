@@ -13,7 +13,8 @@ Fonctionnalités métier implémentées, de bout en bout dans le navigateur :
 - **espace communautaire** : troc et dons entre particuliers, conversation privée et salons de discussion entre passionnés, objets recherchés et notifications, modération (US8 à US12, v1.3.0) ;
 - **personnalisation** : recommandations de produits selon les recherches, consultations et achats, gamme exclusive Evil Ed, notifications selon la navigation, avec consentement (US13, US14) ;
 - **éditions** : actualités et articles de fond ouverts à tous, fanzine numérique (extrait, achat, liseuse et bibliothèque dans « Mon espace »), abonnement numérique ou papier et renouvellement (US15 à US17, ADR-006) ;
-- **administration de la boutique et inscription** : création de produits et réapprovisionnement, suivi des commandes de tous les clients, création d'un compte client en ligne (US18 à US20, v1.5.0).
+- **administration de la boutique et inscription** : création de produits et réapprovisionnement, suivi des commandes de tous les clients, création d'un compte client en ligne (US18 à US20, v1.5.0) ;
+- **expérience d'achat** : image de chaque produit gérée par l'administrateur, recherche et tri du catalogue, interface refondue (en-tête avec recherche, menu des rayons, cartes avec image) (US21, US22, ADR-007).
 
 Hébergement cible en Europe et feuille de route (enchères et diffusion des productions Evil Ed en v2, projections du festival en v3) : [ADR-006](docs/adr/ADR-006-service-editorial-hebergement-feuille-de-route.md).
 
@@ -127,6 +128,7 @@ scripts/         configuration GitHub reproductible (issues, jalons, kanban, rel
 - [x] Espace communautaire : troc, dons, salons, notifications, modération (v1.3.0, ADR-004, ADR-005)
 - [x] Recommandations, gamme Evil Ed, actualités, fanzine numérique et abonnements (v1.4.0, ADR-006)
 - [x] Administration de la boutique (produits, stock, commandes clients) et inscription des clients (v1.5.0)
+- [x] Images des produits, recherche et tri, refonte de l'interface (ADR-007)
 - [ ] v2 : enchères, diffusion des productions Evil Ed ; v3 : projections en ligne du festival (ADR-006)
 - [ ] Répétitions chronométrées et vidéo de secours (#41)
 - [ ] SonarQube Cloud, indicateur 2 (#32)

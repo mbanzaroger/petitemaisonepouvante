@@ -36,6 +36,31 @@ export function modifierProduit(
   });
 }
 
+/** US21 — formats et poids acceptés pour l'image d'un produit (contrôlés aussi par le catalogue). */
+export const TYPES_IMAGE = ['image/jpeg', 'image/png', 'image/webp'];
+export const POIDS_IMAGE_MAX = 2 * 1024 * 1024;
+
+/** Message d'erreur si le fichier choisi ne peut pas servir d'image de produit, sinon null. */
+export function verifierImage(fichier: File): string | null {
+  if (!TYPES_IMAGE.includes(fichier.type)) return 'Choisissez une image JPEG, PNG ou WebP.';
+  if (fichier.size > POIDS_IMAGE_MAX) return 'Image trop lourde : 2 Mo au plus.';
+  return null;
+}
+
+/** Ajoute ou remplace l'image d'un produit ; renvoie le produit avec sa nouvelle adresse d'image. */
+export function envoyerImage(id: string, image: File, token: TokenProvider): Promise<Product> {
+  return appelApi<Product>(`/api/v1/catalog/admin/products/${encodeURIComponent(id)}/image`, {
+    method: 'PUT',
+    fichier: image,
+    token,
+  });
+}
+
+/** Retire l'image d'un produit (le site affiche alors le pictogramme de son rayon). */
+export function retirerImage(id: string, token: TokenProvider): Promise<void> {
+  return appelApi<void>(`/api/v1/catalog/admin/products/${encodeURIComponent(id)}/image`, { method: 'DELETE', token });
+}
+
 /** Ajoute des unités au stock disponible (crée le stock d'un nouveau produit). */
 export function reapprovisionner(productId: string, quantity: number, token: TokenProvider): Promise<NiveauStock> {
   return appelApi<NiveauStock>(`/api/v1/stock/${encodeURIComponent(productId)}/restock`, {

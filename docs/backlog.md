@@ -50,3 +50,13 @@ Les critères d'US8 à US12 sont vérifiés à trois niveaux : tests d'intégrat
 Les critères d'US15 à US17 sont vérifiés par les tests d'intégration du service (Testcontainers, 13 cas), les scénarios Cucumber à travers le Gateway (`acceptance-tests/src/test/resources/features/us15-us17-editions.feature`), le test de fumée du CD et le parcours Playwright + axe (`frontend/e2e/editions.spec.ts`).
 
 Les critères d'US18 à US20 sont vérifiés par les tests d'intégration des services (catalogue, stock, commandes), les scénarios Cucumber à travers le Gateway (`acceptance-tests/src/test/resources/features/us18-us19-administration.feature`), le test de fumée du CD (produit créé, approvisionné, commandé, suivi puis retiré ; formulaire d'inscription) et les parcours Playwright + axe (`frontend/e2e/boutique-admin-inscription.spec.ts`, dont l'inscription réelle d'un client sur Keycloak).
+
+## Épic 6 — Expérience d'achat : images, recherche et refonte de l'interface (recette du 20/11/2026, ADR-007)
+
+| US | Récit | Critères d'acceptation |
+|---|---|---|
+| US21 | En tant qu'administrateur, je veux ajouter l'image d'un produit pour que les clients voient ce qu'ils achètent. | **Étant donné** un administrateur, **quand** il crée un produit avec une image (JPEG, PNG ou WebP, 2 Mo au plus) ou qu'il la change depuis « Produits et stock », **alors** l'image apparaît dans le catalogue, la fiche, le panier et les recommandations ; il peut aussi la retirer (pictogramme du rayon affiché). Un fichier d'un autre type, un faux fichier image ou un fichier trop lourd est refusé (415, 413) ; un client ou un visiteur est refusé (403, 401). Chaque produit de démonstration a une image. |
+| US22 | En tant que visiteur, je veux chercher un produit et trier le catalogue. | **Étant donné** le catalogue, **quand** je cherche un mot (dans un rayon ou dans tous), **alors** je vois les produits en vente dont le nom, la description ou la référence le contiennent, sans tenir compte des majuscules ni des accents ; **quand** je trie par nom, prix croissant, prix décroissant ou nouveautés, **alors** l'ordre change sans perdre les filtres ; je peux afficher les produits en grille ou en liste. |
+
+Tâche liée : **refonte de l'interface** sur le modèle validé (en-tête avec recherche, menu des rayons, colonne de filtres, cartes avec image, pied de page), sans retirer de fonction ni changer les noms accessibles des parcours testés.
+

@@ -5,11 +5,12 @@ import { ConnexionRequise } from './components/ConnexionRequise';
 import { Layout } from './components/Layout';
 import { CataloguePage } from './pages/CataloguePage';
 import { PageIntrouvable } from './pages/PageIntrouvable';
-import { PanierPage } from './pages/PanierPage';
-import { ProduitPage } from './pages/ProduitPage';
 
-// Parcours d'achat dans le bundle principal ; pages connectées, d'administration et d'information chargées à la
-// demande (fichiers séparés, même origine : compatible avec la CSP).
+// Catalogue (page d'arrivée) dans le bundle principal ; fiche produit et panier (depuis la refonte de l'interface),
+// pages connectées, d'administration et d'information chargés à la demande (fichiers séparés, même origine :
+// compatible avec la CSP). Le premier affichage reste dans le budget de poids (scripts/budget.mjs).
+const ProduitPage = lazy(() => import('./pages/ProduitPage').then((m) => ({ default: m.ProduitPage })));
+const PanierPage = lazy(() => import('./pages/PanierPage').then((m) => ({ default: m.PanierPage })));
 const CommandesPage = lazy(() => import('./pages/CommandesPage').then((m) => ({ default: m.CommandesPage })));
 const CommandePage = lazy(() => import('./pages/CommandePage').then((m) => ({ default: m.CommandePage })));
 const StockPage = lazy(() => import('./pages/admin/StockPage').then((m) => ({ default: m.StockPage })));

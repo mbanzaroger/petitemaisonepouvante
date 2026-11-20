@@ -2,8 +2,10 @@ package com.petitemaisonepouvante.catalog.product;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.Normalizer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,10 +18,16 @@ public class ProductRepository {
 
     private static final String SELECT = """
             select p.id, p.sku, p.name, p.description, p.price_cents, p.currency, c.name as category, p.active,
-                   p.exclusive
+                   p.exclusive, i.etag as image_etag
             from product p
             left join category c on c.id = p.category_id
+            left join product_image i on i.product_id = p.id
             """;
+
+    /** Lettres accentuées ramenées à leur lettre de base, en SQL comme en Java : « epouvante » trouve « Épouvante ». */
+    private static final String ACCENTS = "àâäáãåçéèêëíìîïñóòôöõúùûüýÿœæÀÂÄÁÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŸŒÆ";
+    private static final String SANS_ACCENTS = "aaaaaaceeeeiiiinooooouuuuyyoaaaaaaaceeeeiiiinooooouuuuyyoa";
+    private static final String CHERCHE = "translate(lower(%s), :accents, :sansAccents) like :q escape '\\'";
 
     private final JdbcClient jdbc;
 
@@ -27,35 +35,63 @@ public class ProductRepository {
         this.jdbc = jdbc;
     }
 
-    public List<Product> findActive(String category, boolean exclusiveOnly, int page, int size) {
-        StringBuilder sql = new StringBuilder(SELECT).append(" where p.active");
-        if (category != null) {
-            sql.append(" and c.name = :category");
-        }
-        if (exclusiveOnly) {
-            sql.append(" and p.exclusive");
-        }
-        sql.append(" order by p.name, p.id limit :limit offset :offset");
-        JdbcClient.StatementSpec statement = jdbc.sql(sql.toString())
+    /**
+     * Produits en vente : filtre par catégorie, gamme exclusive et texte recherché (US22 : nom, description ou
+     * référence, sans tenir compte des majuscules ni des accents), dans l'ordre demandé.
+     */
+    public List<Product> findActive(CatalogFilter filter, ProductSort sort, int page, int size) {
+        String sql = SELECT + where(filter) + " order by " + sort.orderBy() + " limit :limit offset :offset";
+        return bind(jdbc.sql(sql), filter)
                 .param("limit", size)
-                .param("offset", (long) page * size);
-        if (category != null) {
-            statement = statement.param("category", category);
-        }
-        return statement.query(ProductRepository::map).list();
+                .param("offset", (long) page * size)
+                .query(ProductRepository::map)
+                .list();
     }
 
-    public long countActive(String category, boolean exclusiveOnly) {
-        StringBuilder sql = new StringBuilder(
-                "select count(*) from product p left join category c on c.id = p.category_id where p.active");
-        if (exclusiveOnly) {
+    public long countActive(CatalogFilter filter) {
+        String sql = "select count(*) from product p left join category c on c.id = p.category_id" + where(filter);
+        return bind(jdbc.sql(sql), filter).query(Long.class).single();
+    }
+
+    /** Critères du catalogue public ; {@code query} est le texte tel que saisi (null : pas de recherche). */
+    public record CatalogFilter(String category, boolean exclusiveOnly, String query) {
+    }
+
+    private static String where(CatalogFilter filter) {
+        StringBuilder sql = new StringBuilder(" where p.active");
+        if (filter.category() != null) {
+            sql.append(" and c.name = :category");
+        }
+        if (filter.exclusiveOnly()) {
             sql.append(" and p.exclusive");
         }
-        if (category == null) {
-            return jdbc.sql(sql.toString()).query(Long.class).single();
+        if (filter.query() != null) {
+            sql.append(" and (").append(CHERCHE.formatted("p.name"))
+                    .append(" or ").append(CHERCHE.formatted("coalesce(p.description, '')"))
+                    .append(" or ").append(CHERCHE.formatted("p.sku")).append(')');
         }
-        return jdbc.sql(sql.append(" and c.name = :category").toString()).param("category", category)
-                .query(Long.class).single();
+        return sql.toString();
+    }
+
+    private static JdbcClient.StatementSpec bind(JdbcClient.StatementSpec statement, CatalogFilter filter) {
+        if (filter.category() != null) {
+            statement = statement.param("category", filter.category());
+        }
+        if (filter.query() != null) {
+            statement = statement.param("q", "%" + motif(filter.query()) + "%")
+                    .param("accents", ACCENTS)
+                    .param("sansAccents", SANS_ACCENTS);
+        }
+        return statement;
+    }
+
+    /** Texte recherché en minuscules, sans accents, avec %, _ et l'antislash échappés (cherchés tels quels). */
+    static String motif(String query) {
+        String simple = Normalizer.normalize(query.strip().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .replace("œ", "o")
+                .replace("æ", "a");
+        return simple.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     /** Produits en vente des catégories données (recommandations), exclusivités d'abord. */
@@ -143,6 +179,42 @@ public class ProductRepository {
                 .update() == 1;
     }
 
+    /** US21 — image d'un produit, si elle existe. */
+    public Optional<ProductImage> findImage(UUID productId) {
+        return jdbc.sql("select content_type, data, etag from product_image where product_id = :id")
+                .param("id", productId)
+                .query((rs, row) -> new ProductImage(rs.getString("content_type"), rs.getBytes("data"),
+                        rs.getString("etag").strip()))
+                .optional();
+    }
+
+    /** Remplace l'image d'un produit existant (insertion ou mise à jour). */
+    public void saveImage(UUID productId, ImageFormat format, byte[] data, String etag, String author) {
+        jdbc.sql("""
+                insert into product_image (product_id, content_type, data, size_bytes, etag, updated_by)
+                values (:id, :type, :data, :size, :etag, :author)
+                on conflict (product_id) do update set content_type = excluded.content_type, data = excluded.data,
+                       size_bytes = excluded.size_bytes, etag = excluded.etag, updated_at = now(),
+                       updated_by = excluded.updated_by
+                """)
+                .param("id", productId)
+                .param("type", format.mediaType())
+                .param("data", data)
+                .param("size", data.length)
+                .param("etag", etag)
+                .param("author", author)
+                .update();
+    }
+
+    /** Retire l'image d'un produit ; renvoie false s'il n'en avait pas. */
+    public boolean deleteImage(UUID productId) {
+        return jdbc.sql("delete from product_image where product_id = :id").param("id", productId).update() == 1;
+    }
+
+    public boolean exists(UUID id) {
+        return jdbc.sql("select count(*) from product where id = :id").param("id", id).query(Long.class).single() > 0;
+    }
+
     public List<String> findCategoryNames() {
         return jdbc.sql("select name from category order by name").query(String.class).list();
     }
@@ -157,6 +229,7 @@ public class ProductRepository {
                 rs.getString("currency").trim(),
                 rs.getString("category"),
                 rs.getBoolean("active"),
-                rs.getBoolean("exclusive"));
+                rs.getBoolean("exclusive"),
+                ProductImage.version(rs.getString("image_etag")));
     }
 }

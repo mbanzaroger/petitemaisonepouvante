@@ -4,6 +4,19 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+Demandes de la recette du 20/11/2026 : refonte de l'interface et images des produits (ADR-007).
+
+### Ajouté
+- **Images des produits (US21)** : une image par produit (JPEG, PNG ou WebP, 2 Mo au plus) gardée par `catalog-service` et servie à une adresse versionnée (`imageUrl`, cache d'un an, ETag). L'administrateur l'ajoute à la création du produit (aperçu avant envoi) ou la change et la retire depuis « Produits et stock ». Les 12 produits de démonstration ont un visuel original (`scripts/images-demo`, migration `V5__images_de_demonstration`).
+- **Recherche et tri (US22)** : recherche dans l'en-tête (rayon et texte ; nom, description et référence, sans majuscules ni accents), tri par nom, prix croissant, prix décroissant ou nouveautés.
+
+### Modifié
+- **Refonte de l'interface** sur le modèle validé en recette : bandeau, en-tête rouge (logo, recherche, compte, panier), barre jaune « Toutes les catégories » avec menu des rayons, barre d'administration, catalogue avec fil d'Ariane, colonne des rayons et des filtres, bandeau du rayon, affichage en grille ou en liste, cartes avec image ; fiche produit avec grand visuel ; vignettes dans le panier, les recommandations et le stock ; pied de page sombre (à propos, boutique, communauté, informations légales, magasins). Thème clair, contrastes vérifiés ; aucune fonction retirée.
+- Fiche produit et panier chargés à la demande : le premier affichage reste sous 110 Ko (109,4 Ko gzip).
+
+### Sécurité
+- Contrôle des images envoyées (signature du fichier, type, poids), réponse `nosniff` et CSP `sandbox` ; CSP du site : `img-src 'self' blob:` pour l'aperçu local. Risque résiduel V-30 (images non ré-encodées), action R-14.
+
 ## [1.5.1] - 2026-11-20
 
 Correctif de la chaîne de livraison, sans changement fonctionnel du site ni des services.

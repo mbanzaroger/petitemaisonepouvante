@@ -1,11 +1,19 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router';
-import { listerProduitsAdmin, modifierProduit, reapprovisionner } from '../../api/admin';
+import {
+  envoyerImage,
+  listerProduitsAdmin,
+  modifierProduit,
+  reapprovisionner,
+  retirerImage,
+  verifierImage,
+} from '../../api/admin';
 import { versApiError, type ApiError } from '../../api/client';
 import { LIBELLES_ETAT, SEUIL_STOCK_BAS, etatStock, lireStock, type EtatStock, type NiveauStock } from '../../api/stock';
 import type { Page, Product } from '../../api/types';
 import { useAuth } from '../../auth/auth';
 import { Chargement, MessageErreur } from '../../components/Etats';
+import { ImageProduit } from '../../components/ImageProduit';
 import { Pagination } from '../../components/Pagination';
 import { formaterPrix } from '../../format';
 import { useRessource } from '../../hooks/useRessource';
@@ -33,6 +41,42 @@ function LigneProduit({ ligne, apresModification }: { ligne: Ligne; apresModific
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<ApiError>();
   const idQuantite = `quantite-${produit.id}`;
+  const champImage = useRef<HTMLInputElement>(null);
+  const [erreurFichier, setErreurFichier] = useState<string>();
+
+  /** US21 — nouvelle image choisie : contrôle du format et du poids, puis envoi immédiat. */
+  async function remplacerImage(evenement: ChangeEvent<HTMLInputElement>) {
+    const fichier = evenement.target.files?.[0];
+    evenement.target.value = '';
+    if (!fichier) return;
+    const probleme = verifierImage(fichier);
+    setErreurFichier(probleme ?? undefined);
+    if (probleme) return;
+    setEnvoi(true);
+    setErreur(undefined);
+    try {
+      await envoyerImage(produit.id, fichier, auth.jeton);
+      apresModification(`Image de « ${produit.name} » enregistrée.`);
+    } catch (e) {
+      setErreur(versApiError(e));
+    } finally {
+      setEnvoi(false);
+    }
+  }
+
+  async function supprimerImage() {
+    setEnvoi(true);
+    setErreur(undefined);
+    setErreurFichier(undefined);
+    try {
+      await retirerImage(produit.id, auth.jeton);
+      apresModification(`Image de « ${produit.name} » retirée.`);
+    } catch (e) {
+      setErreur(versApiError(e));
+    } finally {
+      setEnvoi(false);
+    }
+  }
 
   async function ajouter(evenement: FormEvent<HTMLFormElement>) {
     evenement.preventDefault();
@@ -77,8 +121,13 @@ function LigneProduit({ ligne, apresModification }: { ligne: Ligne; apresModific
   return (
     <tr>
       <th scope="row">
-        <Link to={`/produits/${produit.id}`}>{produit.name}</Link>
-        {produit.exclusive && <span className="etiquette etiquette-exclusif">Exclusivité Evil Ed</span>}
+        <span className="ligne-produit">
+          <ImageProduit produit={produit} className="vignette" />
+          <span>
+            <Link to={`/produits/${produit.id}`}>{produit.name}</Link>
+            {produit.exclusive && <span className="etiquette etiquette-exclusif">Exclusivité Evil Ed</span>}
+          </span>
+        </span>
       </th>
       <td>{produit.sku}</td>
       <td>{formaterPrix(produit.price.amountCents, produit.price.currency)}</td>
@@ -113,6 +162,26 @@ function LigneProduit({ ligne, apresModification }: { ligne: Ligne; apresModific
           {produit.available ? 'Retirer de la vente' : 'Remettre en vente'}{' '}
           <span className="visuellement-masque">: {produit.name}</span>
         </button>
+        <div className="actions-image">
+          <input
+            ref={champImage}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            aria-label={`Nouvelle image de ${produit.name}`}
+            hidden
+            onChange={(e) => void remplacerImage(e)}
+          />
+          <button type="button" className="bouton-lien" disabled={envoi} onClick={() => champImage.current?.click()}>
+            {produit.imageUrl ? "Changer l'image" : 'Ajouter une image'}{' '}
+            <span className="visuellement-masque">de {produit.name}</span>
+          </button>
+          {produit.imageUrl && (
+            <button type="button" className="bouton-lien" disabled={envoi} onClick={() => void supprimerImage()}>
+              Retirer l'image <span className="visuellement-masque">de {produit.name}</span>
+            </button>
+          )}
+          {erreurFichier && <p className="erreur-champ">{erreurFichier}</p>}
+        </div>
       </td>
     </tr>
   );

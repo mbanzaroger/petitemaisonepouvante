@@ -19,6 +19,8 @@ const MESSAGES: Record<number, string> = {
   401: 'Votre session a expiré : reconnectez-vous.',
   403: "Votre compte n'a pas accès à cette fonctionnalité.",
   404: 'Élément introuvable.',
+  413: 'Le fichier est trop lourd.',
+  415: "Ce type de fichier n'est pas accepté.",
   429: 'Trop de demandes en peu de temps : réessayez dans un instant.',
   503: 'Le service est momentanément indisponible : réessayez dans un instant.',
 };
@@ -40,7 +42,7 @@ export function nouvelIdCorrelation(): string {
 }
 
 /** Statuts dont le détail problem+json (RFC 9457) est rédigé pour l'utilisateur par les services. */
-const DETAIL_AFFICHE = new Set([409, 422, 429]);
+const DETAIL_AFFICHE = new Set([409, 413, 415, 422, 429]);
 
 /** Le détail problem+json n'est affiché que pour les conflits, refus métier et limitations (textes des services). */
 async function erreurDepuisReponse(reponse: Response, correlationId: string): Promise<ApiError> {
@@ -69,14 +71,20 @@ export function versApiError(erreur: unknown): ApiError {
 interface Options {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
+  /** Fichier envoyé tel quel (corps binaire, type du fichier), à la place d'un corps JSON. */
+  fichier?: Blob;
   token?: TokenProvider;
   signal?: AbortSignal;
 }
 
-export async function appelApi<T>(chemin: string, { method = 'GET', body, token, signal }: Options = {}): Promise<T> {
+export async function appelApi<T>(
+  chemin: string,
+  { method = 'GET', body, fichier, token, signal }: Options = {},
+): Promise<T> {
   const correlationId = nouvelIdCorrelation();
   const headers: Record<string, string> = { Accept: 'application/json', 'X-Correlation-Id': correlationId };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (fichier) headers['Content-Type'] = fichier.type;
   if (token) {
     const jeton = await token();
     if (!jeton) throw new ApiError(401, messagePourStatut(401));
@@ -87,7 +95,7 @@ export async function appelApi<T>(chemin: string, { method = 'GET', body, token,
     reponse = await fetch(chemin, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: fichier ?? (body === undefined ? undefined : JSON.stringify(body)),
       signal,
       credentials: 'same-origin',
     });

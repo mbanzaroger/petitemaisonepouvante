@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+  <radialGradient id="fond" cx="50%" cy="38%" r="78%"><stop offset="0" stop-color="#fdfcfb"/><stop offset="1" stop-color="#e6e2de"/></radialGradient>
+  <radialGradient id="ombre"><stop offset="0" stop-color="#2a1d17" stop-opacity=".32"/><stop offset="1" stop-color="#2a1d17" stop-opacity="0"/></radialGradient>
+  
+  <linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1846"/><stop offset=".7" stop-color="#6b3fa0"/><stop offset="1" stop-color="#b56576"/></linearGradient>
+
+</defs>
+<rect width="600" height="600" fill="url(#fond)"/>
+<ellipse cx="300" cy="470" rx="220" ry="26" fill="url(#ombre)"/>
+
+<path d="M100 250l200 100v96L100 346z" fill="#3a1f52"/>
+<path d="M300 350l200-100v96L300 446z" fill="#24123a"/>
+<g transform="matrix(1 0.5 0 1 100 250)">
+  <text x="100" y="40" font-family="Inter" font-weight="800" font-size="15" fill="#f3e5c4" text-anchor="middle" letter-spacing="1">2 À 5 JOUEURS</text>
+  <text x="100" y="64" font-family="Inter" font-weight="600" font-size="13" fill="#d8c6f0" text-anchor="middle">60 MIN · DÈS 14 ANS</text>
+</g>
+<g transform="matrix(1 0.5 -1 0.5 300 150)">
+  <rect width="200" height="200" fill="url(#ciel)"/>
+  <circle cx="150" cy="44" r="24" fill="#f6edd3"/>
+  <path d="M20 168V108l24-22 24 22v-18h14v30l18-16 30 26V96l26-30 26 30v72z" fill="#0e0816"/>
+  <g fill="#ffcf3f"><rect x="38" y="122" width="8" height="12"/><rect x="128" y="104" width="8" height="12"/><rect x="146" y="104" width="8" height="12"/><rect x="138" y="138" width="8" height="12"/><rect x="100" y="140" width="8" height="10"/></g>
+  <rect y="168" width="200" height="32" fill="#c8102e"/>
+  <text x="100" y="189" font-family="Lora" font-weight="700" font-size="15" fill="#fff4dc" text-anchor="middle">LE MANOIR DES OMBRES</text>
+</g>
+<path d="M300 150l200 100-200 100-200-100z" fill="none" stroke="#120a1c" stroke-width="3"/>
+
+</svg>
