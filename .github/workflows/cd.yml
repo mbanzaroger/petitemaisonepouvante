@@ -142,10 +142,16 @@ jobs:
           CHROME_PATH=$(node -e "import('@playwright/test').then((m) => console.log(m.chromium.executablePath()))")
           export CHROME_PATH
           mkdir -p lighthouse
+          # Seconde mesure si Lighthouse échoue à enregistrer la trace (NO_NAVSTART, aléatoire sur les runners) ; une
+          # page restée sans rapport fait échouer l'étape.
           for page in "catalogue|/" "fiche-produit|/produits/0f6c1a10-0008-4000-8000-000000000008" "troc|/communaute" "plan-du-site|/plan-du-site"; do
-            npx -y lighthouse@13.6.0 "https://app.pme.local:8443${page#*|}" --preset=desktop \
-              --chrome-flags="--headless=new --no-sandbox --ignore-certificate-errors" \
-              --output=json --output=html --output-path="lighthouse/${page%%|*}" --quiet
+            for essai in 1 2; do
+              npx -y lighthouse@13.6.0 "https://app.pme.local:8443${page#*|}" --preset=desktop \
+                --chrome-flags="--headless=new --no-sandbox --ignore-certificate-errors" \
+                --output=json --output=html --output-path="lighthouse/${page%%|*}" --quiet && break
+              echo "::warning::Lighthouse : mesure ${essai} de ${page%%|*} en échec, nouvelle tentative"
+            done
+            [ -f "lighthouse/${page%%|*}.report.json" ] || { echo "::error::Aucun rapport Lighthouse pour ${page%%|*}"; exit 1; }
           done
           { echo "## Lighthouse (site, staging)"; echo; node scripts/lighthouse-seuils.mjs lighthouse; } | tee -a "$GITHUB_STEP_SUMMARY"
 
