@@ -161,8 +161,7 @@ jobs:
           cache: maven
       - name: Tests unitaires, d'intégration (Testcontainers) et d'acceptation + JaCoCo
         run: |
-          if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
-          $MVN -B -ntp verify
+          bash "$GITHUB_WORKSPACE/scripts/mvn.sh" -B -ntp verify
       - name: Jar testé, réutilisé tel quel pour construire l'image
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -192,8 +191,7 @@ jobs:
       - name: Indicateur 2 — Quality Gate SonarQube Cloud
         if: env.SONAR_TOKEN != ''
         run: |
-          if [ -x ./mvnw ]; then MVN=./mvnw; else MVN=mvn; fi
-          $MVN -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+          bash "$GITHUB_WORKSPACE/scripts/mvn.sh" -B -ntp org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.organization="${{ vars.SONAR_ORGANIZATION || 'mbanzaroger' }}" \
             -Dsonar.projectKey="mbanzaroger_petitemaisonepouvante_${{ matrix.service }}" \

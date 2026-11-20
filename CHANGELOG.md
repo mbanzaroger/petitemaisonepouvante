@@ -11,6 +11,7 @@ Correctif de la chaîne de livraison, sans changement fonctionnel du site ni des
 ### Corrigé
 - Supervision : `verify.sh` lit les journaux de toutes les répliques d'un service, et la recherche des appels du site (`web-…`) se fait dans un fichier. Avec `pipefail`, `kubectl logs | grep -q` échouait au hasard : `grep` s'arrête au premier résultat, et `kubectl` reçoit alors SIGPIPE.
 - CI et release : l'image d'un service Java est construite à partir du jar compilé et testé (substitué à l'étape Maven du Dockerfile) ; plus aucun téléchargement Maven pendant `docker build`, où Maven Central refusait certains runners. La seconde tentative automatique ajoutée juste avant échouait de la même façon ; elle est retirée.
+- CI, CD et release : Maven est lancé par `scripts/mvn.sh`, qui se replie sur le Maven du runner (avertissement dans le résumé) quand la distribution du Maven Wrapper ne se télécharge pas ; la CD du 20/11/2026 avait échoué ainsi avant les tests Cucumber.
 
 ### Sécurité
 - Releases v1.1.0, v1.2.0 et v1.3.0 publiées après coup le 20/11/2026 : le scan Trivy bloquant de leur workflow a refusé l'image du site (nginx 1.30.6, V-28), l'exception datée n'existant qu'à partir de v1.4.0. Aucune mise en production n'a été demandée pour ces versions, remplacées par v1.5.x ; le contrôle a joué son rôle (`docs/13-analyse-securite.md`, V-28).
