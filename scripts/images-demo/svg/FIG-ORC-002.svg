@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+  <radialGradient id="fond" cx="50%" cy="38%" r="78%"><stop offset="0" stop-color="#fdfcfb"/><stop offset="1" stop-color="#e6e2de"/></radialGradient>
+  <radialGradient id="ombre"><stop offset="0" stop-color="#2a1d17" stop-opacity=".32"/><stop offset="1" stop-color="#2a1d17" stop-opacity="0"/></radialGradient>
+  
+  <linearGradient id="bois" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b5a32"/><stop offset="1" stop-color="#4b2b15"/></linearGradient>
+  <linearGradient id="cuir" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6e4a2e"/><stop offset="1" stop-color="#3b2516"/></linearGradient>
+  <linearGradient id="bronze" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9b56f"/><stop offset=".5" stop-color="#a77d3a"/><stop offset="1" stop-color="#6b4c22"/></linearGradient>
+  <radialGradient id="tete" cx="40%" cy="30%" r="80%"><stop offset="0" stop-color="#86bb63"/><stop offset=".6" stop-color="#5b8c41"/><stop offset="1" stop-color="#365a25"/></radialGradient>
+
+</defs>
+<rect width="600" height="600" fill="url(#fond)"/>
+<ellipse cx="300" cy="522" rx="180" ry="26" fill="url(#ombre)"/>
+
+<!-- socle en bois -->
+<path d="M190 430h220l22 70H168z" fill="url(#bois)"/>
+<ellipse cx="300" cy="430" rx="110" ry="18" fill="#8a5a33"/>
+<path d="M168 500h264v14a10 10 0 0 1-10 10H178a10 10 0 0 1-10-10z" fill="#3e2412"/>
+<path d="M200 450c40 6 160 6 200 0M190 472c60 8 160 8 220 0" stroke="#5a3519" stroke-width="2" fill="none" opacity=".6"/>
+<rect x="256" y="466" width="88" height="24" rx="3" fill="#d4b14a" stroke="#8c6d1c"/>
+<text x="300" y="483" font-family="Lora" font-weight="700" font-size="14" text-anchor="middle" fill="#3a2a05">L'ORC · 1/4</text>
+<!-- buste : épaules et armure -->
+<path d="M150 432c0-70 50-110 150-110s150 40 150 110z" fill="url(#cuir)"/>
+<path d="M210 432c6-50 40-82 90-82s84 32 90 82z" fill="url(#bronze)"/>
+<path d="M300 352v80" stroke="#6b4c22" stroke-width="4"/>
+<ellipse cx="178" cy="370" rx="52" ry="40" fill="url(#bronze)"/>
+<ellipse cx="422" cy="370" rx="52" ry="40" fill="url(#bronze)"/>
+<g fill="#f1e2b5"><circle cx="160" cy="362" r="5"/><circle cx="188" cy="384" r="5"/><circle cx="440" cy="362" r="5"/><circle cx="412" cy="384" r="5"/></g>
+<!-- cou et tête -->
+<rect x="262" y="290" width="76" height="62" rx="20" fill="#4c7a35"/>
+<path d="M210 206l-50-30 40 64z" fill="#527f39"/><path d="M390 206l50-30-40 64z" fill="#527f39"/>
+<path d="M300 104c66 0 100 44 100 104 0 50-28 94-100 104-72-10-100-54-100-104 0-60 34-104 100-104z" fill="url(#tete)"/>
+<path d="M232 188c28-18 50-14 62 2M368 188c-28-18-50-14-62 2" stroke="#2a4420" stroke-width="12" stroke-linecap="round" fill="none"/>
+<ellipse cx="264" cy="208" rx="13" ry="9" fill="#ffb02e"/><ellipse cx="336" cy="208" rx="13" ry="9" fill="#ffb02e"/>
+<circle cx="266" cy="209" r="4.5" fill="#5c0d0d"/><circle cx="334" cy="209" r="4.5" fill="#5c0d0d"/>
+<path d="M340 150l18 70" stroke="#2f4a22" stroke-width="4" stroke-linecap="round"/>
+<path d="M288 232c6 6 18 6 24 0" stroke="#2a4420" stroke-width="5" stroke-linecap="round" fill="none"/>
+<path d="M254 272c30 14 62 14 92 0" stroke="#203519" stroke-width="7" stroke-linecap="round" fill="none"/>
+<path d="M264 274l7-30 10 32z" fill="#f4ecd8"/><path d="M336 274l-7-30-10 32z" fill="#f4ecd8"/>
+<path d="M300 104c30 0 40-20 34-40-18 16-48 16-68 0-6 20 4 40 34 40z" fill="#1d1d1d"/>
+<path d="M330 96c30 20 40 60 30 100" stroke="#1d1d1d" stroke-width="12" stroke-linecap="round" fill="none"/>
+<ellipse cx="268" cy="150" rx="34" ry="16" fill="#fff" opacity=".12"/>
+
+</svg>

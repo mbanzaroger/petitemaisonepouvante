@@ -85,6 +85,20 @@ order_new=$(api -X POST -H "Authorization: Bearer $carol" -H 'Content-Type: appl
 check "US18 — nouveau produit commandé puis confirmé" CONFIRMED "$(await_status "$carol" "$order_new" CONFIRMED)"
 check "US19 — commande de carol suivie par ADMIN" carol "$(api -H "Authorization: Bearer $admin" "$BASE_URL/api/v1/orders/admin?status=CONFIRMED&size=100" | jq -r --arg id "$order_new" '.content[] | select(.id == $id) | .customerName')"
 check "US19 — suivi des commandes refusé à un client (Gateway)" 403 "$(code -H "Authorization: Bearer $alice" "$BASE_URL/api/v1/orders/admin")"
+# Images des produits (US21) : image de démonstration publique et protégée, envoi et retrait par ADMIN.
+mug="0f6c1a10-0008-4000-8000-000000000008"
+image_mug=$(api "$BASE_URL/api/v1/products/$mug" | jq -r '.imageUrl // empty')
+entetes_image=$(api -D - -o /dev/null "$BASE_URL$image_mug" | tr -d '\r' | tr '[:upper:]' '[:lower:]')
+check "US21 — image de démonstration servie en WebP" oui "$(grep -q '^content-type: image/webp' <<<"$entetes_image" && echo oui || echo non)"
+check "US21 — image servie sans interprétation possible (CSP sandbox, nosniff)" oui "$(grep -q "^content-security-policy: default-src 'none'; sandbox" <<<"$entetes_image" && grep -q '^x-content-type-options: nosniff' <<<"$entetes_image" && echo oui || echo non)"
+png=$(mktemp); printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00' > "$png"
+check "US21 — image envoyée par ADMIN" oui "$(api -X PUT -H "Authorization: Bearer $admin" -H 'Content-Type: image/png' --data-binary "@$png" "$A/$produit/image" | jq -r '.imageUrl // empty' | grep -q "/image?v=" && echo oui || echo non)"
+check "US21 — envoi d'image refusé à un client (Gateway)" 403 "$(code -X PUT -H "Authorization: Bearer $alice" -H 'Content-Type: image/png' --data-binary "@$png" "$A/$produit/image")"
+check "US21 — fichier qui n'est pas une image refusé" 415 "$(code -X PUT -H "Authorization: Bearer $admin" -H 'Content-Type: image/png' --data-binary '<svg onload="alert(1)"/>' "$A/$produit/image")"
+check "US21 — image retirée par ADMIN" 204 "$(code -X DELETE -H "Authorization: Bearer $admin" "$A/$produit/image")"
+rm -f "$png"
+check "US22 — recherche sans accents dans le catalogue" 2 "$(api "$BASE_URL/api/v1/products?q=epouvante" | jq -r .totalElements)"
+check "US22 — tri par prix croissant" 690 "$(api "$BASE_URL/api/v1/products?sort=price-asc&size=1" | jq -r '.content[0].price.amountCents')"
 retrait=$(jq -nc '{name: "Produit des tests de fumée", description: "", priceCents: 1990, category: "Goodies", exclusive: false, active: false}')
 check "US18 — produit retiré de la vente" false "$(api -X PUT -H "Authorization: Bearer $admin" -H 'Content-Type: application/json' -d "$retrait" "$A/$produit" | jq -r '.available')"
 check "US20 — formulaire d'inscription des clients" 200 "$(code "$KEYCLOAK_URL/realms/pme/protocol/openid-connect/registrations?client_id=pme-web&response_type=code&scope=openid&code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM&code_challenge_method=S256&redirect_uri=https%3A%2F%2Fapp.pme.local%3A8443%2F")"

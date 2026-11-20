@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+  <radialGradient id="fond" cx="50%" cy="38%" r="78%"><stop offset="0" stop-color="#fdfcfb"/><stop offset="1" stop-color="#e6e2de"/></radialGradient>
+  <radialGradient id="ombre"><stop offset="0" stop-color="#2a1d17" stop-opacity=".32"/><stop offset="1" stop-color="#2a1d17" stop-opacity="0"/></radialGradient>
+  
+  <linearGradient id="crepuscule" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a0d16"/><stop offset=".45" stop-color="#b3192c"/><stop offset=".8" stop-color="#e8601c"/><stop offset="1" stop-color="#f1a33a"/></linearGradient>
+
+</defs>
+<rect width="600" height="600" fill="url(#fond)"/>
+<ellipse cx="300" cy="508" rx="170" ry="26" fill="url(#ombre)"/>
+
+<path d="M440 104l14 8v376l-14 6z" fill="#efe6cf"/>
+<path d="M440 104l14 8v376l-14 6" fill="none" stroke="#c9bfa5"/>
+<rect x="166" y="96" width="14" height="404" fill="#5c0d0d"/>
+<rect x="180" y="96" width="262" height="404" fill="url(#crepuscule)"/>
+<circle cx="350" cy="250" r="70" fill="#ffd34d" opacity=".85"/>
+<path d="M180 420c60-40 110-50 150-40 40 10 80 0 112-20v140H180z" fill="#1a0b08"/>
+<path d="M290 386v-60c0-16 8-28 20-34l-8-20 18 10 18-10-8 20c12 6 20 18 20 34v60z" fill="#120706"/>
+<path d="M356 300l40-96" stroke="#120706" stroke-width="8" stroke-linecap="round"/>
+<path d="M388 200c20-14 44-10 52 8-16 0-30 6-40 18z" fill="#120706"/>
+<text x="311" y="176" font-family="Lora" font-weight="700" font-size="74" fill="#fff4dc" stroke="#1a0b08" stroke-width="3" text-anchor="middle" paint-order="stroke">L'ORC</text>
+<rect x="244" y="194" width="134" height="26" fill="#1a0b08"/>
+<text x="311" y="213" font-family="Inter" font-weight="800" font-size="14" fill="#ffd34d" text-anchor="middle" letter-spacing="3">TOME 1</text>
+<text x="311" y="478" font-family="Inter" font-weight="600" font-size="12" fill="#f3e5c4" text-anchor="middle" letter-spacing="1">D'APRÈS LA WEB SÉRIE</text>
+
+</svg>

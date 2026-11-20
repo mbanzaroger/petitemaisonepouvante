@@ -28,9 +28,11 @@ Décompte par sévérité **retenue** (après réévaluation dans le contexte, v
 | Statut | Critique | Haute | Moyenne | Basse | Total |
 |---|---|---|---|---|---|
 | Corrigé ou évité | 3 | 3 | 3 | 2 | 11 |
-| Exception datée ou risque accepté | — | — | 1 | 4 | 5 |
-| À traiter (plan de remédiation) | — | 1 | 8 | 2 | 11 |
-| **Total** | **3** | **4** | **12** | **8** | **27** |
+| Exception datée ou risque accepté | — | — | 1 | 5 | 6 |
+| À traiter (plan de remédiation) | — | 1 | 8 | 3 | 12 |
+| **Total** | **3** | **4** | **12** | **10** | **29** |
+
+V-29, faux positif qualifié, n'est pas compté.
 
 **Indicateur 4** (`docs/04`) : **0 vulnérabilité critique ou haute corrigeable non traitée** (la critique du site, V-27, a été bloquée par la CI puis corrigée avant fusion). Le seul constat de sévérité haute encore ouvert (V-17) ne concerne que la future production : il est bloquant pour la mise en production et planifié en priorité 1. Les 8 vulnérabilités hautes du système de base (V-01) n'ont pas de correctif publié ; elles relèvent d'une exception justifiée, conformément à la politique de sécurité (§6).
 
@@ -67,8 +69,9 @@ Sévérité *outil* : celle du scanner ou de la règle. Sévérité *retenue* : 
 | V-25 | Site sans `Cross-Origin-Embedder-Policy` : isolation contre les attaques de type Spectre incomplète | ZAP 90004 (site) | A05 | Basse | Très faible : aucune ressource tierce chargée, COOP et CORP `same-origin` posés ; COEP bloquerait l'iframe de vérification de session Keycloak | Risque accepté (WARN qualifié dans `.zap/rules-site.tsv`) |
 | V-26 | Accessibilité contrôlée automatiquement seulement (axe, `jsx-a11y`) : pas d'audit RGAA manuel ni de déclaration d'accessibilité | Revue (RGAA 4.1) | — | — → **Moyenne** | Sans objet (conformité légale, exclusion d'utilisateurs) | À traiter (R-13, #94) |
 | V-27 | Image `nginx-unprivileged:1.30-alpine` : 1 critique (brotli) et 12 hautes (curl, expat, libxslt, musl, zlib) corrigées par Alpine mais pas encore dans l'image amont | Trivy image (bloquant, CI de la PR #93) | A06 | **Critique** | Faible : nginx ne décompresse pas de brotli ni n'exécute curl ; conteneur non root en lecture seule | **Corrigé** : `apk upgrade` à la construction, scan vert |
-| V-28 | Image du site : nginx 1.30.6, 10 CVE corrigées par nginx 1.30.7 du 18/11/2026 (HTTP/2, HTTP/3, TLS 1.3, resolver, mail, stream, protocole PROXY, alias), pas encore empaqueté pour Alpine 3.24 | Trivy image (bloquant, CI de la PR #112) | A06 | Haute → **Basse** | Très faible : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway, sans module mail ni stream, sans resolver, protocole PROXY ni alias ; conteneur non root en lecture seule | Exception datée jusqu'au 26/11/2026 (`.trivyignore.yaml`, délai d'une haute) ; le Dockerfile installe 1.30.7 depuis nginx.org dès sa publication |
+| V-28 | Image du site : nginx 1.30.6, 10 CVE corrigées par nginx 1.30.7 du 18/11/2026 (HTTP/2, HTTP/3, TLS 1.3, resolver, mail, stream, protocole PROXY, alias), pas encore empaqueté pour Alpine 3.24 | Trivy image (bloquant, CI de la PR #112) | A06 | Haute → **Basse** | Très faible : nginx écoute en HTTP/1.1 sans TLS derrière le Gateway, sans module mail ni stream, sans resolver, protocole PROXY ni alias ; conteneur non root en lecture seule | Exception datée jusqu'au 26/11/2026 (`.trivyignore.yaml`, délai d'une haute) ; le Dockerfile installe 1.30.7 depuis nginx.org dès sa publication. Le 20/11/2026, les releases v1.1.0 à v1.3.0, publiées après coup depuis des étiquettes antérieures à l'exception, ont été bloquées par ce scan : aucune mise en production, versions remplacées par v1.5.0 et v1.6.0 |
 | V-29 | Traversée de répertoire signalée sur `POST /api/v1/community/listings` puis `/community/wishes` (201) par le scan actif de l'API | ZAP [6] (bloquant, CD du 19/11/2026) | A01 | Haute → **Faux positif** | Nulle : l'attaque est le dernier segment de l'URL, sans preuve dans la réponse (heuristique de ZAP qui compare une création acceptée à un refus de validation) ; les services communauté et éditions enregistrent du texte sans aucun accès au système de fichiers (revue du code : ni `java.io.File` ni `java.nio.file`) | Qualifié : règle hors périmètre pour ces deux services (`.zap/rules.tsv`), toujours bloquante sur le catalogue, les commandes et le stock ; preuves des alertes moyennes et hautes publiées dans le résumé du CD |
+| V-30 | Images des produits gardées telles qu'envoyées par l'administrateur, sans ré-encodage : métadonnées (EXIF : appareil, date, parfois position) publiées, fichier « polyglotte » possible | Revue (US21, ADR-007) | A04 | — → **Basse** | Faible : seul `ADMIN` envoie une image ; signature et type vérifiés, image servie avec son type exact, `nosniff` et CSP `sandbox`, jamais interprétée comme document | À traiter (R-14) |
 
 ## 4. Résultats sans constat
 
@@ -187,4 +190,19 @@ Demandées en recette le 19/11/2026 : l'administrateur doit pouvoir mettre en ve
 | Exposition de données des clients | L'administrateur ou un tiers voit plus que nécessaire | La vue d'administration ne montre que le nom affiché du compte, le contenu et le statut des commandes ; l'identifiant Keycloak n'est pas exposé ; aucun panier n'est stocké côté serveur (stockage de session du navigateur) | `OrderApiIT` (`customerId` absent) |
 
 **RGPD** : l'inscription collecte identifiant, e-mail, prénom et nom (exécution du contrat), mot de passe haché par Keycloak ; la page « Données personnelles » du site est mise à jour. **Reste à faire avant ouverture publique** : vérification de l'e-mail et réinitialisation du mot de passe (SMTP), captcha, acceptation des conditions générales à l'inscription, suppression du compte par le client.
+
+## 12. Images des produits, recherche et refonte de l'interface (US21, US22, 20/11/2026)
+
+Demandées à la recette du 20/11/2026 (ADR-007). Analyse ciblée :
+
+| Menace | Scénario | Mesures | Preuve |
+|---|---|---|---|
+| Script déguisé en image (XSS stockée) | Un fichier HTML ou SVG envoyé comme image, puis ouvert à son adresse | Formats limités à JPEG, PNG et WebP ; signature du fichier contrôlée et cohérente avec le type annoncé (415 sinon) ; SVG refusé ; réponse avec son type exact, `X-Content-Type-Options: nosniff` et `Content-Security-Policy: default-src 'none'; sandbox` | `ProductImageApiIT`, `ImageFormatTest`, contrôles de fumée (415, en-têtes) |
+| Déni de service par le volume | Envois répétés de très gros fichiers | 2 Mio au plus, contrôlés par le relais nginx et par le service (lecture interrompue au-delà, 413) ; écriture réservée à `ADMIN` ; cache d'un an des images versionnées côté navigateur | `ProductImageApiIT` (413) |
+| Modification non autorisée du catalogue | Un client remplace ou retire l'image d'un produit | Rôle `ADMIN` exigé au Gateway et dans le service ; auteur journalisé | `ProductImageApiIT` (401, 403), contrôles de fumée (403 au Gateway) |
+| Injection par la recherche ou le tri | `q` ou `sort` détournés vers du SQL, jokers `%` et `_` | Requête paramétrée ; caractères de `LIKE` échappés ; tri choisi dans une liste fermée (400 sinon) ; `q` limité à 100 caractères | `ProductApiIT` (recherche échappée, tri inconnu) ; scan actif ZAP |
+| Affaiblissement de la CSP du site | Ressource distante ou script chargé par le nouveau gabarit | Aucune police, image ni script tiers ; seul ajout : `img-src blob:` pour l'aperçu local avant envoi | Contrôle des en-têtes (Playwright), Lighthouse « bonnes pratiques » |
+| Fuite d'informations par les images | Métadonnées d'une photo (appareil, position) publiées | Images de démonstration générées sans métadonnées ; **reste à faire** : ré-encodage côté serveur (V-30, R-14) | Revue |
+
+**Accessibilité** : la refonte garde les noms accessibles des parcours testés (Playwright + axe sans violation sur la création d'un produit avec image et sur « Produits et stock »), ajoute un fil d'Ariane, un menu des rayons au clavier (Échap rend le focus au bouton) et des contrastes vérifiés sur le nouveau thème clair.
 

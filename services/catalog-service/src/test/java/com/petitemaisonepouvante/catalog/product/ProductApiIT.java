@@ -1,6 +1,8 @@
 package com.petitemaisonepouvante.catalog.product;
 
+import static org.hamcrest.Matchers.containsStringIgnoringCase;
 import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -72,6 +74,54 @@ class ProductApiIT {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements", is(3)))
                 .andExpect(jsonPath("$.content[*].category", everyItem(is("Figurines"))));
+    }
+
+    @Test
+    @DisplayName("US22 — La recherche porte sur le nom, la description et la référence, sans majuscules ni accents")
+    void recherche() throws Exception {
+        mvc.perform(get("/api/v1/products").param("q", "ORC"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(3)))
+                .andExpect(jsonPath("$.content[*].name", everyItem(containsStringIgnoringCase("orc"))));
+        mvc.perform(get("/api/v1/products").param("q", "epouvante"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(2)))
+                .andExpect(jsonPath("$.content[*].name", everyItem(containsStringIgnoringCase("Épouvante"))));
+        mvc.perform(get("/api/v1/products").param("q", "orc").param("category", "Bandes dessinées"))
+                .andExpect(jsonPath("$.totalElements", is(1)));
+        mvc.perform(get("/api/v1/products").param("q", "   "))
+                .andExpect(jsonPath("$.totalElements", is(11)));
+    }
+
+    @Test
+    @DisplayName("US22 — Les caractères spéciaux de LIKE sont cherchés tels quels")
+    void rechercheEchappee() throws Exception {
+        mvc.perform(get("/api/v1/products").param("q", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements", is(0)));
+        mvc.perform(get("/api/v1/products").param("q", "_"))
+                .andExpect(jsonPath("$.totalElements", is(0)));
+        mvc.perform(get("/api/v1/products").param("q", "x".repeat(101))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("US22 — Le catalogue se trie par prix croissant ou décroissant ; un tri inconnu est refusé (400)")
+    void tri() throws Exception {
+        mvc.perform(get("/api/v1/products").param("sort", "price-asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].price.amountCents", is(690)));
+        mvc.perform(get("/api/v1/products").param("sort", "price-desc"))
+                .andExpect(jsonPath("$.content[0].price.amountCents", is(12900)));
+        mvc.perform(get("/api/v1/products").param("sort", "newest")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/products").param("sort", "price; drop table product"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("US21 — Chaque produit de démonstration a une image, à une adresse versionnée")
+    void imagesDeDemonstration() throws Exception {
+        mvc.perform(get("/api/v1/products").param("size", "100"))
+                .andExpect(jsonPath("$.content[*].imageUrl", everyItem(startsWith("/api/v1/products/"))));
     }
 
     @Test

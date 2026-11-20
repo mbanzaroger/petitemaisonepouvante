@@ -46,6 +46,14 @@ paths:
         - { name: size, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
         - { name: exclusive, in: query, description: Seulement la gamme exclusive Evil Ed, schema: { type: boolean, default: false } }
         - { name: category, in: query, schema: { type: string, maxLength: 100 } }
+        - name: q
+          in: query
+          description: US22 — texte cherché dans le nom, la description et la référence (sans majuscules ni accents).
+          schema: { type: string, maxLength: 100 }
+        - name: sort
+          in: query
+          description: US22 — ordre des produits (400 pour une autre valeur).
+          schema: { type: string, enum: [name, price-asc, price-desc, newest], default: name }
         - name: ids
           in: query
           description: Lecture groupée (1 à 50 identifiants séparés par des virgules), utilisée par order-service.
@@ -69,6 +77,25 @@ paths:
       responses:
         "200": { description: Produit, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }
         "400": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/products/{id}/image:
+    get:
+      tags: [Catalogue]
+      summary: Image d'un produit (US21)
+      description: |
+        Adresse fournie par `imageUrl` (avec `v`, version de l'image) : réponse mise en cache un an. Sans version ou
+        avec une version périmée, revalidation par ETag. Réponse servie avec `nosniff` et une CSP `sandbox`.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: v, in: query, description: Version de l'image (16 caractères hexadécimaux), schema: { type: string } }
+      responses:
+        "200":
+          description: Image du produit
+          content:
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "304": { description: Image inchangée (If-None-Match) }
         "404": { $ref: "#/components/responses/Problem" }
   /api/v1/categories:
     get:
@@ -229,6 +256,38 @@ paths:
       responses:
         "200": { description: Produit modifié, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }
         "400": { $ref: "#/components/responses/Problem" }
+        "403": { description: Rôle ADMIN manquant }
+        "404": { $ref: "#/components/responses/Problem" }
+  /api/v1/catalog/admin/products/{id}/image:
+    put:
+      tags: [Catalogue]
+      summary: Ajouter ou remplacer l'image d'un produit (ADMIN, US21)
+      description: |
+        Corps binaire de type image/jpeg, image/png ou image/webp, 2 Mio au plus. La signature du fichier doit
+        correspondre au type annoncé ; SVG et autres formats sont refusés.
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/png: { schema: { type: string, format: binary } }
+          image/webp: { schema: { type: string, format: binary } }
+      responses:
+        "200": { description: Produit avec sa nouvelle adresse d'image, content: { application/json: { schema: { $ref: "#/components/schemas/Product" } } } }
+        "403": { description: Rôle ADMIN manquant }
+        "404": { $ref: "#/components/responses/Problem" }
+        "413": { $ref: "#/components/responses/Problem" }
+        "415": { $ref: "#/components/responses/Problem" }
+    delete:
+      tags: [Catalogue]
+      summary: Retirer l'image d'un produit (ADMIN, US21)
+      security: [{ keycloak: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204": { description: Image retirée (ou absente) }
         "403": { description: Rôle ADMIN manquant }
         "404": { $ref: "#/components/responses/Problem" }
   /api/v1/orders/admin:
@@ -886,6 +945,10 @@ components:
         category: { type: string }
         available: { type: boolean }
         exclusive: { type: boolean, description: Vendu en exclusivité sur le site (gamme Evil Ed) }
+        imageUrl:
+          type: [string, "null"]
+          description: US21 — adresse versionnée de l'image du produit, null s'il n'en a pas
+          example: /api/v1/products/0f6c1a10-0008-4000-8000-000000000008/image?v=3f2a9c1d0b7e6a54
     ProductPage:
       type: object
       properties:

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+  <radialGradient id="fond" cx="50%" cy="38%" r="78%"><stop offset="0" stop-color="#fdfcfb"/><stop offset="1" stop-color="#e6e2de"/></radialGradient>
+  <radialGradient id="ombre"><stop offset="0" stop-color="#2a1d17" stop-opacity=".32"/><stop offset="1" stop-color="#2a1d17" stop-opacity="0"/></radialGradient>
+  
+  <linearGradient id="coton" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2c2c2c"/><stop offset="1" stop-color="#111"/></linearGradient>
+
+</defs>
+<rect width="600" height="600" fill="url(#fond)"/>
+<ellipse cx="300" cy="502" rx="190" ry="26" fill="url(#ombre)"/>
+
+<path d="M222 96c18 22 46 32 78 32s60-10 78-32l92 40 52 96-74 34-26-46v262H178V220l-26 46-74-34 52-96z" fill="url(#coton)"/>
+<path d="M222 96c18 22 46 32 78 32s60-10 78-32" fill="none" stroke="#3a3a3a" stroke-width="10"/>
+<path d="M178 220v-30M422 220v-30" stroke="#000" stroke-width="2" opacity=".35"/>
+<circle cx="300" cy="250" r="72" fill="#c8102e"/>
+<path d="M248 300v-54l22-20 22 20v-16h12v26l16-14 30 26v32z" fill="#151515"/>
+<g fill="#ffd34d"><rect x="264" y="262" width="7" height="10"/><rect x="318" y="270" width="7" height="10"/></g>
+<circle cx="330" cy="212" r="12" fill="#f3e5c4"/>
+<text x="300" y="356" font-family="Lora" font-weight="700" font-size="25" fill="#f3e5c4" text-anchor="middle">PETIT FESTIVAL</text>
+<text x="300" y="384" font-family="Lora" font-weight="700" font-size="19" fill="#f3e5c4" text-anchor="middle">DE L'ÉPOUVANTE</text>
+<text x="300" y="418" font-family="Inter" font-weight="800" font-size="24" fill="#e5484d" text-anchor="middle" letter-spacing="6">2026</text>
+<path d="M200 470c40 8 160 8 200 0" stroke="#000" stroke-width="3" opacity=".3" fill="none"/>
+
+</svg>

@@ -55,8 +55,8 @@ describe('Catalogue', () => {
     const { utilisateur } = rendreApp('/');
     await utilisateur.click(await screen.findByRole('button', { name: 'Ajouter « Produit 01 » au panier' }));
     expect(screen.getByText('« Produit 01 » a été ajouté au panier.')).toBeInTheDocument();
-    const navigation = screen.getByRole('navigation', { name: 'Navigation principale' });
-    expect(within(navigation).getByRole('link', { name: /Panier.*\(1 article\)/ })).toBeInTheDocument();
+    // Le panier est dans l'en-tête, à côté du compte (comme sur les boutiques en ligne).
+    expect(within(screen.getByRole('banner')).getByRole('link', { name: /Panier.*\(1 article\)/ })).toBeInTheDocument();
   });
 
   it('pagine avec des liens explicites', async () => {

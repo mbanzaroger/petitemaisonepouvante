@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+  <radialGradient id="fond" cx="50%" cy="38%" r="78%"><stop offset="0" stop-color="#fdfcfb"/><stop offset="1" stop-color="#e6e2de"/></radialGradient>
+  <radialGradient id="ombre"><stop offset="0" stop-color="#2a1d17" stop-opacity=".32"/><stop offset="1" stop-color="#2a1d17" stop-opacity="0"/></radialGradient>
+  
+  <linearGradient id="nuit" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c1430"/><stop offset=".65" stop-color="#1d1028"/><stop offset="1" stop-color="#3a0d16"/></linearGradient>
+  <linearGradient id="lame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f9fb"/><stop offset=".5" stop-color="#aab4bd"/><stop offset="1" stop-color="#6f7881"/></linearGradient>
+
+  <clipPath id="couverture"><rect x="186" y="128" width="258" height="334"/></clipPath>
+</defs>
+<rect width="600" height="600" fill="url(#fond)"/>
+<ellipse cx="300" cy="488" rx="170" ry="26" fill="url(#ombre)"/>
+
+<path d="M158 96l22-8v380l-22 10z" fill="#123d7a"/>
+<rect x="180" y="88" width="270" height="380" rx="8" fill="#1a4f9c"/>
+<rect x="186" y="94" width="258" height="368" rx="4" fill="url(#nuit)"/>
+<rect x="186" y="94" width="258" height="34" fill="#1f63c6"/>
+<text x="200" y="117" font-family="Inter" font-weight="800" font-size="16" fill="#fff" letter-spacing="1.5">BLU-RAY</text>
+<text x="430" y="117" font-family="Inter" font-weight="700" font-size="12" fill="#dbe8ff" text-anchor="end">RESTAURATION 4K</text>
+<circle cx="380" cy="178" r="34" fill="#f3e5c4"/>
+<circle cx="368" cy="170" r="6" fill="#e3d0a5"/><circle cx="392" cy="190" r="4" fill="#e3d0a5"/>
+<g clip-path="url(#couverture)"><g transform="rotate(-28 300 300)">
+  <rect x="190" y="262" width="210" height="34" rx="2" fill="url(#lame)"/>
+  <path d="M400 262l46 17-46 17z" fill="#cfd6dd"/>
+  <rect x="140" y="258" width="56" height="42" rx="8" fill="#2a1a12"/>
+  <rect x="190" y="254" width="10" height="50" rx="2" fill="#7c858d"/>
+  <ellipse cx="300" cy="279" rx="30" ry="11" fill="#1a1f29" opacity=".85"/>
+  <circle cx="300" cy="279" r="8" fill="#8a1c1c"/><circle cx="300" cy="279" r="3.5" fill="#0b0b0b"/>
+</g></g>
+<path d="M248 336c0 10 8 16 8 22a8 8 0 0 1-16 0c0-6 8-12 8-22zM268 356c0 7 5 11 5 15a5 5 0 0 1-10 0c0-4 5-8 5-15z" fill="#c8102e"/>
+<text x="315" y="390" font-family="Lora" font-style="italic" font-size="22" fill="#f3e5c4" text-anchor="middle">Riflesso di un coltello</text>
+<text x="315" y="418" font-family="Lora" font-style="italic" font-weight="700" font-size="26" fill="#f3e5c4" text-anchor="middle">nella notte</text>
+<rect x="206" y="434" width="218" height="2" fill="#f3e5c4" opacity=".4"/>
+<text x="315" y="452" font-family="Inter" font-size="10" fill="#d7c9a8" text-anchor="middle" letter-spacing=".5">VOST · LIVRET DE 24 PAGES</text>
+<rect x="180" y="88" width="270" height="380" rx="8" fill="none" stroke="#ffffff" stroke-opacity=".35" stroke-width="2"/>
+
+</svg>

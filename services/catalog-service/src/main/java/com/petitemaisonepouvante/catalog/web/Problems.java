@@ -11,7 +11,11 @@ public final class Problems {
     }
 
     public static ErrorResponseException badRequest(String detail) {
-        HttpStatusCode code = HttpStatusCode.valueOf(400);
+        return of(400, detail);
+    }
+
+    public static ErrorResponseException of(int status, String detail) {
+        HttpStatusCode code = HttpStatusCode.valueOf(status);
         return new ErrorResponseException(code, ProblemDetail.forStatusAndDetail(code, detail), null);
     }
 }

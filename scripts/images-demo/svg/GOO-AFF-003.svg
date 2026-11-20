@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+<defs>
+  <radialGradient id="fond" cx="50%" cy="38%" r="78%"><stop offset="0" stop-color="#fdfcfb"/><stop offset="1" stop-color="#e6e2de"/></radialGradient>
+  <radialGradient id="ombre"><stop offset="0" stop-color="#2a1d17" stop-opacity=".32"/><stop offset="1" stop-color="#2a1d17" stop-opacity="0"/></radialGradient>
+  
+  <pattern id="trame" width="5" height="5" patternUnits="userSpaceOnUse"><circle cx="2.5" cy="2.5" r=".9" fill="#7a1010"/></pattern>
+
+</defs>
+<rect width="600" height="600" fill="url(#fond)"/>
+<ellipse cx="300" cy="512" rx="170" ry="26" fill="url(#ombre)"/>
+
+<rect x="160" y="70" width="280" height="430" fill="#161616"/>
+<rect x="174" y="84" width="252" height="402" fill="#fbf7ee"/>
+<rect x="194" y="104" width="212" height="340" fill="#efe2c6"/>
+<circle cx="300" cy="232" r="88" fill="#d93a2b"/>
+<path d="M300 162c50 0 76 34 76 78 0 38-22 72-76 80-54-8-76-42-76-80 0-44 26-78 76-78z" fill="#1b1b1b"/>
+<path d="M224 228l-34-22 26 46zM376 228l34-22-26 46z" fill="#1b1b1b"/>
+<ellipse cx="274" cy="238" rx="10" ry="7" fill="#efe2c6"/><ellipse cx="326" cy="238" rx="10" ry="7" fill="#efe2c6"/>
+<path d="M276 290l6-24 8 26zM324 290l-6-24-8 26z" fill="#efe2c6"/>
+<rect x="194" y="104" width="212" height="340" fill="url(#trame)" opacity=".35"/>
+<text x="300" y="378" font-family="Lora" font-weight="700" font-size="56" fill="#1b1b1b" text-anchor="middle">L'ORC</text>
+<text x="300" y="412" font-family="Inter" font-weight="700" font-size="11" fill="#7a1010" text-anchor="middle" letter-spacing="2">SÉRIGRAPHIE · 200 EXEMPLAIRES</text>
+<text x="404" y="468" font-family="Inter" font-size="10" fill="#6b6257" text-anchor="end">87/200</text>
+
+</svg>
