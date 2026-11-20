@@ -130,7 +130,7 @@ done
 info "Comptes de test (mots de passe dans infra/.env)"
 echo "      alice, carol : clients (commandes, troc, fanzine)"
 echo "      bob          : compte sans profil client (refus attendus)"
-echo "      admin-pme    : administrateur (stock, modération, rédaction)"
+echo "      admin-pme    : administrateur (produits, stock, commandes clients, modération, rédaction)"
 
 printf '\nRésultat : %d vérification(s) réussie(s), %d en échec.\n' "$ok" "$ko"
 [ "$ko" -eq 0 ]

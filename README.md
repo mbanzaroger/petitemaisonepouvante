@@ -19,10 +19,10 @@ Hébergement cible en Europe et feuille de route (enchères et diffusion des pro
 
 | Composant | Rôle | Statut |
 |---|---|---|
-| `web-frontend` | Site : catalogue et recommandations, panier, connexion, commande, suivi, historique, espace communautaire, actualités, fanzine et liseuse, « Mon espace », administration (stock, modération, rédaction), pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété jusqu'à v1.4.0) |
-| `catalog-service` | Produits, catégories, prix | Livré (v0.5.0) |
-| `order-service` | Commandes, statuts, historique, saga (boîte d'envoi) | Livré (v0.5.0) |
-| `stock-service` | Stock, réservations idempotentes | Livré (v0.5.0) |
+| `web-frontend` | Site : catalogue et recommandations, panier, connexion, commande, suivi, historique, espace communautaire, actualités, fanzine et liseuse, « Mon espace », administration (produits, stock, commandes clients, modération, rédaction), inscription des clients, pages de conformité (React + TypeScript, ADR-002) | Livré (v1.1.0, complété jusqu'à v1.5.0) |
+| `catalog-service` | Produits, catégories, prix | Livré (v0.5.0, administration v1.5.0) |
+| `order-service` | Commandes, statuts, historique, saga (boîte d'envoi) | Livré (v0.5.0, administration v1.5.0) |
+| `stock-service` | Stock, réservations idempotentes | Livré (v0.5.0, administration v1.5.0) |
 | `community-service` | Annonces de troc et de dons, propositions, salons, notifications, signalements et modération (ADR-004) | Livré (v1.3.0) |
 | `editorial-service` | Actualités et articles, fanzine numérique (pages servies selon le droit d'accès, bibliothèque), abonnements et liste d'expédition (ADR-006) | Livré (v1.4.0) |
 | Keycloak | Identité OIDC / rôles (client `pme-web` : code + PKCE) | `infra/`, `k8s/platform/` |
