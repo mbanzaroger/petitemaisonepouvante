@@ -462,10 +462,12 @@ img {
   border-bottom-color: var(--jaune);
 }
 
+/* Hauteur minimale : le lien reste une cible de 24 px au moins quand la barre passe sur deux lignes (WCAG 2.5.8). */
 .lien-promo {
   display: flex;
   align-items: center;
   gap: 0.45rem;
+  min-height: 3rem;
   margin-left: auto;
   padding: 0 1.1rem;
   border-left: 1px solid rgb(255 255 255 / 0.2);
