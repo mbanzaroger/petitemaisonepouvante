@@ -4,9 +4,16 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/). Versionnage :
 
 ## [Non publié]
 
+## [1.5.1] - 2026-11-20
+
+Correctif de la chaîne de livraison, sans changement fonctionnel du site ni des services.
+
 ### Corrigé
 - Supervision : `verify.sh` lit les journaux de toutes les répliques d'un service, et la recherche des appels du site (`web-…`) se fait dans un fichier. Avec `pipefail`, `kubectl logs | grep -q` échouait au hasard : `grep` s'arrête au premier résultat, et `kubectl` reçoit alors SIGPIPE.
 - CI et release : l'image d'un service Java est construite à partir du jar compilé et testé (substitué à l'étape Maven du Dockerfile) ; plus aucun téléchargement Maven pendant `docker build`, où Maven Central refusait certains runners. La seconde tentative automatique ajoutée juste avant échouait de la même façon ; elle est retirée.
+
+### Sécurité
+- Releases v1.1.0, v1.2.0 et v1.3.0 publiées après coup le 20/11/2026 : le scan Trivy bloquant de leur workflow a refusé l'image du site (nginx 1.30.6, V-28), l'exception datée n'existant qu'à partir de v1.4.0. Aucune mise en production n'a été demandée pour ces versions, remplacées par v1.5.x ; le contrôle a joué son rôle (`docs/13-analyse-securite.md`, V-28).
 
 ## [1.5.0] - 2026-11-19
 
@@ -163,7 +170,12 @@ Demandes de la recette du 19/11/2026.
 - Cadrage technique v1.0, ADR-001 (microservices), schémas d'architecture, de CI/CD et de saga, backlog US1 à US5.
 - Infrastructure locale de développement (docker-compose) et squelette de CI.
 
-[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.2.0...develop
+[Non publié]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.5.1...develop
+[1.5.1]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.5.0...v1.5.1
+[1.5.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.4.1...v1.5.0
+[1.4.1]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.4.0...v1.4.1
+[1.4.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/mbanzaroger/petitemaisonepouvante/compare/v0.6.0...v1.0.0
