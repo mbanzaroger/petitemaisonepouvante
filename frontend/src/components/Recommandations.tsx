@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import type { Recommandations as Donnees } from '../api/recommandations';
 import { estMembre, useAuth } from '../auth/auth';
-import { formaterPrix } from '../format';
+import { CarteProduit } from './CarteProduit';
 
 /**
  * US13 — produits recommandés, avec la raison de chaque recommandation. Contenu secondaire : rien n'est affiché
@@ -13,16 +13,11 @@ export function Recommandations({ donnees, titre }: { donnees?: Donnees; titre: 
   return (
     <section aria-labelledby="titre-recommandations" className="recommandations">
       <h2 id="titre-recommandations">{donnees.personalized ? 'Recommandé pour vous' : titre}</h2>
-      <ul className="grille-produits">
+      <ul className="grille-produits vue-grille grille-compacte">
         {donnees.items.map(({ product, reason }) => (
-          <li key={product.id} className="carte-produit">
-            {product.exclusive && <p className="etiquette etiquette-exclusif">Exclusivité Evil Ed</p>}
-            <h3>
-              <Link to={`/produits/${product.id}`}>{product.name}</Link>
-            </h3>
-            <p className="prix">{formaterPrix(product.price.amountCents, product.price.currency)}</p>
+          <CarteProduit key={product.id} produit={product} niveauTitre={3}>
             <p className="note">{reason}</p>
-          </li>
+          </CarteProduit>
         ))}
       </ul>
       {!donnees.personalized && estMembre(auth) && (

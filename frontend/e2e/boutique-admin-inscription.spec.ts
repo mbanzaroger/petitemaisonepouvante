@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { auditerAccessibilite, seConnecter } from './outils';
 
+/** Image PNG de 1 × 1 pixel : image de produit envoyée par l'administrateur (US21). */
+const IMAGE_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 test.describe('Administration de la boutique et inscription (US18 à US20)', () => {
   test("l'administrateur ajoute un produit en stock ; un client le commande ; la commande apparaît chez l'administrateur", async ({
     browser,
@@ -19,10 +25,16 @@ test.describe('Administration de la boutique et inscription (US18 à US20)', () 
     await page.getByLabel(/^Description/).fill('Produit créé par le test de bout en bout.');
     await page.getByLabel(/^Stock initial/).fill('3');
     await page.getByLabel(/^Exclusivité Evil Ed/).check();
+    await page.getByLabel(/^Image du produit/).setInputFiles({ name: 'recette.png', mimeType: 'image/png', buffer: IMAGE_PNG });
+    await expect(page.getByText('Aperçu : recette.png')).toBeVisible();
     await auditerAccessibilite(page, testInfo, 'nouveau-produit');
     await page.getByRole('button', { name: 'Créer le produit' }).click();
     const confirmation = page.getByText(/Produit créé et mis en vente/);
     await expect(confirmation).toContainText('Stock initial : 3 unités.');
+    // L'image envoyée est servie par le catalogue, à son adresse versionnée (Gateway, CSP du site).
+    const vignette = page.locator('.resultat-produit img');
+    await expect(vignette).toHaveAttribute('src', /\/api\/v1\/products\/[^/]+\/image\?v=/);
+    await expect.poll(() => vignette.evaluate((image) => (image as { naturalWidth: number }).naturalWidth)).toBe(1);
     const lienProduit = page.getByRole('link', { name: nom });
     const fiche = (await lienProduit.getAttribute('href')) ?? '';
 
@@ -36,6 +48,7 @@ test.describe('Administration de la boutique et inscription (US18 à US20)', () 
     const client = await browser.newPage();
     await client.goto(fiche);
     await expect(client.getByRole('heading', { level: 1, name: nom })).toBeVisible();
+    await expect(client.getByRole('img', { name: `Visuel du produit : ${nom}` })).toBeVisible();
     await client.getByRole('button', { name: 'Ajouter au panier' }).click();
     await client.getByRole('link', { name: 'Voir le panier' }).click();
     await seConnecter(client, 'carol', 'Se connecter pour commander');

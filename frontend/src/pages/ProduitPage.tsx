@@ -6,6 +6,8 @@ import { useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { QUANTITE_MAX } from '../cart/panier';
 import { Chargement, MessageErreur } from '../components/Etats';
+import { IconePanier } from '../components/Icones';
+import { ImageProduit } from '../components/ImageProduit';
 import { Recommandations } from '../components/Recommandations';
 import { formaterPrix } from '../format';
 import { useRecommandations } from '../hooks/useRecommandations';
@@ -42,55 +44,82 @@ export function ProduitPage() {
 
   return (
     <>
-      <p className="fil">
-        <Link to="/">Retour au catalogue</Link>
-      </p>
-      <h1 tabIndex={-1}>{produit ? produit.name : introuvable ? 'Produit introuvable' : 'Fiche produit'}</h1>
-      {chargement && <Chargement texte="Chargement du produit…" />}
-      {introuvable && <p>Ce produit n'existe pas ou n'est plus proposé.</p>}
-      {erreur && !introuvable && <MessageErreur erreur={erreur} onReessayer={recharger} />}
-      {produit && (
-        <article className="fiche-produit" aria-labelledby="titre-fiche">
-          <h2 id="titre-fiche" className="visuellement-masque">
-            Détails du produit
-          </h2>
-          {produit.exclusive && <p className="etiquette etiquette-exclusif">Exclusivité Evil Ed, uniquement sur le site</p>}
-          <p className="description">{produit.description}</p>
-          <dl className="caracteristiques">
-            <dt>Catégorie</dt>
-            <dd>{produit.category}</dd>
-            <dt>Référence</dt>
-            <dd>{produit.sku}</dd>
-            <dt>Prix</dt>
-            <dd className="prix">{formaterPrix(produit.price.amountCents, produit.price.currency)}</dd>
-            <dt>Disponibilité</dt>
-            <dd>{produit.available ? 'Disponible' : 'Indisponible'}</dd>
-          </dl>
-          {produit.available && (
-            <form className="ajout-panier" onSubmit={ajouterAuPanier}>
-              <label htmlFor="quantite">Quantité</label>
-              <select id="quantite" name="quantite" defaultValue="1">
-                {QUANTITES.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-              <button type="submit" className="bouton">
-                Ajouter au panier
-              </button>
-            </form>
+      <nav aria-label="Fil d'Ariane" className="fil-ariane">
+        <ol>
+          <li>
+            <Link to="/">Catalogue</Link>
+          </li>
+          {produit && (
+            <li>
+              <Link to={`/?categorie=${encodeURIComponent(produit.category)}`}>{produit.category}</Link>
+            </li>
           )}
-          <p role="status" className="annonce">
-            {annonce}
+          <li aria-current="page">{produit ? produit.name : 'Fiche produit'}</li>
+        </ol>
+      </nav>
+      <div className={produit ? 'fiche-produit' : 'fiche-produit fiche-vide'}>
+        <h1 tabIndex={-1} className="fiche-titre">
+          {produit ? produit.name : introuvable ? 'Produit introuvable' : 'Fiche produit'}
+        </h1>
+        {chargement && <Chargement texte="Chargement du produit…" />}
+        {introuvable && (
+          <p className="fiche-infos">
+            Ce produit n'existe pas ou n'est plus proposé. <Link to="/">Retour au catalogue</Link>
           </p>
-          {annonce && (
-            <p>
-              <Link to="/panier">Voir le panier</Link>
-            </p>
-          )}
-        </article>
-      )}
+        )}
+        {erreur && !introuvable && <MessageErreur erreur={erreur} onReessayer={recharger} />}
+        {produit && (
+          <>
+            <div className="fiche-visuel">
+              <ImageProduit produit={produit} alt={`Visuel du produit : ${produit.name}`} prioritaire />
+            </div>
+            <article className="fiche-infos" aria-labelledby="titre-fiche">
+              <h2 id="titre-fiche" className="visuellement-masque">
+                Détails du produit
+              </h2>
+              {produit.exclusive && (
+                <p className="etiquette etiquette-exclusif">Exclusivité Evil Ed, uniquement sur le site</p>
+              )}
+              <p className="prix prix-fiche">{formaterPrix(produit.price.amountCents, produit.price.currency)}</p>
+              <p className={produit.available ? 'dispo' : 'dispo dispo-non'}>
+                {produit.available ? 'En stock' : 'Momentanément indisponible'}
+              </p>
+              <p className="description">{produit.description}</p>
+              {produit.available && (
+                <form className="ajout-panier" onSubmit={ajouterAuPanier}>
+                  <label htmlFor="quantite">Quantité</label>
+                  <select id="quantite" name="quantite" defaultValue="1">
+                    {QUANTITES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="submit" className="bouton bouton-panier">
+                    <IconePanier taille={18} /> Ajouter au panier
+                  </button>
+                </form>
+              )}
+              <p role="status" className="annonce">
+                {annonce}
+              </p>
+              {annonce && (
+                <p>
+                  <Link to="/panier">Voir le panier</Link>
+                </p>
+              )}
+              <dl className="caracteristiques">
+                <dt>Catégorie</dt>
+                <dd>{produit.category}</dd>
+                <dt>Référence</dt>
+                <dd>{produit.sku}</dd>
+                <dt>Disponibilité</dt>
+                <dd>{produit.available ? 'Disponible' : 'Indisponible'}</dd>
+              </dl>
+            </article>
+          </>
+        )}
+      </div>
       {produit && <Recommandations donnees={recommandations.donnees} titre="Vous aimerez aussi" />}
     </>
   );

@@ -14,6 +14,8 @@ export interface Product {
   available: boolean;
   /** Vendu en exclusivité sur le site (gamme de figurines du collectif Evil Ed). */
   exclusive: boolean;
+  /** US21 — adresse (versionnée) de l'image du produit, ou null s'il n'en a pas. */
+  imageUrl?: string | null;
 }
 
 export interface Page<T> {

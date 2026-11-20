@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { centimesDepuisSaisie } from '../../api/admin';
 import { CLIENT, commande, corpsEnvoye, fausseAuth, json, page, produit, rendreApp, simulerApi } from '../../test/outils';
@@ -145,5 +145,66 @@ describe('Inscription d’un nouveau client (US20)', () => {
     unmount();
     rendreApp('/admin/stock', fausseAuth());
     expect(within(screen.getByRole('main')).queryByRole('button', { name: /Créer un compte/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('Images des produits (US21)', () => {
+  const png = () => new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47])], 'lustre.png', { type: 'image/png' });
+
+  it('envoie l’image choisie après la création du produit', async () => {
+    const cree = produit(9, { name: 'Figurine « Le Lustre »' });
+    const avecImage = { ...cree, imageUrl: `/api/v1/products/${cree.id}/image?v=abcdef0123456789` };
+    const fetch = simulerApi({
+      'GET /api/v1/categories': () => json(CATEGORIES),
+      'POST /api/v1/catalog/admin/products': () => json(cree, 201),
+      [`PUT /api/v1/catalog/admin/products/${cree.id}/image`]: () => json(avecImage),
+    });
+    const { utilisateur } = rendreApp('/admin/produits/nouveau', fausseAuth(ADMIN));
+    await utilisateur.type(await screen.findByLabelText(/^Nom/), 'Figurine « Le Lustre »');
+    await utilisateur.type(screen.getByLabelText(/^Référence unique/), 'FIG-EVL-043');
+    await utilisateur.selectOptions(screen.getByLabelText('Catégorie'), 'Figurines');
+    await utilisateur.type(screen.getByLabelText(/^Prix en euros/), '39');
+    await utilisateur.upload(screen.getByLabelText(/^Image du produit/), png());
+    await utilisateur.click(screen.getByRole('button', { name: 'Créer le produit' }));
+
+    const statut = await screen.findByText(/Produit créé et mis en vente/);
+    expect(statut.closest('.alerte')?.querySelector('img')).toHaveAttribute('src', avecImage.imageUrl);
+    const envoi = fetch.mock.calls.find(([url, init]) => String(url).endsWith('/image') && init?.method === 'PUT');
+    expect(envoi?.[1]?.body).toBeInstanceOf(File);
+    expect((envoi?.[1]?.headers as Record<string, string>)['Content-Type']).toBe('image/png');
+  });
+
+  it('refuse un fichier qui n’est pas une image acceptée, avant tout envoi', async () => {
+    const fetch = simulerApi({ 'GET /api/v1/categories': () => json(CATEGORIES) });
+    rendreApp('/admin/produits/nouveau', fausseAuth({ ...ADMIN }));
+    const champ = await screen.findByLabelText(/^Image du produit/);
+    // Fichier glissé malgré le filtre « accept » du sélecteur : le contrôle du site s'applique quand même.
+    const svg = new File(['<svg/>'], 'logo.svg', { type: 'image/svg+xml' });
+    fireEvent.change(champ, { target: { files: [svg] } });
+    expect(screen.getByText('Choisissez une image JPEG, PNG ou WebP.')).toBeInTheDocument();
+    expect(champ).toHaveAttribute('aria-invalid', 'true');
+    expect(fetch.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false);
+  });
+
+  it('remplace puis retire l’image d’un produit depuis « Produits et stock »', async () => {
+    const avecImage = produit(1, { imageUrl: `/api/v1/products/${produit(1).id}/image?v=0123456789abcdef` });
+    const fetch = simulerApi({
+      'GET /api/v1/catalog/admin/products': () => json(page([avecImage])),
+      [`GET /api/v1/stock/${produit(1).id}`]: () => json({ productId: produit(1).id, available: 8, reserved: 0 }),
+      [`PUT /api/v1/catalog/admin/products/${produit(1).id}/image`]: () => json(avecImage),
+      [`DELETE /api/v1/catalog/admin/products/${produit(1).id}/image`]: () => new Response(null, { status: 204 }),
+    });
+    const { utilisateur } = rendreApp('/admin/stock', fausseAuth(ADMIN));
+    const tableau = await screen.findByRole('table');
+    expect(within(tableau).getByRole('rowheader', { name: /^Produit 01/ }).querySelector('img')).toHaveAttribute(
+      'src',
+      avecImage.imageUrl,
+    );
+    expect(screen.getByRole('button', { name: "Changer l'image de Produit 01" })).toBeInTheDocument();
+    await utilisateur.upload(screen.getByLabelText('Nouvelle image de Produit 01'), png());
+    expect(await screen.findByText('Image de « Produit 01 » enregistrée.')).toBeInTheDocument();
+    await utilisateur.click(screen.getByRole('button', { name: "Retirer l'image de Produit 01" }));
+    expect(await screen.findByText('Image de « Produit 01 » retirée.')).toBeInTheDocument();
+    expect(fetch.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true);
   });
 });

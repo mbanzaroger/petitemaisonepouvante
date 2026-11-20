@@ -1,11 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { centimesDepuisSaisie, creerProduit, reapprovisionner } from '../../api/admin';
+import { centimesDepuisSaisie, creerProduit, envoyerImage, reapprovisionner, verifierImage } from '../../api/admin';
 import { listerCategories } from '../../api/catalogue';
 import { ApiError, versApiError } from '../../api/client';
 import type { Product } from '../../api/types';
 import { useAuth } from '../../auth/auth';
 import { Chargement, MessageErreur } from '../../components/Etats';
+import { ImageProduit } from '../../components/ImageProduit';
 import { formaterPrix } from '../../format';
 import { useRessource } from '../../hooks/useRessource';
 import { useTitre } from '../../hooks/useTitre';
@@ -15,6 +16,23 @@ interface Resultat {
   stock: number;
   /** Le produit est créé mais le stock initial n'a pas pu être enregistré. */
   erreurStock?: ApiError;
+  /** Le produit est créé mais son image n'a pas pu être enregistrée. */
+  erreurImage?: ApiError;
+}
+
+/** Aperçu local de l'image choisie (adresse blob:, libérée quand l'image change ou que la page se ferme). */
+function useApercu(fichier: File | undefined): string | undefined {
+  const adresse = useMemo(
+    () => (fichier && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(fichier) : undefined),
+    [fichier],
+  );
+  useEffect(
+    () => () => {
+      if (adresse) URL.revokeObjectURL(adresse);
+    },
+    [adresse],
+  );
+  return adresse;
 }
 
 /** US18 — ajout d'un produit au catalogue, avec son stock initial, par l'administrateur. */
@@ -25,6 +43,17 @@ export function NouveauProduitPage() {
   const [resultat, setResultat] = useState<Resultat>();
   const [erreur, setErreur] = useState<ApiError>();
   const [envoi, setEnvoi] = useState(false);
+  const [image, setImage] = useState<File>();
+  const [erreurFichier, setErreurFichier] = useState<string>();
+  const apercu = useApercu(image);
+
+  function choisirImage(evenement: ChangeEvent<HTMLInputElement>) {
+    const fichier = evenement.target.files?.[0];
+    const probleme = fichier ? verifierImage(fichier) : null;
+    setErreurFichier(probleme ?? undefined);
+    setImage(fichier && !probleme ? fichier : undefined);
+    if (probleme) evenement.target.value = '';
+  }
 
   async function enregistrer(evenement: FormEvent<HTMLFormElement>) {
     evenement.preventDefault();
@@ -52,6 +81,20 @@ export function NouveauProduitPage() {
         },
         auth.jeton,
       );
+      let erreurImage: ApiError | undefined;
+      let enregistre = produit;
+      if (image) {
+        try {
+          enregistre = await envoyerImage(produit.id, image, auth.jeton);
+        } catch (e) {
+          const cause = versApiError(e);
+          erreurImage = new ApiError(
+            cause.status,
+            `Produit créé, mais l'image n'a pas été enregistrée : ${cause.message} Ajoutez-la depuis « Produits et stock ».`,
+            cause.correlationId,
+          );
+        }
+      }
       let erreurStock: ApiError | undefined;
       if (stock > 0) {
         try {
@@ -65,8 +108,9 @@ export function NouveauProduitPage() {
           );
         }
       }
-      setResultat({ produit, stock, erreurStock });
+      setResultat({ produit: enregistre, stock, erreurStock, erreurImage });
       formulaire.reset();
+      setImage(undefined);
     } catch (e) {
       setErreur(versApiError(e));
     } finally {
@@ -82,7 +126,8 @@ export function NouveauProduitPage() {
       </p>
       <div role="status">
         {resultat && (
-          <div className="alerte alerte-succes">
+          <div className="alerte alerte-succes resultat-produit">
+            <ImageProduit produit={resultat.produit} className="vignette" />
             <p>
               Produit créé et mis en vente :{' '}
               <Link to={`/produits/${resultat.produit.id}`}>{resultat.produit.name}</Link> (
@@ -95,6 +140,7 @@ export function NouveauProduitPage() {
           </div>
         )}
       </div>
+      {resultat?.erreurImage && <MessageErreur erreur={resultat.erreurImage} />}
       {resultat?.erreurStock && <MessageErreur erreur={resultat.erreurStock} />}
       {categories.chargement && <Chargement texte="Chargement des catégories…" />}
       {categories.erreur && <MessageErreur erreur={categories.erreur} onReessayer={categories.recharger} />}
@@ -129,6 +175,30 @@ export function NouveauProduitPage() {
           <input id="produit-prix" name="prix" required inputMode="decimal" pattern="\d{1,5}([,.]\d{1,2})?" />
           <label htmlFor="produit-description">Description (facultative, 2 000 caractères au plus)</label>
           <textarea id="produit-description" name="description" maxLength={2000} rows={4} />
+          <label htmlFor="produit-image">Image du produit (facultative : JPEG, PNG ou WebP, 2 Mo au plus)</label>
+          <input
+            id="produit-image"
+            name="image"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={choisirImage}
+            aria-describedby={erreurFichier ? 'aide-image erreur-image' : 'aide-image'}
+            aria-invalid={erreurFichier ? true : undefined}
+          />
+          <p id="aide-image" className="note">
+            Format carré conseillé (600 × 600 pixels ou plus), produit centré sur un fond clair.
+          </p>
+          {erreurFichier && (
+            <p id="erreur-image" className="erreur-champ">
+              {erreurFichier}
+            </p>
+          )}
+          {apercu && (
+            <figure className="apercu-image">
+              <img src={apercu} alt="" width={160} height={160} />
+              <figcaption>Aperçu : {image?.name}</figcaption>
+            </figure>
+          )}
           <label htmlFor="produit-stock">Stock initial (unités disponibles à la vente)</label>
           <input id="produit-stock" name="stock" type="number" inputMode="numeric" min={0} max={10000} defaultValue={0} />
           <div className="case">

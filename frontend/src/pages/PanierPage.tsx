@@ -8,6 +8,7 @@ import { estClient, libelleProfil, useAuth } from '../auth/auth';
 import { usePanier } from '../cart/contexte';
 import { QUANTITE_MAX, lignesIndisponibles } from '../cart/panier';
 import { MessageErreur } from '../components/Etats';
+import { ImageProduit } from '../components/ImageProduit';
 import { formaterPrix } from '../format';
 import { useRessource } from '../hooks/useRessource';
 import { useTitre } from '../hooks/useTitre';
@@ -117,6 +118,8 @@ export function PanierPage() {
     ? lignesIndisponibles(panier.lignes, revalidation.donnees.produits)
     : new Set<string>();
   const changements = revalidation.donnees?.changements ?? [];
+  // Images lues avec la revalidation (le panier enregistré dans le navigateur ne les contient pas).
+  const parId = new Map((revalidation.donnees?.produits ?? []).map((p) => [p.id, p]));
 
   if (panier.lignes.length === 0) {
     return (
@@ -163,8 +166,16 @@ export function PanierPage() {
               return (
                 <tr key={ligne.productId}>
                   <th scope="row">
-                    <Link to={`/produits/${ligne.productId}`}>{ligne.nom}</Link>
-                    {indisponibles.has(ligne.productId) && <span className="badge-indispo"> Indisponible</span>}
+                    <span className="ligne-produit">
+                      <ImageProduit
+                        produit={{ imageUrl: parId.get(ligne.productId)?.imageUrl, category: parId.get(ligne.productId)?.category ?? '' }}
+                        className="vignette"
+                      />
+                      <span>
+                        <Link to={`/produits/${ligne.productId}`}>{ligne.nom}</Link>
+                        {indisponibles.has(ligne.productId) && <span className="badge-indispo"> Indisponible</span>}
+                      </span>
+                    </span>
                   </th>
                   <td>{formaterPrix(ligne.prixCentimes, ligne.devise)}</td>
                   <td>
