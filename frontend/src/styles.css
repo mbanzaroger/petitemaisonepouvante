@@ -507,8 +507,11 @@ img {
 
 /* --- Contenu --- */
 
+/* Le pied de page commence sous la ligne de flottaison : quand le contenu chargé à la demande arrive, il ne
+   déplace rien de visible (CLS, Lighthouse). */
 main {
   flex: 1;
+  min-height: calc(100vh - 8rem);
   padding-block: 1.5rem 3rem;
 }
 
